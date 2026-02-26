@@ -79,6 +79,51 @@
     box-shadow: 0 0 0 3px rgba(43, 74, 156, 0.1);
 }
 
+/* Password Input */
+.password-input-container {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background-color: var(--color-bg);
+    transition: all var(--transition-base);
+    overflow: hidden;
+}
+
+.password-input-container:focus-within {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(43, 74, 156, 0.1);
+}
+
+.password-input-container .form-input {
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    background-color: transparent;
+    padding-right: 0;
+    flex: 1;
+}
+
+.password-input-container .form-input:focus {
+    border: none;
+    box-shadow: none;
+}
+
+.password-toggle-btn {
+    padding: 0 1rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-light);
+}
+
+.password-toggle-btn:hover {
+    color: var(--color-primary);
+}
+
 /* Form Options */
 .form-options {
     display: flex;

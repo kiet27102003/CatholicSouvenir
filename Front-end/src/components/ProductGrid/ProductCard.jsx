@@ -1,9 +1,10 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import './ProductCard.css';
 
-const ProductCard = ({ image, title, artisan, price, salePrice, onSale }) => {
+const ProductCard = ({ id, image, title, artisan, price, salePrice, onSale }) => {
     return (
-        <div className="product-card">
+        <Link to={`/product/${id}`} className="product-card" style={{ textDecoration: 'none' }}>
             <div className="product-image">
                 {onSale && <span className="badge badge-sale">SALE</span>}
                 <img src={image} alt={title} />
@@ -22,7 +23,7 @@ const ProductCard = ({ image, title, artisan, price, salePrice, onSale }) => {
                     )}
                 </div>
             </div>
-        </div>
+        </Link>
     );
 };
 

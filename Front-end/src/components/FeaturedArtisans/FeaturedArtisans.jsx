@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import ArtisanCard from './ArtisanCard';
 import './FeaturedArtisans.css';
 
@@ -38,18 +39,19 @@ const FeaturedArtisans = () => {
                         <h2 className="section-title">Featured Artisans</h2>
                         <p className="section-subtitle">Meet the hands and hearts behind the sacred crafts.</p>
                     </div>
-                    <a href="#all-artisans" className="view-all-link">
+                    <Link to="/artisans" className="view-all-link">
                         View all artisans
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
-                    </a>
+                    </Link>
                 </div>
 
                 <div className="artisans-grid">
                     {artisans.map(artisan => (
                         <ArtisanCard
                             key={artisan.id}
+                            id={artisan.id}
                             name={artisan.name}
                             location={artisan.location}
                             description={artisan.description}

@@ -1,0 +1,221 @@
+.register-form-container {
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+    padding: var(--spacing-xl);
+}
+
+.register-form-header {
+    text-align: center;
+    margin-bottom: var(--spacing-xl);
+}
+
+.register-title {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--color-text);
+    margin-bottom: var(--spacing-sm);
+}
+
+.register-subtitle {
+    font-size: 1rem;
+    color: var(--color-text-light);
+}
+
+.register-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+}
+
+/* Reusing Form Group Styles from Login */
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.form-label {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.form-input {
+    padding: 1rem;
+    font-size: 1rem;
+    font-family: var(--font-primary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    transition: all var(--transition-base);
+    outline: none;
+}
+
+.form-input::placeholder {
+    color: var(--color-text-light);
+}
+
+.form-input:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(43, 74, 156, 0.1);
+}
+
+/* Password Input Container */
+.password-input-container {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background-color: var(--color-bg);
+    transition: all var(--transition-base);
+    overflow: hidden;
+}
+
+.password-input-container:focus-within {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(43, 74, 156, 0.1);
+}
+
+.password-input-container .form-input {
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    background-color: transparent;
+    padding-right: 0;
+    flex: 1;
+}
+
+.password-input-container .form-input:focus {
+    border: none;
+    box-shadow: none;
+}
+
+.password-toggle-btn {
+    padding: 0 1rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-light);
+}
+
+.password-toggle-btn:hover {
+    color: var(--color-primary);
+}
+
+/* Button */
+.register-btn {
+    width: 100%;
+    padding: 1rem;
+    font-size: 1rem;
+    font-weight: 600;
+    margin-top: var(--spacing-sm);
+    color: white;
+    background-color: #3b82f6;
+    border: none;
+    border-radius: 0.75rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.register-btn:hover {
+    background-color: #2563eb;
+}
+
+.register-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Divider */
+.register-divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    color: #9ca3af;
+    font-size: 0.75rem;
+    margin: 0.5rem 0;
+}
+
+.register-divider::before,
+.register-divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.register-divider span {
+    padding: 0 1rem;
+    text-transform: uppercase;
+}
+
+/* Social Buttons */
+.social-register-group {
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+}
+
+.social-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #374151;
+    background-color: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.75rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.social-btn:hover {
+    background-color: #f9fafb;
+}
+
+.social-btn svg {
+    flex-shrink: 0;
+}
+
+/* Footer */
+.register-footer {
+    text-align: center;
+    font-size: 0.9375rem;
+    color: var(--color-text);
+    padding-top: var(--spacing-md);
+    border-top: 1px solid var(--color-border-light);
+}
+
+.login-link {
+    color: var(--color-primary);
+    font-weight: 600;
+    text-decoration: none;
+    transition: color var(--transition-fast);
+}
+
+.login-link:hover {
+    color: var(--color-primary-dark);
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+    .register-form-container {
+        padding: var(--spacing-lg);
+    }
+
+    .register-title {
+        font-size: 1.75rem;
+    }
+
+    .social-register-group {
+        flex-direction: column;
+    }
+}

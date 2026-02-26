@@ -35,10 +35,21 @@ export const AuthProvider = ({ children }) => {
         sessionStorage.removeItem('sanctus_user');
     };
 
+    const updateUser = (newUserData) => {
+        const updatedUser = { ...user, ...newUserData };
+        setUser(updatedUser);
+        if (localStorage.getItem('sanctus_user')) {
+            localStorage.setItem('sanctus_user', JSON.stringify(updatedUser));
+        } else if (sessionStorage.getItem('sanctus_user')) {
+            sessionStorage.setItem('sanctus_user', JSON.stringify(updatedUser));
+        }
+    };
+
     const value = {
         user,
         login,
         logout,
+        updateUser,
         isAuthenticated: !!user,
         loading
     };

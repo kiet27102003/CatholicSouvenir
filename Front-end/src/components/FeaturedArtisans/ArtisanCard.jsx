@@ -1,7 +1,8 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import './ArtisanCard.css';
 
-const ArtisanCard = ({ name, location, description, profileImage, productImage }) => {
+const ArtisanCard = ({ id, name, location, description, profileImage, productImage }) => {
     return (
         <div className="artisan-card">
             <div className="artisan-header">
@@ -24,7 +25,9 @@ const ArtisanCard = ({ name, location, description, profileImage, productImage }
                 <img src={productImage} alt={`${name}'s work`} />
             </div>
 
-            <button className="btn btn-secondary artisan-cta">View Shop</button>
+            <Link to={`/artisans/${id}`} className="btn btn-secondary artisan-cta" style={{ textDecoration: 'none', display: 'flex', justifyContent: 'center' }}>
+                View Shop
+            </Link>
         </div>
     );
 };

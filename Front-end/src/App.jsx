@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
@@ -18,6 +18,10 @@ import CheckoutPage from './pages/CheckoutPage'
 import OrderTrackingPage from './pages/customer/OrderTrackingPage'
 import CartDrawer from './components/CartDrawer/CartDrawer'
 
+import AdminLayout from './pages/admin/AdminLayout'
+import SystemConfig from './pages/admin/SystemConfig'
+import UserManager from './pages/admin/UserManager'
+
 function App() {
   return (
     <AuthProvider>
@@ -33,6 +37,15 @@ function App() {
         <Route path="/checkout" element={<CheckoutPage />} />
         <Route path="/artisan" element={<ArtisanDashboard />} />
 
+        {/* Admin Routes with Layout */}
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<Navigate to="/admin/settings" replace />} />
+          <Route path="settings" element={<SystemConfig />} />
+          <Route path="users" element={<UserManager />} />
+          <Route path="security" element={<div className="p-8">Security Logs coming soon...</div>} />
+          <Route path="api-keys" element={<div className="p-8">API Keys coming soon...</div>} />
+        </Route>
+
         {/* Customer Routes inside Layout */}
         <Route element={<CustomerLayout />}>
           <Route path="/profile" element={<ProfilePage />} />
@@ -47,3 +60,4 @@ function App() {
 }
 
 export default App
+

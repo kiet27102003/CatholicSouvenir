@@ -1,0 +1,273 @@
+/* SystemConfig.css */
+
+.system-config-page {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding-bottom: 80px;
+    /* space for the fixed bottom bar */
+}
+
+.page-header {
+    margin-bottom: 24px;
+}
+
+.page-header h2 {
+    font-size: 1.5rem;
+    color: var(--admin-text-primary);
+    margin-bottom: 8px;
+}
+
+.subtitle {
+    color: var(--admin-text-muted);
+    font-size: 0.875rem;
+}
+
+.config-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+    border: 1px solid var(--admin-border);
+    overflow: hidden;
+}
+
+/* Tabs */
+.tabs-container {
+    display: flex;
+    border-bottom: 1px solid var(--admin-border);
+    background-color: #f8fafc;
+    padding: 0 16px;
+}
+
+.tab-btn {
+    background: none;
+    border: none;
+    padding: 16px 24px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--admin-text-muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s ease;
+    font-family: var(--font-primary);
+}
+
+.tab-btn:hover {
+    color: var(--admin-text-primary);
+}
+
+.tab-btn.active {
+    color: var(--color-primary);
+    border-bottom-color: var(--color-primary);
+    background-color: #fff;
+}
+
+/* Tab Content */
+.tab-content {
+    padding: 32px;
+}
+
+.form-section h3 {
+    font-size: 1.125rem;
+    margin-bottom: 24px;
+    color: var(--admin-text-primary);
+    font-weight: 600;
+    border-bottom: 1px solid var(--admin-border);
+    padding-bottom: 12px;
+}
+
+.form-group {
+    margin-bottom: 24px;
+    max-width: 600px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--admin-text-primary);
+    margin-bottom: 8px;
+}
+
+.form-input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--admin-border);
+    border-radius: 6px;
+    font-size: 0.875rem;
+    color: var(--admin-text-primary);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    background-color: #fff;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(43, 74, 156, 0.1);
+}
+
+/* Custom CSS Toggle Switch */
+.toggle-group {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px;
+    background-color: #f8fafc;
+    border: 1px solid var(--admin-border);
+    border-radius: 8px;
+}
+
+.toggle-group label {
+    margin-bottom: 0;
+}
+
+.toggle-info p {
+    font-size: 0.8rem;
+    color: var(--admin-text-muted);
+    margin-top: 4px;
+    margin-bottom: 0;
+}
+
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 26px;
+    flex-shrink: 0;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #cbd5e1;
+    transition: .4s;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .4s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+input:checked+.slider {
+    background-color: var(--color-primary);
+}
+
+input:focus+.slider {
+    box-shadow: 0 0 1px var(--color-primary);
+}
+
+input:checked+.slider:before {
+    transform: translateX(24px);
+}
+
+.slider.round {
+    border-radius: 34px;
+}
+
+.slider.round:before {
+    border-radius: 50%;
+}
+
+/* Special Boxes */
+.current-status-box {
+    padding: 16px;
+    border: 1px solid var(--admin-border);
+    border-radius: 8px;
+    background-color: #fff;
+    margin-top: 24px;
+}
+
+.current-status-box h4 {
+    font-size: 0.875rem;
+    margin-bottom: 8px;
+}
+
+.status-text.success {
+    color: #10b981;
+    /* emerald 500 */
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+/* Floating Save Action Bar */
+.floating-action-bar {
+    position: fixed;
+    bottom: 24px;
+    right: 32px;
+    z-index: 900;
+    background-color: #fff;
+    padding: 12px 24px;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--admin-border);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    animation: slideUp 0.3s ease forwards;
+}
+
+.btn-save {
+    min-width: 160px;
+}
+
+.mt-3 {
+    margin-top: 12px;
+}
+
+/* Utility Animations */
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .floating-action-bar {
+        right: 16px;
+        bottom: 16px;
+        left: 16px;
+        /* stretch on mobile */
+        justify-content: center;
+    }
+
+    .btn-save {
+        width: 100%;
+    }
+}

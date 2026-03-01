@@ -1,0 +1,10 @@
+/* Artisan form uses RegisterForm base styles; only overrides here */
+.artisan-register-form .form-textarea {
+    resize: vertical;
+    min-height: 60px;
+}
+
+.artisan-register-form .register-form {
+    overflow-y: auto;
+    min-height: 0;
+}

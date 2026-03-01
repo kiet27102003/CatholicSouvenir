@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink, useLocation, useNavigate, Navigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import './AdminLayout.css';
 import {
     FiSettings,
@@ -16,6 +17,7 @@ const AdminLayout = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const location = useLocation();
     const navigate = useNavigate();
+    const { user, isAuthenticated, logout } = useAuth();
 
     const toggleSidebar = () => {
         setIsSidebarOpen(!isSidebarOpen);
@@ -35,9 +37,13 @@ const AdminLayout = () => {
     };
 
     const handleLogout = () => {
-        // Basic logout logic for now
+        logout();
         navigate('/login');
     };
+
+    if (!isAuthenticated) {
+        return <Navigate to="/login" replace />;
+    }
 
     return (
         <div className="admin-container">
@@ -97,11 +103,11 @@ const AdminLayout = () => {
 
                         <div className="admin-profile">
                             <div className="profile-info hidden-mobile">
-                                <span className="profile-name">Super Admin</span>
-                                <span className="profile-role">System Administrator</span>
+                                <span className="profile-name">{user?.name || 'Admin'}</span>
+                                <span className="profile-role">{user?.role === 'admin' ? 'System Administrator' : user?.role || 'Admin'}</span>
                             </div>
                             <img
-                                src="https://ui-avatars.com/api/?name=Super+Admin&background=1e3a8a&color=fff"
+                                src={user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'Admin')}&background=1e3a8a&color=fff`}
                                 alt="Profile"
                                 className="profile-avatar"
                             />

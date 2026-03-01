@@ -6,15 +6,16 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    // Load user from localStorage on mount
+    // Load user from localStorage or sessionStorage on mount
     useEffect(() => {
-        const storedUser = localStorage.getItem('sanctus_user');
+        const storedUser = localStorage.getItem('sanctus_user') || sessionStorage.getItem('sanctus_user');
         if (storedUser) {
             try {
                 setUser(JSON.parse(storedUser));
             } catch (error) {
                 console.error('Error parsing stored user:', error);
                 localStorage.removeItem('sanctus_user');
+                sessionStorage.removeItem('sanctus_user');
             }
         }
         setLoading(false);

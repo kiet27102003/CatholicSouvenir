@@ -156,6 +156,37 @@
     background: rgba(255, 255, 255, 0.3);
 }
 
+.sidebar-logout {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 12px 16px;
+    margin: 0 12px 12px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 14px;
+    font-weight: 500;
+    color: #6c757d;
+    text-align: left;
+}
+
+.sidebar-logout:hover {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.sidebar-logout .nav-icon svg {
+    color: #6c757d;
+}
+
+.sidebar-logout:hover .nav-icon svg {
+    color: #dc2626;
+}
+
 .sidebar-footer {
     padding: 20px;
     border-top: 1px solid #e9ecef;

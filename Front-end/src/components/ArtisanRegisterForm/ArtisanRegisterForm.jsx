@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import authService from '../../services/authService';
-import './RegisterForm.css';
+import '../RegisterForm/RegisterForm.css';
+import './ArtisanRegisterForm.css';
 
 const GENDER_OPTIONS = [
     { value: '', label: 'Chọn giới tính' },
@@ -10,7 +11,7 @@ const GENDER_OPTIONS = [
     { value: 'OTHER', label: 'Khác' },
 ];
 
-const RegisterForm = () => {
+const ArtisanRegisterForm = () => {
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
     const [email, setEmail] = useState('');
@@ -19,6 +20,11 @@ const RegisterForm = () => {
     const [phoneNumber, setPhoneNumber] = useState('');
     const [gender, setGender] = useState('');
     const [dateOfBirth, setDateOfBirth] = useState('');
+    const [artisanName, setArtisanName] = useState('');
+    const [bio, setBio] = useState('');
+    const [experienceYear, setExperienceYear] = useState('');
+    const [portfolioUrl, setPortfolioUrl] = useState('');
+    const [specialization, setSpecialization] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
@@ -39,10 +45,16 @@ const RegisterForm = () => {
             return;
         }
 
+        const expYear = experienceYear === '' ? undefined : parseInt(experienceYear, 10);
+        if (experienceYear !== '' && (isNaN(expYear) || expYear < 0)) {
+            setError('Số năm kinh nghiệm không hợp lệ.');
+            return;
+        }
+
         setLoading(true);
 
         try {
-            const result = await authService.register({
+            const result = await authService.registerArtisan({
                 firstName: firstName.trim(),
                 lastName: lastName.trim(),
                 email: email.trim(),
@@ -51,12 +63,17 @@ const RegisterForm = () => {
                 phoneNumber: phoneNumber.trim(),
                 gender: gender || undefined,
                 dateOfBirth: dateOfBirth || undefined,
+                artisanName: artisanName.trim() || undefined,
+                bio: bio.trim() || undefined,
+                experienceYear: expYear,
+                portfolioUrl: portfolioUrl.trim() || undefined,
+                specialization: specialization.trim() || undefined,
             });
 
             if (result.success) {
                 navigate('/login', { state: { message: result.message } });
             } else {
-                setError(result.error || 'Đăng ký thất bại. Vui lòng thử lại.');
+                setError(result.error || 'Đăng ký artisan thất bại. Vui lòng thử lại.');
             }
         } catch (err) {
             setError('Có lỗi xảy ra. Vui lòng thử lại.');
@@ -66,10 +83,10 @@ const RegisterForm = () => {
     };
 
     return (
-        <div className="register-form-container">
+        <div className="register-form-container artisan-register-form">
             <div className="register-form-header">
-                <h1 className="register-title">Đăng ký</h1>
-                <p className="register-subtitle">Tạo tài khoản Sanctus của bạn</p>
+                <h1 className="register-title">Đăng ký Artisan</h1>
+                <p className="register-subtitle">Đăng ký trở thành nghệ nhân trên Sanctus</p>
             </div>
 
             <form onSubmit={handleSubmit} className="register-form">
@@ -85,10 +102,10 @@ const RegisterForm = () => {
 
                 <div className="register-form-row">
                     <div className="form-group">
-                        <label htmlFor="firstName" className="form-label">Họ</label>
+                        <label htmlFor="artisan-firstName" className="form-label">Họ</label>
                         <input
                             type="text"
-                            id="firstName"
+                            id="artisan-firstName"
                             className="form-input"
                             placeholder="Nguyễn"
                             value={firstName}
@@ -98,10 +115,10 @@ const RegisterForm = () => {
                         />
                     </div>
                     <div className="form-group">
-                        <label htmlFor="lastName" className="form-label">Tên</label>
+                        <label htmlFor="artisan-lastName" className="form-label">Tên</label>
                         <input
                             type="text"
-                            id="lastName"
+                            id="artisan-lastName"
                             className="form-input"
                             placeholder="Văn A"
                             value={lastName}
@@ -112,12 +129,24 @@ const RegisterForm = () => {
                     </div>
                 </div>
 
+                <div className="form-group">
+                    <label htmlFor="artisan-artisanName" className="form-label">Tên nghệ nhân / Xưởng</label>
+                    <input
+                        type="text"
+                        id="artisan-artisanName"
+                        className="form-input"
+                        placeholder="Ví dụ: Xưởng gỗ Đức Anh"
+                        value={artisanName}
+                        onChange={(e) => setArtisanName(e.target.value)}
+                    />
+                </div>
+
                 <div className="register-form-row">
                     <div className="form-group">
-                        <label htmlFor="email" className="form-label">Email</label>
+                        <label htmlFor="artisan-email" className="form-label">Email</label>
                         <input
                             type="email"
-                            id="email"
+                            id="artisan-email"
                             className="form-input"
                             placeholder="your@email.com"
                             value={email}
@@ -127,10 +156,10 @@ const RegisterForm = () => {
                         />
                     </div>
                     <div className="form-group">
-                        <label htmlFor="phoneNumber" className="form-label">SĐT</label>
+                        <label htmlFor="artisan-phoneNumber" className="form-label">SĐT</label>
                         <input
                             type="tel"
-                            id="phoneNumber"
+                            id="artisan-phoneNumber"
                             className="form-input"
                             placeholder="0912345678"
                             value={phoneNumber}
@@ -142,23 +171,23 @@ const RegisterForm = () => {
 
                 <div className="register-form-row">
                     <div className="form-group">
-                        <label htmlFor="gender" className="form-label">Giới tính</label>
+                        <label htmlFor="artisan-gender" className="form-label">Giới tính</label>
                         <select
-                            id="gender"
+                            id="artisan-gender"
                             className="form-input form-select"
                             value={gender}
                             onChange={(e) => setGender(e.target.value)}
                         >
                             {GENDER_OPTIONS.map((opt) => (
                                 <option key={opt.value || 'empty'} value={opt.value}>{opt.label}</option>
-                        ))}
-                    </select>
+                            ))}
+                        </select>
                     </div>
                     <div className="form-group">
-                        <label htmlFor="dateOfBirth" className="form-label">Ngày sinh</label>
+                        <label htmlFor="artisan-dateOfBirth" className="form-label">Ngày sinh</label>
                         <input
                             type="date"
-                            id="dateOfBirth"
+                            id="artisan-dateOfBirth"
                             className="form-input"
                             value={dateOfBirth}
                             onChange={(e) => setDateOfBirth(e.target.value)}
@@ -168,11 +197,61 @@ const RegisterForm = () => {
                 </div>
 
                 <div className="form-group">
-                    <label htmlFor="password" className="form-label">Mật khẩu</label>
+                    <label htmlFor="artisan-specialization" className="form-label">Chuyên môn</label>
+                    <input
+                        type="text"
+                        id="artisan-specialization"
+                        className="form-input"
+                        placeholder="Ví dụ: Đồ gỗ, gốm sứ, thêu"
+                        value={specialization}
+                        onChange={(e) => setSpecialization(e.target.value)}
+                    />
+                </div>
+
+                <div className="register-form-row">
+                    <div className="form-group">
+                        <label htmlFor="artisan-experienceYear" className="form-label">Số năm kinh nghiệm</label>
+                        <input
+                            type="number"
+                            id="artisan-experienceYear"
+                            className="form-input"
+                            placeholder="0"
+                            min={0}
+                            value={experienceYear}
+                            onChange={(e) => setExperienceYear(e.target.value)}
+                        />
+                    </div>
+                    <div className="form-group">
+                        <label htmlFor="artisan-portfolioUrl" className="form-label">Link portfolio</label>
+                        <input
+                            type="url"
+                            id="artisan-portfolioUrl"
+                            className="form-input"
+                            placeholder="https://..."
+                            value={portfolioUrl}
+                            onChange={(e) => setPortfolioUrl(e.target.value)}
+                        />
+                    </div>
+                </div>
+
+                <div className="form-group">
+                    <label htmlFor="artisan-bio" className="form-label">Giới thiệu ngắn</label>
+                    <textarea
+                        id="artisan-bio"
+                        className="form-input form-textarea"
+                        placeholder="Giới thiệu về bạn và tác phẩm..."
+                        rows={2}
+                        value={bio}
+                        onChange={(e) => setBio(e.target.value)}
+                    />
+                </div>
+
+                <div className="form-group">
+                    <label htmlFor="artisan-password" className="form-label">Mật khẩu</label>
                     <div className="password-input-container">
                         <input
                             type={showPassword ? 'text' : 'password'}
-                            id="password"
+                            id="artisan-password"
                             className="form-input"
                             placeholder="••••••••"
                             value={password}
@@ -203,11 +282,11 @@ const RegisterForm = () => {
                 </div>
 
                 <div className="form-group">
-                    <label htmlFor="confirmPassword" className="form-label">Xác nhận mật khẩu</label>
+                    <label htmlFor="artisan-confirmPassword" className="form-label">Xác nhận mật khẩu</label>
                     <div className="password-input-container">
                         <input
                             type={showPassword ? 'text' : 'password'}
-                            id="confirmPassword"
+                            id="artisan-confirmPassword"
                             className="form-input"
                             placeholder="••••••••"
                             value={confirmPassword}
@@ -224,30 +303,8 @@ const RegisterForm = () => {
                     className="btn btn-primary register-btn"
                     disabled={loading}
                 >
-                    {loading ? 'Đang đăng ký...' : 'Đăng ký'}
+                    {loading ? 'Đang gửi đăng ký...' : 'Đăng ký Artisan'}
                 </button>
-
-                <div className="register-divider">
-                    <span>HOẶC</span>
-                </div>
-
-                <div className="social-register-group">
-                    <button type="button" className="social-btn google-btn">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-                            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
-                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-                        </svg>
-                        Đăng ký với Google
-                    </button>
-                    <button type="button" className="social-btn apple-btn">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M16.365 14.887c-.015-3.376 2.756-4.99 2.88-5.068-1.565-2.285-3.99-2.596-4.86-2.637-2.073-.208-4.045 1.22-5.1 1.22-1.053 0-2.663-1.187-4.364-1.155-2.22.032-4.272 1.29-5.4 3.253-2.298 3.98-1.895 9.873.353 13.116 1.1 1.583 2.41 3.344 4.095 3.28 1.63-.06 2.253-1.048 4.212-1.048 1.956 0 2.522 1.048 4.244 1.015 1.758-.028 2.895-1.58 3.99-3.176 1.265-1.848 1.782-3.642 1.808-3.738-.04-.016-3.447-1.32-3.463-4.582M14.655 4.607c.895-1.084 1.503-2.593 1.34-4.096-1.294.053-2.855.864-3.778 1.942-.823.953-1.55 2.488-1.36 3.96 1.444.113 2.883-.717 3.798-1.806" />
-                        </svg>
-                        Đăng ký với Apple
-                    </button>
-                </div>
 
                 <div className="register-footer">
                     <p>Đã có tài khoản? <Link to="/login" className="login-link">Đăng nhập</Link></p>
@@ -257,4 +314,4 @@ const RegisterForm = () => {
     );
 };
 
-export default RegisterForm;
+export default ArtisanRegisterForm;

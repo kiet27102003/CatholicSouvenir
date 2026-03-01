@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import authService from '../../services/authService';
 import './LoginForm.css';
@@ -25,19 +25,15 @@ const LoginForm = () => {
 
             if (result.success) {
                 login(result.user, rememberMe);
-
-                // Role-based routing
-                switch (result.user.role) {
-                    case 'admin':
-                        navigate('/admin');
-                        break;
-                    case 'artisan':
-                        navigate('/artisan');
-                        break;
-                    case 'customer':
-                    default:
-                        navigate('/');
-                        break;
+                const role = (result.user?.role ?? '').toUpperCase();
+                if (role === 'CUSTOMER') {
+                    navigate('/');
+                } else if (role === 'ADMIN') {
+                    navigate('/admin');
+                } else if (role === 'ARTISAN') {
+                    navigate('/artisan');
+                } else {
+                    navigate('/');
                 }
             } else {
                 setError(result.error || 'Login failed. Please try again.');
@@ -136,23 +132,10 @@ const LoginForm = () => {
                 </button>
 
                 <div className="login-footer">
-                    <p>Don't have an account? <a href="#register" className="register-link">Create one</a></p>
+                    <p>Don't have an account? <Link to="/register" className="register-link">Create one</Link></p>
                 </div>
 
-                <div className="test-credentials">
-                    <p className="test-title">Test Accounts:</p>
-                    <div className="test-accounts">
-                        <div className="test-account">
-                            <strong>Customer:</strong> customer@sanctus.com / customer123
-                        </div>
-                        <div className="test-account">
-                            <strong>Artisan:</strong> artisan@sanctus.com / artisan123
-                        </div>
-                        <div className="test-account">
-                            <strong>Admin:</strong> admin@sanctus.com / admin123
-                        </div>
-                    </div>
-                </div>
+
             </form>
         </div>
     );

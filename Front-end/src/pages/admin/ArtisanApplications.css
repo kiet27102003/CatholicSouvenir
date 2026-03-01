@@ -168,6 +168,27 @@
     gap: 6px;
 }
 
+/* Modal từ chối */
+.rejection-textarea {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--admin-border);
+    border-radius: var(--admin-radius-sm);
+    font-size: 0.9375rem;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 100px;
+}
+
+.rejection-textarea:focus {
+    outline: none;
+    border-color: var(--color-primary, #0D8ABC);
+}
+
+.rejection-modal .detail-label .required {
+    color: #991b1b;
+}
+
 @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }

@@ -7,11 +7,15 @@ import './ArtisanApplications.css';
 
 const API_URL = '/artisan-applications/pending';
 
+const REVIEW_API = '/artisan-applications';
+
 const ArtisanApplications = () => {
     const [applications, setApplications] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [detailApp, setDetailApp] = useState(null);
+    const [actionLoading, setActionLoading] = useState(null);
+    const [rejectionModal, setRejectionModal] = useState({ open: false, applicationId: null, reason: '', error: null });
 
     const fetchPending = async () => {
         setLoading(true);
@@ -32,6 +36,61 @@ const ArtisanApplications = () => {
     useEffect(() => {
         fetchPending();
     }, []);
+
+    const submitReview = async (applicationId, approved, rejectionReason = '') => {
+        await api.put(`${REVIEW_API}/${applicationId}/review`, {
+            approved,
+            rejectionReason: rejectionReason || '',
+        });
+        setError(null);
+        setDetailApp(null);
+        setRejectionModal({ open: false, applicationId: null, reason: '', error: null });
+        fetchPending();
+    };
+
+    const handleApprove = async (item) => {
+        const id = item.applicationId;
+        if (!id) return;
+        setActionLoading(id);
+        setError(null);
+        try {
+            await submitReview(id, true, '');
+        } catch (err) {
+            setError(err.response?.data?.message || err.message || 'Không thể duyệt đơn.');
+        } finally {
+            setActionLoading(null);
+        }
+    };
+
+    const openRejectionModal = (item) => {
+        setDetailApp(null);
+        setRejectionModal({ open: true, applicationId: item.applicationId, reason: '', error: null });
+    };
+
+    const closeRejectionModal = () => {
+        setRejectionModal({ open: false, applicationId: null, reason: '', error: null });
+    };
+
+    const handleConfirmReject = async () => {
+        const { applicationId, reason } = rejectionModal;
+        const trimmed = (reason || '').trim();
+        if (!trimmed) {
+            setRejectionModal((prev) => ({ ...prev, error: 'Vui lòng nhập lý do từ chối.' }));
+            return;
+        }
+        setActionLoading(applicationId);
+        setRejectionModal((prev) => ({ ...prev, error: null }));
+        try {
+            await submitReview(applicationId, false, trimmed);
+        } catch (err) {
+            setRejectionModal((prev) => ({
+                ...prev,
+                error: err.response?.data?.message || err.message || 'Không thể từ chối đơn.',
+            }));
+        } finally {
+            setActionLoading(null);
+        }
+    };
 
     const getStatusBadgeClass = (status) => {
         if (!status) return 'badge-secondary';
@@ -88,10 +147,22 @@ const ArtisanApplications = () => {
                         >
                             <FiEye />
                         </button>
-                        <button type="button" className="btn-action edit" title="Duyệt">
-                            <FiCheck />
+                        <button
+                            type="button"
+                            className="btn-action edit"
+                            title="Duyệt"
+                            onClick={() => handleApprove(item)}
+                            disabled={actionLoading === item.applicationId}
+                        >
+                            {actionLoading === item.applicationId ? <FiRefreshCw className="spin" /> : <FiCheck />}
                         </button>
-                        <button type="button" className="btn-action delete" title="Từ chối">
+                        <button
+                            type="button"
+                            className="btn-action delete"
+                            title="Từ chối"
+                            onClick={() => openRejectionModal(item)}
+                            disabled={actionLoading === item.applicationId}
+                        >
                             <FiX />
                         </button>
                     </div>
@@ -275,11 +346,81 @@ const ArtisanApplications = () => {
                             <button type="button" className="btn btn-outline" onClick={() => setDetailApp(null)}>
                                 Đóng
                             </button>
-                            <button type="button" className="btn-action edit" title="Duyệt">
-                                <FiCheck /> Duyệt
+                            <button
+                                type="button"
+                                className="btn-action edit"
+                                title="Duyệt"
+                                onClick={() => handleApprove(detailApp)}
+                                disabled={actionLoading === detailApp.applicationId}
+                            >
+                                {actionLoading === detailApp.applicationId ? (
+                                    <FiRefreshCw className="spin" /> 
+                                ) : (
+                                    <FiCheck />
+                                )}{' '}
+                                Duyệt
                             </button>
-                            <button type="button" className="btn-action delete" title="Từ chối">
+                            <button
+                                type="button"
+                                className="btn-action delete"
+                                title="Từ chối"
+                                onClick={() => openRejectionModal(detailApp)}
+                                disabled={actionLoading === detailApp.applicationId}
+                            >
                                 <FiX /> Từ chối
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal nhập lý do từ chối */}
+            {rejectionModal.open && (
+                <div className="detail-overlay" onClick={closeRejectionModal}>
+                    <div className="detail-modal rejection-modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="detail-modal-header">
+                            <h3>Từ chối đơn đăng ký</h3>
+                            <button
+                                type="button"
+                                className="detail-close"
+                                onClick={closeRejectionModal}
+                                aria-label="Đóng"
+                            >
+                                &times;
+                            </button>
+                        </div>
+                        <div className="detail-modal-body">
+                            <label className="detail-label" htmlFor="rejection-reason">
+                                Lý do từ chối <span className="required">*</span>
+                            </label>
+                            <textarea
+                                id="rejection-reason"
+                                className="rejection-textarea"
+                                placeholder="Nhập lý do từ chối..."
+                                value={rejectionModal.reason}
+                                onChange={(e) =>
+                                    setRejectionModal((prev) => ({ ...prev, reason: e.target.value, error: null }))
+                                }
+                                rows={4}
+                                disabled={!!actionLoading}
+                            />
+                            {rejectionModal.error && (
+                                <div className="artisan-app-alert error" style={{ marginTop: 12 }}>
+                                    {rejectionModal.error}
+                                </div>
+                            )}
+                        </div>
+                        <div className="detail-modal-footer">
+                            <button type="button" className="btn btn-outline" onClick={closeRejectionModal}>
+                                Hủy
+                            </button>
+                            <button
+                                type="button"
+                                className="btn-action delete"
+                                onClick={handleConfirmReject}
+                                disabled={!!actionLoading}
+                            >
+                                {actionLoading ? <FiRefreshCw className="spin" /> : <FiX />} Xác nhận từ chối
                             </button>
                         </div>
                     </div>

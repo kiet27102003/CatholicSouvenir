@@ -5,12 +5,11 @@ import './AdminLayout.css';
 import {
     FiSettings,
     FiUsers,
-    FiShield,
-    FiKey,
     FiMenu,
     FiBell,
     FiSearch,
-    FiLogOut
+    FiLogOut,
+    FiFileText
 } from 'react-icons/fi';
 
 const AdminLayout = () => {
@@ -24,16 +23,15 @@ const AdminLayout = () => {
     };
 
     const menuItems = [
-        { path: '/admin/settings', name: 'System Configuration', icon: <FiSettings /> },
-        { path: '/admin/users', name: 'User Management', icon: <FiUsers /> },
-        { path: '/admin/security', name: 'Security Logs', icon: <FiShield /> },
-        { path: '/admin/api-keys', name: 'API Keys', icon: <FiKey /> },
+        { path: '/admin/settings', name: 'Cấu hình hệ thống', icon: <FiSettings /> },
+        { path: '/admin/users', name: 'Quản lý người dùng', icon: <FiUsers /> },
+        { path: '/admin/artisan-applications', name: 'Artisan Application', icon: <FiFileText /> },
     ];
 
     // Derive page title from path
     const getPageTitle = () => {
         const item = menuItems.find(item => location.pathname.includes(item.path));
-        return item ? item.name : 'Admin Dashboard';
+        return item ? item.name : 'Trang quản trị';
     };
 
     const handleLogout = () => {
@@ -55,7 +53,7 @@ const AdminLayout = () => {
                 </div>
 
                 <nav className="sidebar-nav">
-                    <div className="nav-section-title">MAIN MENU</div>
+                    <div className="nav-section-title">Menu chính</div>
                     <ul>
                         {menuItems.map((item) => (
                             <li key={item.path}>
@@ -74,7 +72,7 @@ const AdminLayout = () => {
                 <div className="sidebar-footer">
                     <button className="logout-btn" onClick={handleLogout}>
                         <FiLogOut className="nav-icon" />
-                        <span className="nav-text">Log Out</span>
+                        <span className="nav-text">Đăng xuất</span>
                     </button>
                 </div>
             </aside>
@@ -84,16 +82,19 @@ const AdminLayout = () => {
                 {/* Topbar */}
                 <header className="admin-topbar">
                     <div className="topbar-left">
-                        <button className="toggle-sidebar-btn" onClick={toggleSidebar}>
+                        <button className="toggle-sidebar-btn" onClick={toggleSidebar} aria-label="Toggle menu">
                             <FiMenu />
                         </button>
-                        <h1 className="page-title">{getPageTitle()}</h1>
+                        <div>
+                            <div className="admin-breadcrumb">Admin / <span>{getPageTitle()}</span></div>
+                            <h1 className="page-title">{getPageTitle()}</h1>
+                        </div>
                     </div>
 
                     <div className="topbar-right">
                         <div className="search-bar hidden-mobile">
                             <FiSearch className="search-icon" />
-                            <input type="text" placeholder="Search across admin..." />
+                            <input type="text" placeholder="Tìm kiếm..." />
                         </div>
 
                         <button className="icon-btn">

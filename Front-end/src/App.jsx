@@ -5,10 +5,10 @@ import LoginPage from './pages/LoginPage'
 import ArtisanDashboard from './pages/artisan/ArtisanDashboard'
 
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
-import RegisterPage from './pages/RegisterPage'
 import CustomerLayout from './pages/customer/CustomerLayout'
 import ProfilePage from './pages/customer/ProfilePage'
 import OrderHistoryPage from './pages/customer/OrderHistoryPage'
+import RegisterForm from './components/RegisterForm/RegisterForm'
 import ProductDetailsPage from './pages/ProductDetailsPage'
 import ArtisanDirectoryPage from './pages/ArtisanDirectoryPage'
 import ArtisanProfilePage from './pages/ArtisanProfilePage'
@@ -21,6 +21,7 @@ import CartDrawer from './components/CartDrawer/CartDrawer'
 import AdminLayout from './pages/admin/AdminLayout'
 import SystemConfig from './pages/admin/SystemConfig'
 import UserManager from './pages/admin/UserManager'
+import ArtisanApplications from './pages/admin/ArtisanApplications'
 
 function App() {
   return (
@@ -29,7 +30,7 @@ function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/register" element={<RegisterForm />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/product/:id" element={<ProductDetailsPage />} />
         <Route path="/artisans" element={<ArtisanDirectoryPage />} />
@@ -42,8 +43,7 @@ function App() {
           <Route index element={<Navigate to="/admin/settings" replace />} />
           <Route path="settings" element={<SystemConfig />} />
           <Route path="users" element={<UserManager />} />
-          <Route path="security" element={<div className="p-8">Security Logs coming soon...</div>} />
-          <Route path="api-keys" element={<div className="p-8">API Keys coming soon...</div>} />
+          <Route path="artisan-applications" element={<ArtisanApplications />} />
         </Route>
 
         {/* Customer Routes inside Layout */}

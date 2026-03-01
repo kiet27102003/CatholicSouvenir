@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { FiSearch, FiFilter, FiEdit2, FiTrash2, FiPlus, FiMoreVertical } from 'react-icons/fi';
+import { FiSearch, FiFilter, FiEdit2, FiTrash2, FiPlus, FiMoreVertical, FiUsers } from 'react-icons/fi';
+import './admin-common.css';
 import './UserManager.css';
 
 // Mock Data
@@ -35,56 +36,52 @@ const UserManager = () => {
     };
 
     return (
-        <div className="user-manager-page">
-            {/* Header Section */}
-            <div className="page-header flex-between align-center">
+        <div className="admin-page user-manager-page">
+            <div className="admin-page-header user-manager-header">
                 <div>
-                    <h2>User Management</h2>
-                    <p className="subtitle">Manage user accounts, roles, and permissions.</p>
+                    <h2>Quản lý người dùng</h2>
+                    <p className="admin-page-subtitle">Quản lý tài khoản, vai trò và quyền hạn.</p>
                 </div>
-                <button className="btn btn-primary btn-icon">
-                    <FiPlus className="icon-mr" />
-                    Add New User
+                <button type="button" className="btn btn-primary btn-icon">
+                    <FiPlus />
+                    Thêm người dùng
                 </button>
             </div>
 
-            {/* Controls: Search and Filter */}
             <div className="controls-bar">
                 <div className="search-box">
                     <FiSearch className="control-icon" />
                     <input
                         type="text"
-                        placeholder="Search by name or email..."
+                        placeholder="Tìm theo tên hoặc email..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
-
                 <div className="filter-box">
                     <FiFilter className="control-icon" />
                     <select
                         value={roleFilter}
                         onChange={(e) => setRoleFilter(e.target.value)}
                     >
-                        <option value="All">All Roles</option>
+                        <option value="All">Tất cả vai trò</option>
                         <option value="Admin">Admin</option>
-                        <option value="Artisan">Artisan</option>
-                        <option value="User">User</option>
+                        <option value="Artisan">Thợ thủ công</option>
+                        <option value="User">Người dùng</option>
                     </select>
                 </div>
             </div>
 
-            {/* Data Table */}
-            <div className="table-card">
+            <div className="admin-card table-card">
                 <div className="table-responsive">
                     <table className="admin-table">
                         <thead>
                             <tr>
                                 <th width="50">#</th>
-                                <th width="300">User</th>
-                                <th width="150">Role</th>
-                                <th width="150">Status</th>
-                                <th width="120" className="text-right">Actions</th>
+                                <th width="300">Người dùng</th>
+                                <th width="150">Vai trò</th>
+                                <th width="150">Trạng thái</th>
+                                <th width="120" className="text-right">Thao tác</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -127,10 +124,10 @@ const UserManager = () => {
                             ) : (
                                 <tr>
                                     <td colSpan="5" className="empty-state">
-                                        <div className="empty-state-content">
-                                            <FiUsers className="empty-icon" />
-                                            <h4>No users found</h4>
-                                            <p>Try adjusting your search or filters.</p>
+                                        <div className="admin-empty-state">
+                                            <FiUsers style={{ fontSize: '2.5rem', color: 'var(--admin-border)' }} />
+                                            <h4>Không tìm thấy người dùng</h4>
+                                            <p>Thử thay đổi từ khóa hoặc bộ lọc.</p>
                                         </div>
                                     </td>
                                 </tr>
@@ -142,12 +139,12 @@ const UserManager = () => {
                 {/* Pagination stub */}
                 <div className="table-footer">
                     <span className="showing-text">
-                        Showing {filteredUsers.length} of {users.length} users
+                        Hiển thị {filteredUsers.length} / {users.length} người dùng
                     </span>
                     <div className="pagination">
-                        <button className="btn-page" disabled>Previous</button>
-                        <button className="btn-page active">1</button>
-                        <button className="btn-page">Next</button>
+                        <button type="button" className="btn-page" disabled>Trước</button>
+                        <button type="button" className="btn-page active">1</button>
+                        <button type="button" className="btn-page">Sau</button>
                     </div>
                 </div>
             </div>

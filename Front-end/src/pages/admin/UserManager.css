@@ -1,50 +1,17 @@
-/* UserManager.css */
+/* UserManager.css - extends admin-common */
 
-.user-manager-page {
-    max-width: 1200px;
-    margin: 0 auto;
-}
-
-.flex-between {
+.user-manager-header {
     display: flex;
     justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 16px;
 }
 
-.align-center {
-    align-items: center;
-}
-
-.page-header {
-    margin-bottom: 24px;
-}
-
-.page-header h2 {
-    font-size: 1.5rem;
-    color: var(--admin-text-primary);
-    margin-bottom: 4px;
-}
-
-.subtitle {
-    color: var(--admin-text-muted);
-    font-size: 0.875rem;
-    margin: 0;
-}
-
-.btn-icon {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.icon-mr {
-    margin-right: 4px;
-}
-
-/* Controls Bar */
 .controls-bar {
     display: flex;
-    gap: 16px;
-    margin-bottom: 24px;
+    gap: 12px;
+    margin-bottom: 20px;
     flex-wrap: wrap;
 }
 
@@ -52,10 +19,10 @@
 .filter-box {
     display: flex;
     align-items: center;
-    background-color: #fff;
+    background: var(--admin-card-bg);
     border: 1px solid var(--admin-border);
-    border-radius: 8px;
-    padding: 0 12px;
+    border-radius: var(--admin-radius-sm);
+    padding: 0 14px;
     height: 40px;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
@@ -63,18 +30,20 @@
 .search-box:focus-within,
 .filter-box:focus-within {
     border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px rgba(43, 74, 156, 0.1);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
 }
 
 .control-icon {
     color: var(--admin-text-muted);
     margin-right: 8px;
     flex-shrink: 0;
+    font-size: 1rem;
 }
 
 .search-box {
     flex-grow: 1;
-    max-width: 400px;
+    min-width: 200px;
+    max-width: 360px;
 }
 
 .search-box input {
@@ -93,16 +62,11 @@
     font-size: 0.875rem;
     color: var(--admin-text-primary);
     cursor: pointer;
-    padding: 8px 0;
+    padding: 0;
 }
 
-/* Data Table Card */
+/* Table */
 .table-card {
-    background: #fff;
-    border-radius: 12px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-    border: 1px solid var(--admin-border);
-    overflow: hidden;
     display: flex;
     flex-direction: column;
 }
@@ -119,31 +83,31 @@
 }
 
 .admin-table th {
-    padding: 16px 20px;
-    background-color: #f8fafc;
+    padding: 14px 20px;
+    background: var(--admin-bg);
     color: var(--admin-text-muted);
     font-weight: 600;
-    font-size: 0.75rem;
+    font-size: 0.6875rem;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.05em;
     border-bottom: 1px solid var(--admin-border);
 }
 
 .admin-table td {
-    padding: 16px 20px;
-    border-bottom: 1px solid var(--admin-border);
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--admin-border-light);
     vertical-align: middle;
+    font-size: 0.875rem;
 }
 
 .admin-table tbody tr {
-    transition: background-color 0.2s ease;
+    transition: background 0.15s ease;
 }
 
 .admin-table tbody tr:hover {
-    background-color: #f8fafc;
+    background: var(--admin-bg);
 }
 
-/* Table Cells specialized */
 .table-user-cell {
     display: flex;
     align-items: center;
@@ -153,7 +117,7 @@
 .table-avatar {
     width: 40px;
     height: 40px;
-    border-radius: 50%;
+    border-radius: 10px;
     object-fit: cover;
     border: 1px solid var(--admin-border);
 }
@@ -175,14 +139,13 @@
     color: var(--admin-text-muted);
 }
 
-/* Roles and Badges */
 .role-tag {
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     font-weight: 500;
-    color: var(--admin-text-primary);
-    background: #f1f5f9;
+    color: var(--admin-text-secondary);
+    background: var(--admin-bg);
     padding: 4px 10px;
-    border-radius: 20px;
+    border-radius: 6px;
     border: 1px solid var(--admin-border);
 }
 
@@ -190,7 +153,7 @@
     display: inline-flex;
     align-items: center;
     padding: 4px 10px;
-    border-radius: 20px;
+    border-radius: 6px;
     font-size: 0.75rem;
     font-weight: 600;
 }
@@ -205,42 +168,41 @@
 }
 
 .badge-success {
-    background-color: #dcfce7;
+    background: #dcfce7;
     color: #166534;
 }
 
 .badge-success::before {
-    background-color: #22c55e;
+    background: #22c55e;
 }
 
 .badge-warning {
-    background-color: #fef3c7;
+    background: #fef3c7;
     color: #92400e;
 }
 
 .badge-warning::before {
-    background-color: #f59e0b;
+    background: #f59e0b;
 }
 
 .badge-danger {
-    background-color: #fee2e2;
+    background: #fee2e2;
     color: #991b1b;
 }
 
 .badge-danger::before {
-    background-color: #ef4444;
+    background: #ef4444;
 }
 
 .badge-secondary {
-    background-color: #f1f5f9;
+    background: #f1f5f9;
     color: #475569;
 }
 
 .badge-secondary::before {
-    background-color: #64748b;
+    background: #64748b;
 }
 
-/* Action Buttons */
 .action-buttons {
     display: flex;
     align-items: center;
@@ -256,69 +218,43 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 6px;
+    border-radius: var(--admin-radius-sm);
     color: var(--admin-text-muted);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background 0.2s ease, color 0.2s ease;
 }
 
 .btn-action.edit:hover {
-    background-color: #e0f2fe;
+    background: #e0f2fe;
     color: #0284c7;
 }
 
 .btn-action.delete:hover {
-    background-color: #fee2e2;
+    background: #fee2e2;
     color: #ef4444;
 }
 
 .btn-action.more:hover {
-    background-color: var(--admin-border);
+    background: var(--admin-border);
     color: var(--admin-text-primary);
 }
 
-/* Empty State */
 .empty-state {
     text-align: center;
     padding: 48px 20px;
 }
 
-.empty-state-content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    color: var(--admin-text-muted);
-}
-
-.empty-icon {
-    font-size: 3rem;
-    color: #cbd5e1;
-    margin-bottom: 16px;
-}
-
-.empty-state-content h4 {
-    font-size: 1.125rem;
-    color: var(--admin-text-primary);
-    margin-bottom: 8px;
-}
-
-.empty-state-content p {
-    font-size: 0.875rem;
-}
-
-/* Table Footer / Pagination */
 .table-footer {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 16px 20px;
-    background-color: #f8fafc;
+    padding: 14px 20px;
+    background: var(--admin-bg);
     border-top: 1px solid var(--admin-border);
 }
 
 .showing-text {
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
     color: var(--admin-text-muted);
 }
 
@@ -329,57 +265,71 @@
 }
 
 .btn-page {
-    background: #fff;
+    background: var(--admin-card-bg);
     border: 1px solid var(--admin-border);
     padding: 6px 12px;
-    font-size: 0.875rem;
-    border-radius: 6px;
+    font-size: 0.8125rem;
+    border-radius: var(--admin-radius-sm);
     color: var(--admin-text-primary);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background 0.2s ease, border-color 0.2s ease;
 }
 
 .btn-page:hover:not(:disabled) {
-    background-color: #f1f5f9;
+    background: var(--admin-border-light);
 }
 
 .btn-page.active {
-    background-color: var(--color-primary);
+    background: var(--color-primary);
     color: #fff;
     border-color: var(--color-primary);
 }
 
 .btn-page:disabled {
-    background-color: #f8fafc;
-    color: #cbd5e1;
+    background: var(--admin-bg);
+    color: var(--admin-text-muted);
     cursor: not-allowed;
 }
 
-/* Text Utils */
 .text-right {
     text-align: right;
 }
 
-/* Responsive */
+.text-muted {
+    color: var(--admin-text-muted);
+    font-size: 0.875rem;
+}
+
+.animate-fade-in.row-delay {
+    animation: fadeIn 0.25s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
 @media (max-width: 768px) {
-    .page-header {
+    .user-manager-header {
         flex-direction: column;
-        align-items: flex-start;
-        gap: 16px;
+        align-items: stretch;
     }
 
     .controls-bar {
         flex-direction: column;
     }
 
-    .search-box,
-    .filter-box {
-        max-width: 100%;
-        width: 100%;
+    .search-box {
+        max-width: none;
     }
 
     .table-footer {
         flex-direction: column;
-        gap: 16px;
+        gap: 12px;
+    }
+
+    .admin-table th,
+    .admin-table td {
+        padding: 12px 14px;
     }
 }

@@ -1,0 +1,155 @@
+/* Shared styles for all admin pages - import in each page or in AdminLayout */
+
+/* Page wrapper - use class "admin-page" on root of each page */
+.admin-page {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.admin-page-header {
+    margin-bottom: 24px;
+}
+
+.admin-page-header h2 {
+    font-size: 1.375rem;
+    font-weight: 600;
+    color: var(--admin-text-primary);
+    margin: 0 0 4px 0;
+    font-family: var(--font-primary);
+}
+
+.admin-page-subtitle {
+    font-size: 0.875rem;
+    color: var(--admin-text-muted);
+    margin: 0;
+}
+
+/* Card - use for sections */
+.admin-card {
+    background: var(--admin-card-bg);
+    border-radius: var(--admin-radius);
+    border: 1px solid var(--admin-border);
+    box-shadow: var(--admin-shadow);
+    overflow: hidden;
+}
+
+.admin-card-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--admin-border-light);
+    background: var(--admin-bg);
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--admin-text-primary);
+}
+
+.admin-card-body {
+    padding: 20px 24px;
+}
+
+/* Buttons - use with admin-card or standalone */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 18px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    font-family: var(--font-primary);
+    border-radius: var(--admin-radius-sm);
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    border: 1px solid transparent;
+}
+
+.btn-primary {
+    background: var(--color-primary);
+    color: #fff;
+    border-color: var(--color-primary);
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: var(--color-primary-dark);
+    border-color: var(--color-primary-dark);
+}
+
+.btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btn-outline {
+    background: transparent;
+    color: var(--admin-text-primary);
+    border-color: var(--admin-border);
+}
+
+.btn-outline:hover:not(:disabled) {
+    background: var(--admin-bg);
+    border-color: var(--admin-text-muted);
+}
+
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 0.8125rem;
+}
+
+.btn-icon {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Form elements - shared */
+.admin-form-group {
+    margin-bottom: 20px;
+    max-width: 560px;
+}
+
+.admin-form-group label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--admin-text-primary);
+    margin-bottom: 6px;
+}
+
+.admin-form-input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--admin-border);
+    border-radius: var(--admin-radius-sm);
+    font-size: 0.875rem;
+    color: var(--admin-text-primary);
+    background: var(--admin-card-bg);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.admin-form-input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+.admin-form-input::placeholder {
+    color: var(--admin-text-muted);
+}
+
+/* Empty / placeholder state */
+.admin-empty-state {
+    text-align: center;
+    padding: 48px 24px;
+    color: var(--admin-text-muted);
+}
+
+.admin-empty-state h4 {
+    font-size: 1.125rem;
+    color: var(--admin-text-primary);
+    margin: 0 0 8px 0;
+    font-weight: 600;
+}
+
+.admin-empty-state p {
+    font-size: 0.875rem;
+    margin: 0;
+}

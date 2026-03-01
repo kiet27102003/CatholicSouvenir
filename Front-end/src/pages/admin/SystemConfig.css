@@ -1,53 +1,33 @@
-/* SystemConfig.css */
+/* SystemConfig.css - extends admin-common */
 
 .system-config-page {
-    max-width: 1000px;
-    margin: 0 auto;
-    padding-bottom: 80px;
-    /* space for the fixed bottom bar */
-}
-
-.page-header {
-    margin-bottom: 24px;
-}
-
-.page-header h2 {
-    font-size: 1.5rem;
-    color: var(--admin-text-primary);
-    margin-bottom: 8px;
-}
-
-.subtitle {
-    color: var(--admin-text-muted);
-    font-size: 0.875rem;
+    padding-bottom: 32px;
 }
 
 .config-card {
-    background: #fff;
-    border-radius: 12px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-    border: 1px solid var(--admin-border);
-    overflow: hidden;
+    margin-bottom: 24px;
 }
 
 /* Tabs */
 .tabs-container {
     display: flex;
     border-bottom: 1px solid var(--admin-border);
-    background-color: #f8fafc;
-    padding: 0 16px;
+    background: var(--admin-bg);
+    padding: 0 20px;
+    gap: 4px;
 }
 
 .tab-btn {
     background: none;
     border: none;
-    padding: 16px 24px;
+    padding: 14px 20px;
     font-size: 0.875rem;
     font-weight: 500;
     color: var(--admin-text-muted);
     cursor: pointer;
     border-bottom: 2px solid transparent;
-    transition: all 0.2s ease;
+    margin-bottom: -1px;
+    transition: color 0.2s ease, border-color 0.2s ease;
     font-family: var(--font-primary);
 }
 
@@ -58,26 +38,26 @@
 .tab-btn.active {
     color: var(--color-primary);
     border-bottom-color: var(--color-primary);
-    background-color: #fff;
+    background: var(--admin-card-bg);
 }
 
 /* Tab Content */
 .tab-content {
-    padding: 32px;
+    padding: 28px 24px;
 }
 
-.form-section h3 {
-    font-size: 1.125rem;
-    margin-bottom: 24px;
-    color: var(--admin-text-primary);
+.form-section-title {
+    font-size: 1.0625rem;
     font-weight: 600;
-    border-bottom: 1px solid var(--admin-border);
+    color: var(--admin-text-primary);
+    margin: 0 0 20px 0;
     padding-bottom: 12px;
+    border-bottom: 1px solid var(--admin-border-light);
 }
 
 .form-group {
-    margin-bottom: 24px;
-    max-width: 600px;
+    margin-bottom: 20px;
+    max-width: 560px;
 }
 
 .form-group label {
@@ -85,35 +65,35 @@
     font-size: 0.875rem;
     font-weight: 500;
     color: var(--admin-text-primary);
-    margin-bottom: 8px;
+    margin-bottom: 6px;
 }
 
 .form-input {
     width: 100%;
     padding: 10px 14px;
     border: 1px solid var(--admin-border);
-    border-radius: 6px;
+    border-radius: var(--admin-radius-sm);
     font-size: 0.875rem;
     color: var(--admin-text-primary);
+    background: var(--admin-card-bg);
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
-    background-color: #fff;
 }
 
 .form-input:focus {
     outline: none;
     border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px rgba(43, 74, 156, 0.1);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
 }
 
-/* Custom CSS Toggle Switch */
+/* Toggle row */
 .toggle-group {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 16px;
-    background-color: #f8fafc;
+    padding: 14px 16px;
+    background: var(--admin-bg);
     border: 1px solid var(--admin-border);
-    border-radius: 8px;
+    border-radius: var(--admin-radius-sm);
 }
 
 .toggle-group label {
@@ -121,7 +101,7 @@
 }
 
 .toggle-info p {
-    font-size: 0.8rem;
+    font-size: 0.8125rem;
     color: var(--admin-text-muted);
     margin-top: 4px;
     margin-bottom: 0;
@@ -130,7 +110,7 @@
 .toggle-switch {
     position: relative;
     display: inline-block;
-    width: 50px;
+    width: 48px;
     height: 26px;
     flex-shrink: 0;
 }
@@ -148,8 +128,8 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: #cbd5e1;
-    transition: .4s;
+    background: #cbd5e1;
+    transition: 0.25s ease;
 }
 
 .slider:before {
@@ -159,115 +139,90 @@
     width: 20px;
     left: 3px;
     bottom: 3px;
-    background-color: white;
-    transition: .4s;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    background: #fff;
+    transition: 0.25s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
-input:checked+.slider {
-    background-color: var(--color-primary);
+input:checked + .slider {
+    background: var(--color-primary);
 }
 
-input:focus+.slider {
-    box-shadow: 0 0 1px var(--color-primary);
+input:focus + .slider {
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
 }
 
-input:checked+.slider:before {
-    transform: translateX(24px);
+input:checked + .slider:before {
+    transform: translateX(22px);
 }
 
 .slider.round {
-    border-radius: 34px;
+    border-radius: 26px;
 }
 
 .slider.round:before {
     border-radius: 50%;
 }
 
-/* Special Boxes */
+/* Status box */
 .current-status-box {
     padding: 16px;
     border: 1px solid var(--admin-border);
-    border-radius: 8px;
-    background-color: #fff;
-    margin-top: 24px;
+    border-radius: var(--admin-radius-sm);
+    background: var(--admin-bg);
+    margin-top: 20px;
+    max-width: 560px;
 }
 
 .current-status-box h4 {
     font-size: 0.875rem;
-    margin-bottom: 8px;
+    font-weight: 600;
+    color: var(--admin-text-primary);
+    margin: 0 0 8px 0;
 }
 
 .status-text.success {
-    color: #10b981;
-    /* emerald 500 */
+    color: #059669;
     font-size: 0.875rem;
     font-weight: 500;
-}
-
-/* Floating Save Action Bar */
-.floating-action-bar {
-    position: fixed;
-    bottom: 24px;
-    right: 32px;
-    z-index: 900;
-    background-color: #fff;
-    padding: 12px 24px;
-    border-radius: 8px;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-    border: 1px solid var(--admin-border);
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    animation: slideUp 0.3s ease forwards;
-}
-
-.btn-save {
-    min-width: 160px;
 }
 
 .mt-3 {
     margin-top: 12px;
 }
 
-/* Utility Animations */
-@keyframes slideUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
+/* Save bar - inline below card */
+.config-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
 
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+.btn-save {
+    min-width: 160px;
 }
 
 .animate-fade-in {
-    animation: fadeIn 0.3s ease;
+    animation: fadeIn 0.25s ease;
 }
 
 @keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-
-    to {
-        opacity: 1;
-    }
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
-/* Responsive */
 @media (max-width: 768px) {
-    .floating-action-bar {
-        right: 16px;
-        bottom: 16px;
-        left: 16px;
-        /* stretch on mobile */
-        justify-content: center;
+    .tab-content {
+        padding: 20px 16px;
     }
 
-    .btn-save {
-        width: 100%;
+    .tabs-container {
+        padding: 0 12px;
+        overflow-x: auto;
+    }
+
+    .tab-btn {
+        padding: 12px 14px;
+        white-space: nowrap;
     }
 }

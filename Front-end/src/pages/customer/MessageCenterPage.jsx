@@ -3,75 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import './MessageCenterPage.css';
 
-const MOCK_CONVERSATIONS = [
-    {
-        id: 'c1',
-        artisanId: '1',
-        artisanName: 'Marco V.',
-        artisanAvatar: 'https://i.pravatar.cc/150?img=12',
-        unread: 1,
-        lastMessage: 'I have attached the quotation for your custom rosary.',
-        updatedAt: '2023-10-26T14:30:00',
-        messages: [
-            {
-                id: 'm1',
-                sender: 'customer',
-                text: 'Hello, I would like to request a custom olive wood rosary with silver inlay for my wedding.',
-                timestamp: '2023-10-25T09:00:00'
-            },
-            {
-                id: 'm2',
-                sender: 'artisan',
-                text: 'God bless you! Congratulations on your upcoming wedding. I would be honored to craft this for you. Do you have a specific crucifix design in mind?',
-                timestamp: '2023-10-25T11:30:00'
-            },
-            {
-                id: 'm3',
-                sender: 'customer',
-                text: 'Yes, a traditional San Damiano cross if possible.',
-                timestamp: '2023-10-25T12:15:00'
-            },
-            {
-                id: 'm4',
-                sender: 'artisan',
-                text: 'That is a beautiful choice. I have attached the quotation for this custom piece. Please review it and let me know if you would like to proceed.',
-                timestamp: '2023-10-26T14:30:00',
-                isQuotation: true,
-                quotation: {
-                    id: 'q101',
-                    title: 'Custom Olive Wood & Silver Rosary',
-                    amount: 185.00,
-                    status: 'pending', // pending, accepted, rejected
-                    details: 'San Damiano cross in sterling silver, hand-turned olive wood beads from Bethlehem, silver inlay on "Our Father" beads.',
-                    estimatedDelivery: '3 weeks'
-                }
-            }
-        ]
-    },
-    {
-        id: 'c2',
-        artisanId: '3',
-        artisanName: 'Clara M.',
-        artisanAvatar: 'https://i.pravatar.cc/150?img=32',
-        unread: 0,
-        lastMessage: 'Your order is shipped!',
-        updatedAt: '2023-09-15T08:20:00',
-        messages: [
-            {
-                id: 'm1',
-                sender: 'artisan',
-                text: 'Hello! I wanted to let you know your order has been shipped.',
-                timestamp: '2023-09-15T08:20:00'
-            }
-        ]
-    }
-];
-
 const MessageCenterPage = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
-    const [conversations, setConversations] = useState(MOCK_CONVERSATIONS);
-    const [activeChatId, setActiveChatId] = useState(MOCK_CONVERSATIONS[0]?.id || null);
+    const [conversations, setConversations] = useState([]);
+    const [activeChatId, setActiveChatId] = useState(null);
     const [newMessage, setNewMessage] = useState('');
 
     const activeConversation = conversations.find(c => c.id === activeChatId);
@@ -176,7 +112,12 @@ const MessageCenterPage = () => {
                         <h2>Messages</h2>
                     </div>
                     <div className="conversations-list">
-                        {conversations.map(conv => (
+                        {conversations.length === 0 ? (
+                            <div className="conversations-empty">
+                                <p>No conversations yet.</p>
+                                <p className="text-small">When you contact an artisan or submit a custom request, your messages will appear here.</p>
+                            </div>
+                        ) : conversations.map(conv => (
                             <div
                                 key={conv.id}
                                 className={`conversation-item ${activeChatId === conv.id ? 'active' : ''} ${conv.unread > 0 ? 'unread' : ''}`}

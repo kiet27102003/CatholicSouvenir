@@ -4,77 +4,19 @@ import Footer from '../components/Footer/Footer';
 import ArtisanCard from '../components/FeaturedArtisans/ArtisanCard';
 import './ArtisanDirectoryPage.css';
 
-const MOCK_ARTISANS = [
-    {
-        id: '1',
-        name: 'Marco V.',
-        location: 'Bethlehem, Pennsylvania',
-        description: 'A carpentry master who carves purely crafted wood items by hand.',
-        profileImage: 'https://i.pravatar.cc/150?img=12',
-        productImage: '/src/assets/wooden-bowl.png',
-        specialties: ['Woodworking', 'Carving']
-    },
-    {
-        id: '2',
-        name: 'Elena S.',
-        location: 'Santa Fe, New Mexico',
-        description: 'Traditional woodcarver, forensically crafted with prayer and delicacy.',
-        profileImage: 'https://i.pravatar.cc/150?img=47',
-        productImage: '/src/assets/carved-wood.png',
-        specialties: ['Woodworking', 'Sculpture']
-    },
-    {
-        id: '3',
-        name: 'Clara M.',
-        location: 'Rome, Italy',
-        description: 'Hand-weaves rosaries using age-old techniques and holy intent.',
-        profileImage: 'https://i.pravatar.cc/150?img=32',
-        productImage: '/src/assets/rosary-beads.png',
-        specialties: ['Jewelry', 'Weaving']
-    },
-    {
-        id: '4',
-        name: 'David O.',
-        location: 'Monastery of Christ in the Desert',
-        description: 'Brewer and candle maker focusing on ethically sourced goods.',
-        profileImage: 'https://i.pravatar.cc/150?img=11',
-        productImage: '/src/assets/beeswax-candle.png',
-        specialties: ['Candles', 'Wax']
-    },
-    {
-        id: '5',
-        name: 'Sister Mary Grace',
-        location: 'Avila, Spain',
-        description: 'Illuminated manuscripts and traditional calligraphy.',
-        profileImage: 'https://i.pravatar.cc/150?img=43',
-        productImage: '/src/assets/leather-journal.png',
-        specialties: ['Calligraphy', 'Leatherwork']
-    },
-    {
-        id: '6',
-        name: 'John Paul Metalworks',
-        location: 'Krakow, Poland',
-        description: 'Master silversmiths specializing in crucifixes and medals.',
-        profileImage: 'https://i.pravatar.cc/150?img=53',
-        productImage: '/src/assets/silver-crucifix.png',
-        specialties: ['Metalworking', 'Jewelry']
-    }
-];
-
 const ArtisanDirectoryPage = () => {
     const [artisans, setArtisans] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [filter, setFilter] = useState('All');
 
-    const allSpecialties = ['All', ...new Set(MOCK_ARTISANS.flatMap(a => a.specialties))];
+    const allSpecialties = ['All', ...new Set(artisans.flatMap(a => a.specialties || []))];
 
     useEffect(() => {
         window.scrollTo(0, 0);
-        setTimeout(() => {
-            setArtisans(MOCK_ARTISANS);
-            setLoading(false);
-        }, 500);
+        // TODO: fetch artisans from API when endpoint is available
+        setArtisans([]);
+        setLoading(false);
     }, []);
 
     const filteredArtisans = artisans.filter(artisan => {

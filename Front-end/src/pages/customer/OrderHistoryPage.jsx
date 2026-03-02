@@ -3,51 +3,16 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import './OrderHistoryPage.css';
 
-const MOCK_ORDERS = [
-    {
-        id: 'ORD-2023-001',
-        date: '2023-10-25',
-        total: 125.00,
-        status: 'Delivered',
-        items: [
-            { name: 'Hand-carved Olive Wood Cross', quantity: 1, price: 85.00 },
-            { name: 'Rosary Beads - Lapis Lazuli', quantity: 1, price: 40.00 }
-        ]
-    },
-    {
-        id: 'ORD-2023-002',
-        date: '2023-11-12',
-        total: 450.00,
-        status: 'In Progress',
-        type: 'Custom Request',
-        items: [
-            { name: 'Custom Family Altar Centerpiece', quantity: 1, price: 450.00 }
-        ]
-    }
-];
-
 const OrderHistoryPage = () => {
     const { user } = useAuth();
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Simulate fetching orders from API
-        const fetchOrders = async () => {
-            try {
-                // In reality, fetch(`http://localhost:3001/orders?userId=${user.id}`);
-                setTimeout(() => {
-                    setOrders(MOCK_ORDERS);
-                    setLoading(false);
-                }, 800);
-            } catch (error) {
-                console.error("Failed to fetch orders:", error);
-                setLoading(false);
-            }
-        };
-
-        fetchOrders();
-    }, [user.id]);
+        // TODO: fetch orders from API when endpoint is available
+        setOrders([]);
+        setLoading(false);
+    }, [user?.id]);
 
     const getStatusStyle = (status) => {
         switch (status) {
@@ -85,7 +50,7 @@ const OrderHistoryPage = () => {
                     </svg>
                     <h3>No orders yet</h3>
                     <p>When you place an order, it will appear here.</p>
-                    <button className="btn btn-primary">Start Shopping</button>
+                    <Link to="/" className="btn btn-primary" style={{ textDecoration: 'none' }}>Start Shopping</Link>
                 </div>
             ) : (
                 <div className="orders-list">

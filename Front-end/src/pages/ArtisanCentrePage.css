@@ -1,0 +1,158 @@
+.artisan-centre-page {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.artisan-centre-main {
+    flex: 1;
+}
+
+.artisan-centre-hero {
+    background: linear-gradient(135deg, var(--color-primary-dark) 0%, var(--color-primary) 100%);
+    color: var(--color-text-white);
+    padding: var(--spacing-xl) 0;
+    text-align: center;
+}
+
+.artisan-centre-hero h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.artisan-centre-hero p {
+    font-size: 1rem;
+    opacity: 0.95;
+    max-width: 560px;
+    margin: 0 auto;
+}
+
+.artisan-centre-content {
+    padding: var(--spacing-xl) 0;
+    max-width: 560px;
+    margin: 0 auto;
+}
+
+.artisan-centre-login-prompt {
+    display: flex;
+    justify-content: center;
+    padding: var(--spacing-xl) 0;
+}
+
+.login-prompt-card {
+    background: var(--color-bg);
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-xl);
+    text-align: center;
+    box-shadow: var(--shadow-md);
+}
+
+.login-prompt-card h2 {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.login-prompt-card p {
+    color: var(--color-text-light);
+    margin-bottom: var(--spacing-lg);
+}
+
+.login-prompt-register {
+    margin-top: var(--spacing-md);
+    font-size: 0.9375rem;
+}
+
+.login-prompt-register a {
+    color: var(--color-primary);
+    font-weight: 500;
+}
+
+.artisan-centre-success {
+    display: flex;
+    justify-content: center;
+    padding: var(--spacing-xl) 0;
+}
+
+.success-card {
+    background: var(--color-bg);
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-xl);
+    text-align: center;
+    box-shadow: var(--shadow-md);
+}
+
+.success-icon {
+    color: var(--color-success, #22c55e);
+    margin-bottom: var(--spacing-md);
+}
+
+.success-card h2 {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.success-card p {
+    color: var(--color-text-light);
+    margin-bottom: var(--spacing-lg);
+}
+
+.artisan-centre-form-section {
+    background: var(--color-bg);
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-xl);
+    box-shadow: var(--shadow-md);
+}
+
+.form-section-header {
+    margin-bottom: var(--spacing-lg);
+}
+
+.form-section-header h2 {
+    font-size: 1.25rem;
+    margin-bottom: 0.25rem;
+}
+
+.form-section-header p {
+    color: var(--color-text-light);
+    font-size: 0.9375rem;
+}
+
+.artisan-apply-form .form-group {
+    margin-bottom: var(--spacing-md);
+}
+
+.artisan-apply-form .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-md);
+}
+
+.artisan-apply-form .form-textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+.artisan-apply-form .error-message {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: rgba(220, 53, 69, 0.1);
+    color: #c33;
+    border-radius: var(--radius-md);
+    margin-bottom: var(--spacing-md);
+}
+
+.artisan-apply-form button[type="submit"] {
+    margin-top: var(--spacing-sm);
+}
+
+@media (max-width: 600px) {
+    .artisan-apply-form .form-row {
+        grid-template-columns: 1fr;
+    }
+}

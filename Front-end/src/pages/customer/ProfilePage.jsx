@@ -31,37 +31,19 @@ const ProfilePage = () => {
         setErrorMsg('');
 
         try {
-            // Mocking API call to update user profile
-            const response = await fetch(`http://localhost:3001/users/${user.id}`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    name: formData.name,
-                    phone: formData.phone,
-                    address: formData.address
-                })
+            // TODO: call API to update profile when endpoint is available
+            updateUser({
+                ...user,
+                name: formData.name,
+                phone: formData.phone,
+                address: formData.address
             });
-
-            if (response.ok) {
-                const updatedUser = await response.json();
-                updateUser(updatedUser);
-                setSuccessMsg('Profile updated successfully!');
-            } else {
-                setErrorMsg('Failed to update profile.');
-            }
+            setSuccessMsg('Profile updated successfully!');
+            setTimeout(() => setSuccessMsg(''), 3000);
         } catch (error) {
             setErrorMsg('An error occurred. Please try again.');
         } finally {
             setLoading(false);
-
-            // Clear success message after 3 seconds
-            if (!errorMsg) {
-                setTimeout(() => {
-                    setSuccessMsg('');
-                }, 3000);
-            }
         }
     };
 

@@ -1,7 +1,7 @@
 import React from 'react';
 import './Sidebar.css';
 
-const Sidebar = ({ user, activeView, setActiveView, onLogout }) => {
+const Sidebar = ({ user, activeView, setActiveView, onLogout, isOpen = false, onClose }) => {
     const menuItems = [
         { id: 'dashboard', icon: 'dashboard', label: 'Dashboard', badge: null },
         { id: 'commissions', icon: 'work', label: 'Commissions', badge: 3 },
@@ -11,7 +11,8 @@ const Sidebar = ({ user, activeView, setActiveView, onLogout }) => {
     ];
 
     return (
-        <aside className="artisan-sidebar">
+        <aside className={`artisan-sidebar ${isOpen ? 'open' : ''}`}>
+            {onClose && <button type="button" className="sidebar-close-btn" aria-label="Đóng menu" onClick={onClose}>&times;</button>}
             <div className="sidebar-header">
                 <div className="sidebar-logo">
                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -40,6 +41,7 @@ const Sidebar = ({ user, activeView, setActiveView, onLogout }) => {
                         key={item.id}
                         className={`nav-item ${activeView === item.id ? 'active' : ''}`}
                         onClick={() => setActiveView(item.id)}
+                        type="button"
                     >
                         <div className="nav-item-content">
                             <span className="nav-icon">{getIcon(item.icon)}</span>

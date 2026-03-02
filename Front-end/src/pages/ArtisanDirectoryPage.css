@@ -134,7 +134,35 @@
         font-size: 2.25rem;
     }
 
+    .directory-content {
+        padding: var(--spacing-xl) var(--spacing-md);
+    }
+
+    .directory-filters {
+        margin-bottom: var(--spacing-xl);
+    }
+
     .artisans-grid-full {
         grid-template-columns: 1fr;
+        gap: var(--spacing-lg);
+    }
+}
+
+@media (max-width: 480px) {
+    .directory-hero h1 {
+        font-size: 1.75rem;
+    }
+
+    .directory-hero p {
+        font-size: 1rem;
+    }
+
+    .specialty-filters {
+        gap: var(--spacing-xs);
+    }
+
+    .filter-btn {
+        padding: 0.4rem 1rem;
+        font-size: 0.875rem;
     }
 }

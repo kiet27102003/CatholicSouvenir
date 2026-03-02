@@ -5,59 +5,6 @@ import Footer from '../components/Footer/Footer';
 import { useCart } from '../context/CartContext';
 import './ProductDetailsPage.css';
 
-const MOCK_PRODUCTS = {
-    '1': {
-        id: '1',
-        title: 'Sterling Silver Crucifix',
-        artisan: "Maria's Relics",
-        price: 89,
-        salePrice: 69,
-        onSale: true,
-        image: '/src/assets/silver-crucifix.png',
-        description: 'A beautifully crafted sterling silver crucifix, forged by hand using traditional techniques handed down through generations. Perfect for personal devotion or as a meaningful gift for a loved one. Includes an 18-inch silver chain.',
-        materials: ['Sterling Silver .925'],
-        dimensions: '2" x 1.2"',
-        productionTime: 'Ready to ship'
-    },
-    '2': {
-        id: '2',
-        title: 'Hand-Thrown Prayer Bowl',
-        artisan: 'Patrick Clay',
-        price: 52,
-        onSale: false,
-        image: '/src/assets/ceramic-bowl.png',
-        description: 'Earthy and grounding, this prayer bowl is thrown on a traditional potter\'s wheel and glazed with natural minerals. Ideal for holding rosaries, prayer cards, or small offerings.',
-        materials: ['Stoneware Clay', 'Natural Glaze'],
-        dimensions: '5" diameter x 2" height',
-        productionTime: 'Ready to ship'
-    },
-    '3': {
-        id: '3',
-        image: '/src/assets/leather-journal.png',
-        title: 'Refillable Leather Journal',
-        artisan: 'Augustinian Leather',
-        price: 128,
-        salePrice: 99,
-        onSale: true,
-        description: 'A premium full-grain leather journal perfect for spiritual reflections and prayers. Features blind-debossed cross on the cover and includes one inserts of 100gsm acid-free paper.',
-        materials: ['Full-grain Vegetable Tanned Leather', 'Acid-free Paper'],
-        dimensions: '8.5" x 5.5"',
-        productionTime: 'Ready to ship'
-    },
-    '4': {
-        id: '4',
-        image: '/src/assets/beeswax-candle.png',
-        title: 'Pure Beeswax Altar Candle',
-        artisan: 'Trappist Wicks',
-        price: 34,
-        onSale: false,
-        description: '100% pure beeswax pillar candle, poured by hand. These candles burn clean and bright with a subtle, natural honey scent, perfect for home altars or prayer spaces.',
-        materials: ['100% Pure Beeswax', 'Cotton Wick'],
-        dimensions: '6" height x 3" diameter',
-        productionTime: 'Ready to ship'
-    }
-};
-
 const ProductDetailsPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -67,13 +14,10 @@ const ProductDetailsPage = () => {
     const [quantity, setQuantity] = useState(1);
 
     useEffect(() => {
-        // Simulate API fetch
         window.scrollTo(0, 0);
-        setTimeout(() => {
-            const foundProduct = MOCK_PRODUCTS[id];
-            setProduct(foundProduct || null);
-            setLoading(false);
-        }, 500);
+        // TODO: fetch product by id from API when endpoint is available
+        setProduct(null);
+        setLoading(false);
     }, [id]);
 
     const handleAddToCart = () => {

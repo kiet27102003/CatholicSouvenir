@@ -5,39 +5,6 @@ import Footer from '../components/Footer/Footer';
 import ProductCard from '../components/ProductGrid/ProductCard';
 import './ArtisanProfilePage.css';
 
-const MOCK_ARTISANS_DETAILS = {
-    '1': {
-        id: '1',
-        name: 'Marco V.',
-        location: 'Bethlehem, Pennsylvania',
-        description: 'A carpentry master who carves purely crafted wood items by hand.',
-        about: 'I have been carving olive wood and cedar for over 25 years. My craft was passed down by my father, who learned it from his. Each piece is prayed over during the carving process, ensuring it carries the peace of Christ into your home.',
-        profileImage: 'https://i.pravatar.cc/250?img=12',
-        coverImage: '/src/assets/wood-workshop.png', // Fallback to a color if not found
-        specialties: ['Woodworking', 'Carving'],
-        rating: 4.9,
-        reviews: 124,
-        products: [
-            { id: 101, title: 'Olive Wood Cross', price: 45, onSale: false, image: '/src/assets/silver-crucifix.png' }, // reusing images for mockup
-            { id: 102, title: 'Cedar Rosary Box', price: 35, onSale: true, salePrice: 28, image: '/src/assets/wooden-bowl.png' },
-            { id: 103, title: 'Carved Nativity Set', price: 150, onSale: false, image: '/src/assets/carved-wood.png' },
-        ]
-    },
-    // Mock for ID 2
-    '2': {
-        id: '2',
-        name: 'Elena S.',
-        location: 'Santa Fe, New Mexico',
-        description: 'Traditional woodcarver, forensically crafted with prayer and delicacy.',
-        about: 'My work is inspired by the vibrant faith of the Southwest. I specialize in traditional retablos and bultos, using natural pigments and locally sourced pine.',
-        profileImage: 'https://i.pravatar.cc/250?img=47',
-        specialties: ['Woodworking', 'Sculpture'],
-        rating: 4.8,
-        reviews: 89,
-        products: []
-    }
-};
-
 const ArtisanProfilePage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -46,12 +13,9 @@ const ArtisanProfilePage = () => {
 
     useEffect(() => {
         window.scrollTo(0, 0);
-        // Simulate API fetch
-        setTimeout(() => {
-            const found = MOCK_ARTISANS_DETAILS[id] || MOCK_ARTISANS_DETAILS['1']; // Fallback to 1 for demo
-            setArtisan(found);
-            setLoading(false);
-        }, 600);
+        // TODO: fetch artisan by id from API when endpoint is available
+        setArtisan(null);
+        setLoading(false);
     }, [id]);
 
     const handleCustomRequest = () => {
@@ -66,6 +30,25 @@ const ArtisanProfilePage = () => {
                     <div className="spinner"></div>
                     <p>Loading artisan profile...</p>
                 </div>
+                <Footer />
+            </div>
+        );
+    }
+
+    if (!artisan) {
+        return (
+            <div className="artisan-profile-page">
+                <Header />
+                <main className="artisan-main">
+                    <div className="container artisan-content-wrapper">
+                        <button className="back-link" onClick={() => navigate('/artisans')}>&larr; Back to Directory</button>
+                        <div className="artisan-loading">
+                            <h2>Artisan not found</h2>
+                            <p>We couldn't find this artisan profile.</p>
+                            <button className="btn btn-primary" onClick={() => navigate('/artisans')}>Back to Directory</button>
+                        </div>
+                    </div>
+                </main>
                 <Footer />
             </div>
         );
@@ -119,7 +102,7 @@ const ArtisanProfilePage = () => {
                             </div>
 
                             <div className="profile-specialties">
-                                {artisan.specialties.map(spec => (
+                                {(artisan.specialties || []).map(spec => (
                                     <span key={spec} className="badge badge-outline">{spec}</span>
                                 ))}
                             </div>

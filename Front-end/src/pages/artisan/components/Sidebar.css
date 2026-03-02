@@ -216,13 +216,45 @@
     font-style: italic;
 }
 
+.sidebar-close-btn {
+    display: none;
+}
+
 @media (max-width: 1024px) {
     .artisan-sidebar {
         transform: translateX(-100%);
         transition: transform 0.3s ease;
+        box-shadow: 4px 0 20px rgba(0,0,0,0.1);
     }
 
     .artisan-sidebar.open {
         transform: translateX(0);
+    }
+
+    .sidebar-close-btn {
+        display: flex;
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        width: 40px;
+        height: 40px;
+        align-items: center;
+        justify-content: center;
+        background: transparent;
+        border: none;
+        font-size: 1.5rem;
+        color: #6c757d;
+        cursor: pointer;
+        border-radius: 8px;
+    }
+
+    .sidebar-close-btn:hover {
+        background: #f8f9fa;
+        color: #1a1a1a;
+    }
+
+    .sidebar-header {
+        position: relative;
+        padding-right: 56px;
     }
 }

@@ -12,6 +12,7 @@ import RegisterForm from './components/RegisterForm/RegisterForm'
 import ProductDetailsPage from './pages/ProductDetailsPage'
 import ArtisanDirectoryPage from './pages/ArtisanDirectoryPage'
 import ArtisanProfilePage from './pages/ArtisanProfilePage'
+import ArtisanCentrePage from './pages/ArtisanCentrePage'
 import CustomRequestPage from './pages/customer/CustomRequestPage'
 import MessageCenterPage from './pages/customer/MessageCenterPage'
 import CheckoutPage from './pages/CheckoutPage'
@@ -35,6 +36,7 @@ function App() {
         <Route path="/product/:id" element={<ProductDetailsPage />} />
         <Route path="/artisans" element={<ArtisanDirectoryPage />} />
         <Route path="/artisans/:id" element={<ArtisanProfilePage />} />
+        <Route path="/artisan-centre" element={<ArtisanCentrePage />} />
         <Route path="/checkout" element={<CheckoutPage />} />
         <Route path="/artisan" element={<ArtisanDashboard />} />
 

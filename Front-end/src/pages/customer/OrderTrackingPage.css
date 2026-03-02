@@ -336,6 +336,25 @@
     }
 }
 
+@media (max-width: 768px) {
+    .tracking-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .tracking-header-left h1 {
+        font-size: 1.5rem;
+    }
+
+    .est-delivery {
+        padding: var(--spacing-sm) var(--spacing-md);
+    }
+
+    .est-date {
+        font-size: 1rem;
+    }
+}
+
 @media (max-width: 640px) {
     .timeline-visual-container {
         display: none;

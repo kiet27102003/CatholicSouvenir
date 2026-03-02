@@ -1,0 +1,20 @@
+{
+  "common": {
+    "shop": "Cửa hàng",
+    "artisans": "Nghệ nhân",
+    "about": "Giới thiệu",
+    "blog": "Blog",
+    "artisanCentre": "Artisan Centre",
+    "login": "Đăng nhập",
+    "logout": "Đăng xuất",
+    "searchPlaceholder": "Tìm kiếm sản phẩm thánh...",
+    "myProfile": "Hồ sơ của tôi",
+    "myOrders": "Đơn hàng của tôi",
+    "dashboard": "Bảng điều khiển",
+    "closeMenu": "Đóng menu"
+  },
+  "home": {
+    "heroTitle": "Sacred Crafts, Faithful Hands",
+    "heroSubtitle": "Discover handcrafted religious items made with prayer and devotion by our community of artisans."
+  }
+}

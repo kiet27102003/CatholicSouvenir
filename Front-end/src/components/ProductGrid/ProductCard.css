@@ -84,3 +84,17 @@
         height: 220px;
     }
 }
+
+@media (max-width: 480px) {
+    .product-image {
+        height: 200px;
+    }
+
+    .product-info {
+        padding: var(--spacing-sm);
+    }
+
+    .product-title {
+        font-size: 1rem;
+    }
+}

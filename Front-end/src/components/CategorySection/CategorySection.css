@@ -54,4 +54,10 @@
     .category-grid {
         grid-template-columns: 1fr;
     }
+
+    .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-sm);
+    }
 }

@@ -2,24 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import './OrderTrackingPage.css';
 
-const MOCK_ORDER = {
-    id: 'ORD-2023-8942',
-    date: 'October 26, 2023',
-    status: 'in_progress', // payment_received, in_progress, shipped, delivered
-    estimatedDelivery: 'Nov 15, 2023',
-    artisanName: 'Marco V.',
-    totalAmount: 185.00,
-    item: 'Custom Olive Wood & Silver Rosary',
-    shippingAddress: 'Maria Rossi, 123 Via Roma, Rome, Italy, 00100',
-    progressSteps: [
-        { id: '1', title: 'Payment Received', date: 'Oct 26, 2023, 10:30 AM', completed: true, description: 'Your payment has been successfully processed.' },
-        { id: '2', title: 'Artisan Review', date: 'Oct 26, 2023, 02:15 PM', completed: true, description: 'Marco V. has reviewed your specifications and is preparing materials.' },
-        { id: '3', title: 'Crafting in Progress', date: 'Oct 28, 2023, 09:00 AM', completed: true, description: 'Wood carving and silver molding have begun.' },
-        { id: '4', title: 'Final Finishing', date: 'Pending', completed: false, description: 'Sanding, oiling, and final assembly.' },
-        { id: '5', title: 'Shipped', date: 'Pending', completed: false, description: 'Your item will be handed over to the courier.' },
-    ]
-};
-
 const OrderTrackingPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -28,11 +10,9 @@ const OrderTrackingPage = () => {
 
     useEffect(() => {
         window.scrollTo(0, 0);
-        // Simulate fetch
-        setTimeout(() => {
-            setOrder(MOCK_ORDER);
-            setLoading(false);
-        }, 600);
+        // TODO: fetch order by id from API when endpoint is available
+        setOrder(null);
+        setLoading(false);
     }, [id]);
 
     if (loading) {

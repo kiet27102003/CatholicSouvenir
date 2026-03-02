@@ -122,6 +122,33 @@ export const authService = {
             };
         }
     },
+
+    /** Apply to become Artisan (for logged-in customer) */
+    async applyArtisan(payload) {
+        try {
+            const response = await api.post('/artisan-applications/apply', payload);
+            const code = response.data?.code;
+            if (code !== undefined && code !== 200) {
+                return {
+                    success: false,
+                    error: response.data?.message || 'Gửi đơn đăng ký thất bại.',
+                };
+            }
+            return {
+                success: true,
+                message: response.data?.message || 'Đơn của bạn đã được gửi. Vui lòng chờ admin duyệt.',
+            };
+        } catch (error) {
+            const message =
+                error.response?.data?.message ??
+                error.message ??
+                'Gửi đơn đăng ký thất bại. Vui lòng thử lại.';
+            return {
+                success: false,
+                error: typeof message === 'string' ? message : 'Gửi đơn đăng ký thất bại. Vui lòng thử lại.',
+            };
+        }
+    },
 };
 
 export default authService;

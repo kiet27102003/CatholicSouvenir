@@ -236,4 +236,32 @@
     .profile-specialties {
         justify-content: center;
     }
+
+    .artisan-products-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .artisan-cover {
+        height: 160px;
+    }
+
+    .artisan-content-wrapper {
+        margin-top: -50px;
+    }
+
+    .profile-image-container {
+        width: 120px;
+        height: 120px;
+    }
+
+    .profile-title-row h1 {
+        font-size: 1.75rem;
+    }
+
+    .artisan-about-section h2,
+    .artisan-products-section h2 {
+        font-size: 1.5rem;
+    }
 }

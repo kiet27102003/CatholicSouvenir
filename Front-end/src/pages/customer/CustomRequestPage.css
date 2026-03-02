@@ -155,8 +155,30 @@
 }
 
 /* Responsive */
+@media (max-width: 768px) {
+    .custom-request-page {
+        padding: 0 var(--spacing-md);
+    }
+
+    .request-title {
+        font-size: 1.5rem;
+    }
+}
+
 @media (max-width: 640px) {
     .request-form-container {
         padding: var(--spacing-lg);
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .custom-request-success {
+        padding: var(--spacing-xl) var(--spacing-md);
+    }
+
+    .custom-request-success h2 {
+        font-size: 1.5rem;
     }
 }

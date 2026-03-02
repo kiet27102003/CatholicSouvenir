@@ -2,59 +2,9 @@ import React from 'react';
 import './Workbench.css';
 
 const Workbench = ({ user }) => {
-    const activeCommissions = [
-        {
-            id: 'CM-459',
-            title: 'Custom Rosary - Lapis Lazuli',
-            client: {
-                name: 'Sarah Jenkins',
-                avatar: 'https://i.pravatar.cc/150?img=47'
-            },
-            daysLeft: 3,
-            currentPhase: 'Assembling',
-            progress: 75,
-            status: 'Feast of the Assumption'
-        },
-        {
-            id: 'CM-458',
-            title: 'Hand-painted Icon of St. Francis',
-            client: {
-                name: "Michael O'Connor",
-                avatar: 'https://i.pravatar.cc/150?img=12'
-            },
-            dueDate: 'Oct 4th',
-            daysLeft: 12,
-            currentPhase: 'Gilding',
-            progress: 46
-        }
-    ];
-
-    const newInquiries = [
-        {
-            id: 1,
-            client: {
-                name: 'Elena R.',
-                avatar: 'https://i.pravatar.cc/150?img=32',
-                initials: 'ER'
-            },
-            title: 'First Communion Veil Embroidery',
-            description: 'Looking for a custom design featuring lilies of the valley. Needed by May.',
-            budget: 150,
-            timeAgo: '2h ago'
-        },
-        {
-            id: 2,
-            client: {
-                name: 'John Doe',
-                avatar: 'https://i.pravatar.cc/150?img=60',
-                initials: 'JD'
-            },
-            title: 'Olive Wood Carving - Holy Family',
-            description: "I saw your St. Joseph carving and would love a similar style for a Holy Family set approx...",
-            budget: 500,
-            timeAgo: '5h ago'
-        }
-    ];
+    // TODO: fetch from API when endpoints are available
+    const activeCommissions = [];
+    const newInquiries = [];
 
     return (
         <div className="workbench">
@@ -82,7 +32,7 @@ const Workbench = ({ user }) => {
                     </div>
                     <div className="stat-content">
                         <p className="stat-label">Active Commissions</p>
-                        <p className="stat-value">3</p>
+                        <p className="stat-value">{activeCommissions.length}</p>
                     </div>
                 </div>
 
@@ -95,7 +45,7 @@ const Workbench = ({ user }) => {
                     </div>
                     <div className="stat-content">
                         <p className="stat-label">Earnings (This Month)</p>
-                        <p className="stat-value">$1,250</p>
+                        <p className="stat-value">—</p>
                     </div>
                 </div>
 
@@ -108,7 +58,7 @@ const Workbench = ({ user }) => {
                     </div>
                     <div className="stat-content">
                         <p className="stat-label">Avg. Completion Time</p>
-                        <p className="stat-value">14 Days</p>
+                        <p className="stat-value">—</p>
                     </div>
                 </div>
             </div>
@@ -124,9 +74,13 @@ const Workbench = ({ user }) => {
                     </div>
 
                     <div className="commissions-grid">
-                        {activeCommissions.map(commission => (
-                            <CommissionCard key={commission.id} commission={commission} />
-                        ))}
+                        {activeCommissions.length === 0 ? (
+                            <p className="view-placeholder">No active commissions. When you have orders, they will appear here.</p>
+                        ) : (
+                            activeCommissions.map(commission => (
+                                <CommissionCard key={commission.id} commission={commission} />
+                            ))
+                        )}
                     </div>
                 </div>
 
@@ -137,14 +91,18 @@ const Workbench = ({ user }) => {
                                 <span className="section-icon">✉️</span>
                                 New Inquiries
                             </h2>
-                            <span className="badge-new">2 New</span>
+                            {newInquiries.length > 0 && <span className="badge-new">{newInquiries.length} New</span>}
                         </div>
                     </div>
 
                     <div className="inquiries-list">
-                        {newInquiries.map(inquiry => (
-                            <InquiryCard key={inquiry.id} inquiry={inquiry} />
-                        ))}
+                        {newInquiries.length === 0 ? (
+                            <p className="view-placeholder">No new inquiries. New requests will appear here.</p>
+                        ) : (
+                            newInquiries.map(inquiry => (
+                                <InquiryCard key={inquiry.id} inquiry={inquiry} />
+                            ))
+                        )}
                     </div>
 
                     <div className="liturgical-calendar">

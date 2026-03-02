@@ -2,12 +2,18 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
+import { useLanguage } from '../../context/LanguageContext';
+import { useTheme } from '../../context/ThemeContext';
 import './Header.css';
 
 const Header = () => {
     const { user, logout, isAuthenticated } = useAuth();
     const { cartItemsCount, toggleCart } = useCart();
+    const { language, setLanguage, t } = useLanguage();
+    const { theme, toggleTheme } = useTheme();
     const navigate = useNavigate();
+    const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
+    const [langMenuOpen, setLangMenuOpen] = React.useState(false);
 
     const handleAuthAction = () => {
         if (isAuthenticated) {
@@ -19,24 +25,70 @@ const Header = () => {
 
     return (
         <header className="header">
+            {mobileMenuOpen && (
+                <div
+                    className="mobile-nav-overlay"
+                    onClick={() => setMobileMenuOpen(false)}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={t('common.closeMenu')}
+                    onKeyDown={(e) => e.key === 'Escape' && setMobileMenuOpen(false)}
+                />
+            )}
             <div className="container">
                 <div className="header-content">
-                    {/* Logo */}
-                    <div className="header-logo" onClick={() => navigate('/')}>
+                    <div className="header-left-mobile">
+                        <button
+                            type="button"
+                            className="hamburger-btn"
+                            aria-label="Menu"
+                            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                        >
+                            {mobileMenuOpen ? (
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                                </svg>
+                            ) : (
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
+                                </svg>
+                            )}
+                        </button>
+                        <div className="header-logo" onClick={() => navigate('/')}>
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                             <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                             <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                         <span className="logo-text">Sanctus</span>
+                        </div>
                     </div>
 
                     {/* Navigation */}
-                    <nav className="header-nav">
-                        <a href="#shop" className="nav-link">Shop</a>
-                        <a href="#artisans" className="nav-link">Artisans</a>
-                        <a href="#about" className="nav-link">About</a>
-                        <a href="#blog" className="nav-link">Blog</a>
+                    <nav className={`header-nav ${mobileMenuOpen ? 'open' : ''}`}>
+                        <div className="nav-links">
+                            <a href="#shop" className="nav-link" onClick={() => setMobileMenuOpen(false)}>{t('common.shop')}</a>
+                            <a href="#artisans" className="nav-link" onClick={() => setMobileMenuOpen(false)}>{t('common.artisans')}</a>
+                            <a href="#about" className="nav-link" onClick={() => setMobileMenuOpen(false)}>{t('common.about')}</a>
+                            <a href="#blog" className="nav-link" onClick={() => setMobileMenuOpen(false)}>{t('common.blog')}</a>
+                        </div>
+                        <div className="nav-right">
+                            <span className="nav-separator" aria-hidden="true">|</span>
+                            <button
+                                type="button"
+                                className="nav-link nav-link-btn"
+                                onClick={() => {
+                                    setMobileMenuOpen(false);
+                                    if (user?.role === 'artisan') {
+                                        navigate('/artisan');
+                                    } else {
+                                        navigate('/artisan-centre');
+                                    }
+                                }}
+                            >
+                                {t('common.artisanCentre')}
+                            </button>
+                        </div>
                     </nav>
 
                     {/* Search and Actions */}
@@ -48,15 +100,64 @@ const Header = () => {
                             </svg>
                             <input
                                 type="text"
-                                placeholder="Search sacred items..."
+                                placeholder={t('common.searchPlaceholder')}
                                 className="search-input"
                             />
                         </div>
 
-                        <button className="icon-btn" aria-label="Toggle dark mode">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
+                        <div className="lang-toggle-wrapper">
+                            <button
+                                type="button"
+                                className="icon-btn"
+                                aria-label={language === 'vi' ? 'Tiếng Việt' : 'English'}
+                                aria-expanded={langMenuOpen}
+                                aria-haspopup="true"
+                                onClick={() => setLangMenuOpen(!langMenuOpen)}
+                            >
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+                                    <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                                </svg>
+                            </button>
+                            {langMenuOpen && (
+                                <>
+                                    <div className="lang-menu-overlay" onClick={() => setLangMenuOpen(false)} aria-hidden="true" />
+                                    <div className="lang-menu">
+                                        <button
+                                            type="button"
+                                            className={`lang-option ${language === 'vi' ? 'active' : ''}`}
+                                            onClick={() => { setLanguage('vi'); setLangMenuOpen(false); }}
+                                        >
+                                            VI
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className={`lang-option ${language === 'en' ? 'active' : ''}`}
+                                            onClick={() => { setLanguage('en'); setLangMenuOpen(false); }}
+                                        >
+                                            EN
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+
+                        <button
+                            type="button"
+                            className="icon-btn"
+                            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                            onClick={toggleTheme}
+                        >
+                            {theme === 'dark' ? (
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <circle cx="12" cy="12" r="5" stroke="currentColor" strokeWidth="2" />
+                                    <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                                </svg>
+                            ) : (
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                            )}
                         </button>
 
                         <button className="icon-btn" aria-label="Notifications" onClick={() => navigate('/notifications')}>
@@ -101,7 +202,7 @@ const Header = () => {
                                                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                                                     <circle cx="12" cy="7" r="4"></circle>
                                                 </svg>
-                                                My Profile
+                                                {t('common.myProfile')}
                                             </button>
                                             <button onClick={() => navigate('/orders')} className="dropdown-item">
                                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -109,7 +210,7 @@ const Header = () => {
                                                     <circle cx="20" cy="21" r="1"></circle>
                                                     <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
                                                 </svg>
-                                                My Orders
+                                                {t('common.myOrders')}
                                             </button>
                                         </>
                                     )}
@@ -121,7 +222,7 @@ const Header = () => {
                                                 <line x1="3" y1="9" x2="21" y2="9"></line>
                                                 <line x1="9" y1="21" x2="9" y2="9"></line>
                                             </svg>
-                                            Dashboard
+                                            {t('common.dashboard')}
                                         </button>
                                     )}
 
@@ -130,13 +231,13 @@ const Header = () => {
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                         </svg>
-                                        Logout
+                                        {t('common.logout')}
                                     </button>
                                 </div>
                             </div>
                         ) : (
                             <button onClick={handleAuthAction} className="btn btn-primary header-login-btn">
-                                Login
+                                {t('common.login')}
                             </button>
                         )}
                     </div>

@@ -125,6 +125,7 @@
 @media (max-width: 900px) {
     .customer-main-container {
         flex-direction: column;
+        padding: var(--spacing-lg);
     }
 
     .customer-sidebar {
@@ -135,6 +136,7 @@
         flex-direction: row;
         overflow-x: auto;
         padding: 0;
+        -webkit-overflow-scrolling: touch;
     }
 
     .sidebar-link {
@@ -147,5 +149,30 @@
     .sidebar-link.active {
         border-left-color: transparent;
         border-bottom-color: var(--color-primary);
+    }
+
+    .customer-content {
+        padding: var(--spacing-lg);
+    }
+}
+
+@media (max-width: 480px) {
+    .customer-main-container {
+        padding: var(--spacing-md);
+    }
+
+    .customer-content {
+        padding: var(--spacing-md);
+    }
+
+    .sidebar-profile {
+        padding: var(--spacing-md);
+    }
+
+    .sidebar-avatar,
+    .sidebar-avatar-placeholder {
+        width: 60px;
+        height: 60px;
+        font-size: 1.5rem;
     }
 }

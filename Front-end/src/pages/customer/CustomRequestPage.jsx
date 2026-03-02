@@ -28,7 +28,6 @@ const CustomRequestPage = () => {
     };
 
     const handleFileChange = (e) => {
-        // Just mock file selection for now
         if (e.target.files && e.target.files[0]) {
             setFormData(prev => ({ ...prev, referenceImage: e.target.files[0] }));
         }
@@ -37,17 +36,10 @@ const CustomRequestPage = () => {
     const handleSubmit = (e) => {
         e.preventDefault();
         setSubmitting(true);
-
-        // Simulate API send message/quote request
-        setTimeout(() => {
-            setSubmitting(false);
-            setSuccess(true);
-
-            // Redirect to messages after 2 seconds
-            setTimeout(() => {
-                navigate('/messages');
-            }, 2000);
-        }, 1200);
+        // TODO: call API to submit custom request when endpoint is available
+        setSubmitting(false);
+        setSuccess(true);
+        setTimeout(() => navigate('/messages'), 2000);
     };
 
     if (success) {
@@ -85,12 +77,9 @@ const CustomRequestPage = () => {
                         <div className="form-group">
                             <label className="form-label" htmlFor="artisanSelect">Select Artisan (Optional)</label>
                             <select id="artisanSelect" className="form-input" defaultValue="">
-                                <option value="" disabled>Choose an artisan...</option>
-                                <option value="1">Marco V. - Woodworking</option>
-                                <option value="3">Clara M. - Jewelry</option>
-                                <option value="6">John Paul Metalworks - Metalworking</option>
+                                <option value="">Choose an artisan...</option>
                             </select>
-                            <span className="input-hint">Leave blank if you want us to match you with the best artisan for your request.</span>
+                            <span className="input-hint">Artisans will appear here when available. Leave blank to be matched with an artisan.</span>
                         </div>
                     )}
 

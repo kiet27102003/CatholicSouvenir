@@ -1,8 +1,10 @@
 import React from 'react';
+import { useLanguage } from '../../context/LanguageContext';
 import ProductCard from './ProductCard';
 import './ProductGrid.css';
 
 const ProductGrid = () => {
+    const { t } = useLanguage();
     const products = [
         {
             id: 1,
@@ -43,7 +45,7 @@ const ProductGrid = () => {
     return (
         <section className="product-grid-section section">
             <div className="container">
-                <h2 className="section-title">Fresh from the Studio</h2>
+                <h2 className="section-title">{t('home.freshFromStudio')}</h2>
 
                 <div className="product-grid">
                     {products.map(product => (

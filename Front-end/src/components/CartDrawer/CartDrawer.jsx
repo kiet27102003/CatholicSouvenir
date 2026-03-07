@@ -59,13 +59,23 @@ const CartDrawer = () => {
                             {cartItems.map((item) => (
                                 <div key={item.id} className="cart-item">
                                     <div className="cart-item-image">
-                                        <img src={item.image || '/src/assets/placeholder.png'} alt={item.title} />
+                                        {item.image ? (
+                                            <img src={item.image} alt={item.title} />
+                                        ) : (
+                                            <div className="cart-item-image-placeholder">
+                                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                                                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                                                    <circle cx="8.5" cy="8.5" r="1.5" />
+                                                    <polyline points="21 15 16 10 5 21" />
+                                                </svg>
+                                            </div>
+                                        )}
                                     </div>
 
                                     <div className="cart-item-details">
                                         <h4>{item.title}</h4>
                                         <p className="cart-item-artisan">by {item.artisan || 'Sanctus Artisan'}</p>
-                                        <div className="cart-item-price">${item.price.toFixed(2)}</div>
+                                        <div className="cart-item-price">{(item.price ?? 0).toLocaleString('vi-VN')} ₫</div>
 
                                         <div className="cart-item-actions">
                                             <div className="quantity-controls">
@@ -105,7 +115,7 @@ const CartDrawer = () => {
                     <div className="cart-footer">
                         <div className="cart-subtotal">
                             <span>Subtotal</span>
-                            <span className="subtotal-amount">${cartTotalAmount.toFixed(2)}</span>
+                            <span className="subtotal-amount">{cartTotalAmount.toLocaleString('vi-VN')} ₫</span>
                         </div>
                         <p className="shipping-note">Shipping & taxes calculated at checkout</p>
                         <button className="btn btn-primary btn-checkout" onClick={handleCheckout}>

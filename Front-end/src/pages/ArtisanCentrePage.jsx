@@ -3,20 +3,55 @@ import { useNavigate, Link } from 'react-router-dom';
 import Header from '../components/Header/Header';
 import Footer from '../components/Footer/Footer';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import authService from '../services/authService';
 import './ArtisanCentrePage.css';
 
 const ArtisanCentrePage = () => {
     const { user, isAuthenticated } = useAuth();
+    const { t } = useLanguage();
     const navigate = useNavigate();
+
+    const REGISTER_STEPS = [
+        { id: 1, title: t('artisanCentre.step1Title'), short: t('artisanCentre.step1Short') },
+        { id: 2, title: t('artisanCentre.step2Title'), short: t('artisanCentre.step2Short') },
+        { id: 3, title: t('artisanCentre.step3Title'), short: t('artisanCentre.step3Short') },
+    ];
+
+    const GENDER_OPTIONS = [
+        { value: '', label: t('artisanCentre.genderSelect') },
+        { value: 'MALE', label: t('artisanCentre.genderMale') },
+        { value: 'FEMALE', label: t('artisanCentre.genderFemale') },
+        { value: 'OTHER', label: t('artisanCentre.genderOther') },
+    ];
+
+    // Register form (unauthenticated)
+    const [regStep, setRegStep] = useState(1);
+    const [firstName, setFirstName] = useState('');
+    const [lastName, setLastName] = useState('');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [phoneNumber, setPhoneNumber] = useState('');
+    const [gender, setGender] = useState('');
+    const [dateOfBirth, setDateOfBirth] = useState('');
     const [artisanName, setArtisanName] = useState('');
     const [bio, setBio] = useState('');
     const [specialization, setSpecialization] = useState('');
     const [experienceYear, setExperienceYear] = useState('');
     const [portfolioUrl, setPortfolioUrl] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+
+    // Apply form (authenticated)
+    const [artisanNameApply, setArtisanNameApply] = useState('');
+    const [bioApply, setBioApply] = useState('');
+    const [specializationApply, setSpecializationApply] = useState('');
+    const [experienceYearApply, setExperienceYearApply] = useState('');
+    const [portfolioUrlApply, setPortfolioUrlApply] = useState('');
+    const [submitted, setSubmitted] = useState(false);
+
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
-    const [submitted, setSubmitted] = useState(false);
 
     useEffect(() => {
         window.scrollTo(0, 0);
@@ -28,31 +63,122 @@ const ArtisanCentrePage = () => {
         }
     }, [user?.role, navigate]);
 
-    const handleSubmit = async (e) => {
+    // Validation for register form
+    const validateRegStep1 = () => {
+        if (!firstName.trim()) {
+            setError(t('artisanCentre.errors.firstNameRequired'));
+            return false;
+        }
+        if (!lastName.trim()) {
+            setError(t('artisanCentre.errors.lastNameRequired'));
+            return false;
+        }
+        return true;
+    };
+
+    const validateRegStep2 = () => {
+        if (!email.trim()) {
+            setError(t('artisanCentre.errors.emailRequired'));
+            return false;
+        }
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email.trim())) {
+            setError(t('artisanCentre.errors.emailInvalid'));
+            return false;
+        }
+        return true;
+    };
+
+    const validateRegStep3 = () => {
+        if (password.length < 6) {
+            setError(t('artisanCentre.errors.passwordMin'));
+            return false;
+        }
+        if (password !== confirmPassword) {
+            setError(t('artisanCentre.errors.passwordMismatch'));
+            return false;
+        }
+        const expYear = experienceYear === '' ? undefined : parseInt(experienceYear, 10);
+        if (experienceYear !== '' && (isNaN(expYear) || expYear < 0)) {
+            setError(t('artisanCentre.errors.experienceInvalid'));
+            return false;
+        }
+        return true;
+    };
+
+    const goNextReg = (e) => {
+        e.preventDefault();
+        setError('');
+        if (regStep === 1 && !validateRegStep1()) return;
+        if (regStep === 2 && !validateRegStep2()) return;
+        setRegStep((s) => Math.min(s + 1, REGISTER_STEPS.length));
+    };
+
+    const goBackReg = () => {
+        setError('');
+        setRegStep((s) => Math.max(s - 1, 1));
+    };
+
+    const handleRegisterSubmit = async (e) => {
+        e.preventDefault();
+        setError('');
+        if (!validateRegStep3()) return;
+
+        const expYear = experienceYear === '' ? undefined : parseInt(experienceYear, 10);
+        setLoading(true);
+        try {
+            const result = await authService.registerArtisan({
+                firstName: firstName.trim(),
+                lastName: lastName.trim(),
+                email: email.trim(),
+                password,
+                confirmPassword,
+                phoneNumber: phoneNumber.trim() || undefined,
+                gender: gender || undefined,
+                dateOfBirth: dateOfBirth || undefined,
+                artisanName: artisanName.trim() || undefined,
+                bio: bio.trim() || undefined,
+                experienceYear: expYear,
+                portfolioUrl: portfolioUrl.trim() || undefined,
+                specialization: specialization.trim() || undefined,
+            });
+            if (result.success) {
+                navigate('/login', { state: { message: result.message } });
+            } else {
+                setError(result.error || t('artisanCentre.errors.registerFailed'));
+            }
+        } catch {
+            setError(t('artisanCentre.errors.generic'));
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleApplySubmit = async (e) => {
         e.preventDefault();
         setError('');
         setLoading(true);
         try {
-            const expYear = experienceYear === '' ? undefined : parseInt(experienceYear, 10);
-            if (experienceYear !== '' && (isNaN(expYear) || expYear < 0)) {
-                setError('Số năm kinh nghiệm không hợp lệ.');
+            const expYear = experienceYearApply === '' ? undefined : parseInt(experienceYearApply, 10);
+            if (experienceYearApply !== '' && (isNaN(expYear) || expYear < 0)) {
+                setError(t('artisanCentre.errors.experienceInvalid'));
                 setLoading(false);
                 return;
             }
             const result = await authService.applyArtisan({
-                artisanName: artisanName.trim() || undefined,
-                bio: bio.trim() || undefined,
-                specialization: specialization.trim() || undefined,
+                artisanName: artisanNameApply.trim() || undefined,
+                bio: bioApply.trim() || undefined,
+                specialization: specializationApply.trim() || undefined,
                 experienceYear: expYear,
-                portfolioUrl: portfolioUrl.trim() || undefined,
+                portfolioUrl: portfolioUrlApply.trim() || undefined,
             });
             if (result.success) {
                 setSubmitted(true);
             } else {
-                setError(result.error || 'Gửi đơn thất bại. Vui lòng thử lại.');
+                setError(result.error || t('artisanCentre.errors.applyFailed'));
             }
         } catch {
-            setError('Có lỗi xảy ra. Vui lòng thử lại.');
+            setError(t('artisanCentre.errors.generic'));
         } finally {
             setLoading(false);
         }
@@ -68,24 +194,250 @@ const ArtisanCentrePage = () => {
             <main className="artisan-centre-main">
                 <div className="artisan-centre-hero">
                     <div className="container">
-                        <h1>Artisan Centre</h1>
-                        <p>Trung tâm dành cho nghệ nhân – đăng ký trở thành nghệ nhân hoặc quản lý cửa hàng của bạn.</p>
+                        <h1>{t('artisanCentre.heroTitle')}</h1>
+                        <p>{t('artisanCentre.heroSubtitle')}</p>
                     </div>
                 </div>
 
                 <div className="container artisan-centre-content">
                     {!isAuthenticated ? (
-                        <div className="artisan-centre-login-prompt">
-                            <div className="login-prompt-card">
-                                <h2>Đăng nhập để tiếp tục</h2>
-                                <p>Bạn cần đăng nhập để đăng ký trở thành nghệ nhân trên Sanctus.</p>
-                                <Link to="/login" className="btn btn-primary">
-                                    Đăng nhập
-                                </Link>
-                                <p className="login-prompt-register">
-                                    Chưa có tài khoản? <Link to="/register">Đăng ký</Link>
-                                </p>
+                        <div className="artisan-centre-form-section artisan-register-form-section">
+                            <div className="form-section-header">
+                                <h2>{t('artisanCentre.registerTitle')}</h2>
+                                <p>{t('artisanCentre.registerSubtitle')}</p>
                             </div>
+
+                            <div className="artisan-register-steps" role="tablist" aria-label={t('artisanCentre.registerStepsLabel')}>
+                                {REGISTER_STEPS.map((s, i) => (
+                                    <div
+                                        key={s.id}
+                                        className={`register-step-dot ${regStep >= s.id ? 'active' : ''} ${regStep === s.id ? 'current' : ''}`}
+                                        title={s.title}
+                                    >
+                                        <span className="register-step-num">{s.id}</span>
+                                        {i < REGISTER_STEPS.length - 1 && <span className="register-step-line" />}
+                                    </div>
+                                ))}
+                            </div>
+                            <p className="register-step-title">{REGISTER_STEPS[regStep - 1].title}</p>
+
+                            <form onSubmit={regStep === 3 ? handleRegisterSubmit : goNextReg} className="artisan-apply-form artisan-register-form">
+                                {error && (
+                                    <div className="error-message" role="alert">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                            <circle cx="12" cy="12" r="10" />
+                                            <path d="M12 8v4M12 16h.01" strokeLinecap="round" />
+                                        </svg>
+                                        {error}
+                                    </div>
+                                )}
+
+                                {regStep === 1 && (
+                                    <div className="register-step-panel">
+                                        <div className="form-row">
+                                            <div className="form-group">
+                                                <label htmlFor="ac-firstName" className="form-label">{t('artisanCentre.firstName')} <span className="required">{t('artisanCentre.required')}</span></label>
+                                                <input
+                                                    type="text"
+                                                    id="ac-firstName"
+                                                    className="form-input"
+                                                    placeholder={t('artisanCentre.firstNamePlaceholder')}
+                                                    value={firstName}
+                                                    onChange={(e) => setFirstName(e.target.value)}
+                                                    autoComplete="given-name"
+                                                />
+                                            </div>
+                                            <div className="form-group">
+                                                <label htmlFor="ac-lastName" className="form-label">{t('artisanCentre.lastName')} <span className="required">{t('artisanCentre.required')}</span></label>
+                                                <input
+                                                    type="text"
+                                                    id="ac-lastName"
+                                                    className="form-input"
+                                                    placeholder={t('artisanCentre.lastNamePlaceholder')}
+                                                    value={lastName}
+                                                    onChange={(e) => setLastName(e.target.value)}
+                                                    autoComplete="family-name"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="form-group">
+                                            <label htmlFor="ac-artisanName" className="form-label">{t('artisanCentre.artisanName')}</label>
+                                            <input
+                                                type="text"
+                                                id="ac-artisanName"
+                                                className="form-input"
+                                                placeholder={t('artisanCentre.artisanNamePlaceholder2')}
+                                                value={artisanName}
+                                                onChange={(e) => setArtisanName(e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="form-row">
+                                            <div className="form-group">
+                                                <label htmlFor="ac-gender" className="form-label">{t('artisanCentre.gender')}</label>
+                                                <select
+                                                    id="ac-gender"
+                                                    className="form-input form-select"
+                                                    value={gender}
+                                                    onChange={(e) => setGender(e.target.value)}
+                                                >
+                                                    {GENDER_OPTIONS.map((opt) => (
+                                                        <option key={opt.value || 'empty'} value={opt.value}>{opt.label}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div className="form-group">
+                                                <label htmlFor="ac-dateOfBirth" className="form-label">{t('artisanCentre.dateOfBirth')}</label>
+                                                <input
+                                                    type="date"
+                                                    id="ac-dateOfBirth"
+                                                    className="form-input"
+                                                    value={dateOfBirth}
+                                                    onChange={(e) => setDateOfBirth(e.target.value)}
+                                                    autoComplete="bday"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {regStep === 2 && (
+                                    <div className="register-step-panel">
+                                        <div className="form-group">
+                                            <label htmlFor="ac-email" className="form-label">{t('artisanCentre.email')} <span className="required">{t('artisanCentre.required')}</span></label>
+                                            <input
+                                                type="email"
+                                                id="ac-email"
+                                                className="form-input"
+                                                placeholder="email@example.com"
+                                                value={email}
+                                                onChange={(e) => setEmail(e.target.value)}
+                                                autoComplete="email"
+                                            />
+                                        </div>
+                                        <div className="form-group">
+                                            <label htmlFor="ac-phoneNumber" className="form-label">{t('artisanCentre.phoneNumber')}</label>
+                                            <input
+                                                type="tel"
+                                                id="ac-phoneNumber"
+                                                className="form-input"
+                                                placeholder={t('artisanCentre.phonePlaceholder')}
+                                                value={phoneNumber}
+                                                onChange={(e) => setPhoneNumber(e.target.value)}
+                                                autoComplete="tel"
+                                            />
+                                        </div>
+                                        <div className="form-group">
+                                            <label htmlFor="ac-specialization" className="form-label">{t('artisanCentre.specialization')}</label>
+                                            <input
+                                                type="text"
+                                                id="ac-specialization"
+                                                className="form-input"
+                                                placeholder={t('artisanCentre.specializationPlaceholder')}
+                                                value={specialization}
+                                                onChange={(e) => setSpecialization(e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="form-row">
+                                            <div className="form-group">
+                                                <label htmlFor="ac-experienceYear" className="form-label">{t('artisanCentre.experienceYear')}</label>
+                                                <input
+                                                    type="number"
+                                                    id="ac-experienceYear"
+                                                    className="form-input"
+                                                    placeholder="0"
+                                                    min={0}
+                                                    value={experienceYear}
+                                                    onChange={(e) => setExperienceYear(e.target.value)}
+                                                />
+                                            </div>
+                                            <div className="form-group">
+                                                <label htmlFor="ac-portfolioUrl" className="form-label">{t('artisanCentre.portfolioUrl')}</label>
+                                                <input
+                                                    type="url"
+                                                    id="ac-portfolioUrl"
+                                                    className="form-input"
+                                                    placeholder={t('artisanCentre.portfolioPlaceholder')}
+                                                    value={portfolioUrl}
+                                                    onChange={(e) => setPortfolioUrl(e.target.value)}
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="form-group">
+                                            <label htmlFor="ac-bio" className="form-label">{t('artisanCentre.bio')}</label>
+                                            <textarea
+                                                id="ac-bio"
+                                                className="form-input form-textarea"
+                                                placeholder={t('artisanCentre.bioPlaceholder')}
+                                                rows={3}
+                                                value={bio}
+                                                onChange={(e) => setBio(e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+
+                                {regStep === 3 && (
+                                    <div className="register-step-panel">
+                                        <div className="form-group">
+                                            <label htmlFor="ac-password" className="form-label">{t('artisanCentre.password')} <span className="required">{t('artisanCentre.required')}</span></label>
+                                            <div className="password-input-container">
+                                                <input
+                                                    type={showPassword ? 'text' : 'password'}
+                                                    id="ac-password"
+                                                    className="form-input"
+                                                    placeholder={t('artisanCentre.passwordPlaceholder')}
+                                                    value={password}
+                                                    onChange={(e) => setPassword(e.target.value)}
+                                                    minLength={6}
+                                                    autoComplete="new-password"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    className="password-toggle-btn"
+                                                    onClick={() => setShowPassword(!showPassword)}
+                                                    aria-label={showPassword ? t('artisanCentre.hidePassword') : t('artisanCentre.showPassword')}
+                                                >
+                                                    {showPassword ? (
+                                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
+                                                    ) : (
+                                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
+                                                    )}
+                                                </button>
+                                            </div>
+                                            <span className="form-hint">{t('artisanCentre.requiredHint')}</span>
+                                        </div>
+                                        <div className="form-group">
+                                            <label htmlFor="ac-confirmPassword" className="form-label">{t('artisanCentre.confirmPassword')} <span className="required">{t('artisanCentre.required')}</span></label>
+                                            <div className="password-input-container">
+                                                <input
+                                                    type={showPassword ? 'text' : 'password'}
+                                                    id="ac-confirmPassword"
+                                                    className="form-input"
+                                                    placeholder={t('artisanCentre.confirmPasswordPlaceholder')}
+                                                    value={confirmPassword}
+                                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                                    minLength={6}
+                                                    autoComplete="new-password"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="register-form-actions">
+                                    {regStep > 1 && (
+                                        <button type="button" className="btn btn-secondary register-btn-back" onClick={goBackReg}>
+                                            {t('artisanCentre.back')}
+                                        </button>
+                                    )}
+                                    <button type="submit" className="btn btn-primary" disabled={loading}>
+                                        {regStep === 3 ? (loading ? t('artisanCentre.registering') : t('artisanCentre.register')) : t('artisanCentre.next')}
+                                    </button>
+                                </div>
+                                <p className="artisan-register-login-prompt">
+                                    {t('artisanCentre.haveAccount')} <Link to="/login">{t('common.login')}</Link>
+                                </p>
+                            </form>
                         </div>
                     ) : submitted ? (
                         <div className="artisan-centre-success">
@@ -96,20 +448,20 @@ const ArtisanCentrePage = () => {
                                         <polyline points="22 4 12 14.01 9 11.01"></polyline>
                                     </svg>
                                 </div>
-                                <h2>Đơn đăng ký đã được gửi</h2>
-                                <p>Chúng tôi đã nhận đơn đăng ký trở thành nghệ nhân của bạn. Admin sẽ xem xét và phản hồi trong thời gian sớm nhất.</p>
+                                <h2>{t('artisanCentre.successTitle')}</h2>
+                                <p>{t('artisanCentre.successMessage')}</p>
                                 <button type="button" className="btn btn-primary" onClick={() => navigate('/')}>
-                                    Về trang chủ
+                                    {t('artisanCentre.goHome')}
                                 </button>
                             </div>
                         </div>
                     ) : (
                         <div className="artisan-centre-form-section">
                             <div className="form-section-header">
-                                <h2>Đăng ký trở thành Nghệ nhân</h2>
-                                <p>Điền thông tin bên dưới để gửi đơn đăng ký. Admin sẽ duyệt và liên hệ với bạn.</p>
+                                <h2>{t('artisanCentre.applyTitle')}</h2>
+                                <p>{t('artisanCentre.applySubtitle')}</p>
                             </div>
-                            <form onSubmit={handleSubmit} className="artisan-apply-form">
+                            <form onSubmit={handleApplySubmit} className="artisan-apply-form">
                                 {error && (
                                     <div className="error-message">
                                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -120,65 +472,65 @@ const ArtisanCentrePage = () => {
                                     </div>
                                 )}
                                 <div className="form-group">
-                                    <label htmlFor="artisanName" className="form-label">Tên nghệ nhân / Xưởng</label>
+                                    <label htmlFor="artisanName" className="form-label">{t('artisanCentre.artisanName')}</label>
                                     <input
                                         type="text"
                                         id="artisanName"
                                         className="form-input"
-                                        placeholder="Ví dụ: Xưởng gỗ Đức Anh"
-                                        value={artisanName}
-                                        onChange={(e) => setArtisanName(e.target.value)}
+                                        placeholder={t('artisanCentre.artisanNamePlaceholder3')}
+                                        value={artisanNameApply}
+                                        onChange={(e) => setArtisanNameApply(e.target.value)}
                                     />
                                 </div>
                                 <div className="form-group">
-                                    <label htmlFor="specialization" className="form-label">Chuyên môn</label>
+                                    <label htmlFor="specialization" className="form-label">{t('artisanCentre.specialization')}</label>
                                     <input
                                         type="text"
                                         id="specialization"
                                         className="form-input"
-                                        placeholder="Ví dụ: Đồ gỗ, gốm sứ, thêu"
-                                        value={specialization}
-                                        onChange={(e) => setSpecialization(e.target.value)}
+                                        placeholder={t('artisanCentre.specializationPlaceholder')}
+                                        value={specializationApply}
+                                        onChange={(e) => setSpecializationApply(e.target.value)}
                                     />
                                 </div>
                                 <div className="form-row">
                                     <div className="form-group">
-                                        <label htmlFor="experienceYear" className="form-label">Số năm kinh nghiệm</label>
+                                        <label htmlFor="experienceYear" className="form-label">{t('artisanCentre.experienceYear')}</label>
                                         <input
                                             type="number"
                                             id="experienceYear"
                                             className="form-input"
                                             placeholder="0"
                                             min={0}
-                                            value={experienceYear}
-                                            onChange={(e) => setExperienceYear(e.target.value)}
+                                            value={experienceYearApply}
+                                            onChange={(e) => setExperienceYearApply(e.target.value)}
                                         />
                                     </div>
                                     <div className="form-group">
-                                        <label htmlFor="portfolioUrl" className="form-label">Link portfolio</label>
+                                        <label htmlFor="portfolioUrl" className="form-label">{t('artisanCentre.portfolioUrl')}</label>
                                         <input
                                             type="url"
                                             id="portfolioUrl"
                                             className="form-input"
-                                            placeholder="https://..."
-                                            value={portfolioUrl}
-                                            onChange={(e) => setPortfolioUrl(e.target.value)}
+                                            placeholder={t('artisanCentre.portfolioPlaceholder')}
+                                            value={portfolioUrlApply}
+                                            onChange={(e) => setPortfolioUrlApply(e.target.value)}
                                         />
                                     </div>
                                 </div>
                                 <div className="form-group">
-                                    <label htmlFor="bio" className="form-label">Giới thiệu ngắn</label>
+                                    <label htmlFor="bio" className="form-label">{t('artisanCentre.bio')}</label>
                                     <textarea
                                         id="bio"
                                         className="form-input form-textarea"
-                                        placeholder="Giới thiệu về bạn và tác phẩm..."
+                                        placeholder={t('artisanCentre.bioPlaceholder')}
                                         rows={4}
-                                        value={bio}
-                                        onChange={(e) => setBio(e.target.value)}
+                                        value={bioApply}
+                                        onChange={(e) => setBioApply(e.target.value)}
                                     />
                                 </div>
                                 <button type="submit" className="btn btn-primary" disabled={loading}>
-                                    {loading ? 'Đang gửi...' : 'Gửi đơn đăng ký'}
+                                    {loading ? t('artisanCentre.submitting') : t('artisanCentre.submitApply')}
                                 </button>
                             </form>
                         </div>

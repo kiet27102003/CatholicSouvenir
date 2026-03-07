@@ -1,9 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useLanguage } from '../../context/LanguageContext';
 import ArtisanCard from './ArtisanCard';
 import './FeaturedArtisans.css';
 
 const FeaturedArtisans = () => {
+    const { t } = useLanguage();
     const artisans = [
         {
             id: 1,
@@ -36,11 +38,11 @@ const FeaturedArtisans = () => {
             <div className="container">
                 <div className="featured-artisans-header">
                     <div>
-                        <h2 className="section-title">Featured Artisans</h2>
-                        <p className="section-subtitle">Meet the hands and hearts behind the sacred crafts.</p>
+                        <h2 className="section-title">{t('home.featuredArtisansTitle')}</h2>
+                        <p className="section-subtitle">{t('home.featuredArtisansSubtitle')}</p>
                     </div>
                     <Link to="/artisans" className="view-all-link">
-                        View all artisans
+                        {t('home.viewAllArtisans')}
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>

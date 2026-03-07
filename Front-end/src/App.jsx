@@ -13,6 +13,7 @@ import ProductDetailsPage from './pages/ProductDetailsPage'
 import ArtisanDirectoryPage from './pages/ArtisanDirectoryPage'
 import ArtisanProfilePage from './pages/ArtisanProfilePage'
 import ArtisanCentrePage from './pages/ArtisanCentrePage'
+import ShopPage from './pages/ShopPage'
 import CustomRequestPage from './pages/customer/CustomRequestPage'
 import MessageCenterPage from './pages/customer/MessageCenterPage'
 import CheckoutPage from './pages/CheckoutPage'
@@ -22,6 +23,7 @@ import CartDrawer from './components/CartDrawer/CartDrawer'
 import AdminLayout from './pages/admin/AdminLayout'
 import SystemConfig from './pages/admin/SystemConfig'
 import UserManager from './pages/admin/UserManager'
+import ProductManager from './pages/admin/ProductManager'
 import ArtisanApplications from './pages/admin/ArtisanApplications'
 
 function App() {
@@ -30,6 +32,7 @@ function App() {
       <CartDrawer />
       <Routes>
         <Route path="/" element={<HomePage />} />
+        <Route path="/shop" element={<ShopPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterForm />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
@@ -45,6 +48,7 @@ function App() {
           <Route index element={<Navigate to="/admin/settings" replace />} />
           <Route path="settings" element={<SystemConfig />} />
           <Route path="users" element={<UserManager />} />
+          <Route path="products" element={<ProductManager />} />
           <Route path="artisan-applications" element={<ArtisanApplications />} />
         </Route>
 

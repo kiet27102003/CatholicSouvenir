@@ -1,45 +1,95 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { getOrders } from '../../services/orderService';
 import './OrderHistoryPage.css';
+
+const formatVnd = (value) => `${Number(value).toLocaleString('vi-VN')} ₫`;
 
 const OrderHistoryPage = () => {
     const { user } = useAuth();
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
-        // TODO: fetch orders from API when endpoint is available
-        setOrders([]);
-        setLoading(false);
+        if (!user?.id) {
+            setLoading(false);
+            return;
+        }
+        let cancelled = false;
+        setLoading(true);
+        setError(null);
+        getOrders()
+            .then((res) => {
+                if (cancelled) return;
+                if (res.success && Array.isArray(res.data)) {
+                    setOrders(res.data);
+                } else {
+                    setError(res.error || 'Không thể tải đơn hàng.');
+                }
+            })
+            .catch(() => {
+                if (!cancelled) setError('Không thể tải đơn hàng.');
+            })
+            .finally(() => {
+                if (!cancelled) setLoading(false);
+            });
+        return () => { cancelled = true; };
     }, [user?.id]);
 
     const getStatusStyle = (status) => {
-        switch (status) {
-            case 'Delivered':
+        const s = (status || '').toUpperCase();
+        switch (s) {
+            case 'DELIVERED':
+            case 'COMPLETED':
                 return 'status-delivered';
-            case 'In Progress':
+            case 'IN_PROGRESS':
+            case 'PROCESSING':
+            case 'SHIPPED':
                 return 'status-in-progress';
-            case 'Pending':
+            case 'PENDING':
                 return 'status-pending';
-            case 'Cancelled':
+            case 'CANCELLED':
+            case 'CANCELED':
                 return 'status-cancelled';
             default:
                 return '';
         }
     };
 
+    const getStatusLabel = (status) => {
+        const s = (status || '').toUpperCase();
+        const map = {
+            PENDING: 'Chờ xử lý',
+            PROCESSING: 'Đang xử lý',
+            IN_PROGRESS: 'Đang giao',
+            SHIPPED: 'Đang giao',
+            DELIVERED: 'Đã giao',
+            COMPLETED: 'Hoàn thành',
+            CANCELLED: 'Đã hủy',
+            CANCELED: 'Đã hủy',
+        };
+        return map[s] || status || '—';
+    };
+
     return (
         <div className="orders-page">
             <div className="orders-header">
-                <h1 className="orders-title">Order History</h1>
-                <p className="orders-subtitle">View and track your previous and current orders.</p>
+                <h1 className="orders-title">Lịch sử đơn hàng</h1>
+                <p className="orders-subtitle">Xem và theo dõi đơn hàng của bạn.</p>
             </div>
+
+            {error && (
+                <div className="orders-error">
+                    <p>{error}</p>
+                </div>
+            )}
 
             {loading ? (
                 <div className="orders-loading">
                     <div className="spinner"></div>
-                    <p>Loading your orders...</p>
+                    <p>Đang tải đơn hàng...</p>
                 </div>
             ) : orders.length === 0 ? (
                 <div className="orders-empty">
@@ -48,39 +98,43 @@ const OrderHistoryPage = () => {
                         <circle cx="20" cy="21" r="1"></circle>
                         <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
                     </svg>
-                    <h3>No orders yet</h3>
-                    <p>When you place an order, it will appear here.</p>
-                    <Link to="/" className="btn btn-primary" style={{ textDecoration: 'none' }}>Start Shopping</Link>
+                    <h3>Chưa có đơn hàng</h3>
+                    <p>Khi bạn đặt hàng, đơn sẽ hiển thị tại đây.</p>
+                    <Link to="/shop" className="btn btn-primary" style={{ textDecoration: 'none' }}>Mua sắm</Link>
                 </div>
             ) : (
                 <div className="orders-list">
-                    {orders.map(order => (
-                        <div key={order.id} className="order-card">
+                    {orders.map((order) => (
+                        <div key={order.orderId} className="order-card">
                             <div className="order-card-header">
                                 <div className="order-info-mobile">
                                     <div className="order-id">
-                                        <span className="label">Order ID:</span> {order.id}
-                                        {order.type === 'Custom Request' && (
-                                            <span className="badge badge-custom">Custom</span>
+                                        <span className="label">Mã đơn:</span> {order.orderId}
+                                        {order.paymentMethod && (
+                                            <span className="badge badge-payment">{order.paymentMethod}</span>
                                         )}
                                     </div>
-                                    <div className="order-date">Placed on {new Date(order.date).toLocaleDateString()}</div>
+                                    <div className="order-date">
+                                        Đặt ngày {new Date(order.orderDate).toLocaleDateString('vi-VN')}
+                                    </div>
                                 </div>
 
                                 <div className="order-status-actions">
                                     <div className={`order-status ${getStatusStyle(order.status)}`}>
-                                        {order.status}
+                                        {getStatusLabel(order.status)}
                                     </div>
                                     <div className="order-total">
-                                        Total: <strong>${order.total.toFixed(2)}</strong>
+                                        Tổng: <strong>{formatVnd(order.total)}</strong>
                                     </div>
-                                    <Link to={`/orders/${order.id}/tracking`} className="btn btn-outline btn-sm" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Track Order</Link>
+                                    <Link to={`/orders/${order.orderId}/tracking`} className="btn btn-outline btn-sm" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        Theo dõi đơn
+                                    </Link>
                                 </div>
                             </div>
 
                             <div className="order-items">
-                                {order.items.map((item, index) => (
-                                    <div key={index} className="order-item">
+                                {(order.orderDetails || []).map((item, index) => (
+                                    <div key={item.id || index} className="order-item">
                                         <div className="item-details">
                                             <div className="item-image-placeholder">
                                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -90,12 +144,12 @@ const OrderHistoryPage = () => {
                                                 </svg>
                                             </div>
                                             <div className="item-text">
-                                                <p className="item-name">{item.name}</p>
-                                                <p className="item-qty">Qty: {item.quantity}</p>
+                                                <p className="item-name">Sản phẩm × {item.quantity}</p>
+                                                <p className="item-qty">{formatVnd(item.unitPrice)}/sp</p>
                                             </div>
                                         </div>
                                         <div className="item-price">
-                                            ${item.price.toFixed(2)}
+                                            {formatVnd(item.subTotal)}
                                         </div>
                                     </div>
                                 ))}

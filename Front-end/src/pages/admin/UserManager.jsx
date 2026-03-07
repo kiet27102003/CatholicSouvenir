@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FiSearch, FiFilter, FiEye, FiUsers, FiRefreshCw, FiEdit2, FiSave, FiX, FiTrash2, FiAlertTriangle } from 'react-icons/fi';
+import { FiSearch, FiFilter, FiEye, FiUsers, FiRefreshCw, FiEdit2, FiSave, FiX, FiTrash2, FiAlertTriangle, FiUserPlus } from 'react-icons/fi';
 import api from '../../cofig/api';
 import './admin-common.css';
 import './UserManager.css';
@@ -7,6 +7,12 @@ import './UserManager.css';
 const API_ACCOUNTS = '/admin/accounts';
 const DEFAULT_PAGE_SIZE = 10;
 const DEFAULT_SORT = { sortBy: 'createdDate', sortDirection: 'DESC' };
+
+const ROLE_OPTIONS = [
+    { id: 1, name: 'Admin' },
+    { id: 2, name: 'Customer' },
+    { id: 3, name: 'Artisan' },
+];
 
 const UserManager = () => {
     const [accounts, setAccounts] = useState([]);
@@ -32,6 +38,24 @@ const UserManager = () => {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [deleteLoading, setDeleteLoading] = useState(false);
     const [deleteError, setDeleteError] = useState(null);
+
+    // Create account state
+    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [createForm, setCreateForm] = useState({
+        fullName: '',
+        email: '',
+        password: '',
+        phone: '',
+        gender: '',
+        dateOfBirth: '',
+        avtUrl: '',
+        roleId: '',
+        saintId: '',
+        isVerified: false,
+    });
+    const [createLoading, setCreateLoading] = useState(false);
+    const [createError, setCreateError] = useState(null);
+    const [createSuccess, setCreateSuccess] = useState(false);
 
     const fetchAccounts = async (pageIndex = page) => {
         setLoading(true);
@@ -226,6 +250,67 @@ const UserManager = () => {
         }
     };
 
+    // Create account: reset form
+    const openCreateModal = () => {
+        setCreateForm({
+            fullName: '',
+            email: '',
+            password: '',
+            phone: '',
+            gender: '',
+            dateOfBirth: '',
+            avtUrl: '',
+            roleId: '',
+            saintId: '',
+            isVerified: false,
+        });
+        setCreateError(null);
+        setCreateSuccess(false);
+        setShowCreateModal(true);
+    };
+
+    const closeCreateModal = () => {
+        setShowCreateModal(false);
+        setCreateError(null);
+        setCreateSuccess(false);
+    };
+
+    const handleCreateChange = (field, value) => {
+        setCreateForm((prev) => ({ ...prev, [field]: value }));
+    };
+
+    // Create account via POST
+    const handleCreateSubmit = async () => {
+        setCreateLoading(true);
+        setCreateError(null);
+        setCreateSuccess(false);
+        try {
+            const body = {
+                fullName: createForm.fullName,
+                email: createForm.email,
+                password: createForm.password,
+                phone: createForm.phone,
+                gender: createForm.gender || undefined,
+                dateOfBirth: createForm.dateOfBirth || undefined,
+                avtUrl: createForm.avtUrl || undefined,
+                roleId: createForm.roleId !== '' ? Number(createForm.roleId) : 0,
+                saintId: createForm.saintId || undefined,
+                isVerified: createForm.isVerified,
+            };
+            await api.post(API_ACCOUNTS, body);
+            setCreateSuccess(true);
+            setPage(0);
+            fetchAccounts(0);
+            setTimeout(() => {
+                closeCreateModal();
+            }, 1200);
+        } catch (err) {
+            setCreateError(err.response?.data?.message || err.message || 'Tạo tài khoản thất bại.');
+        } finally {
+            setCreateLoading(false);
+        }
+    };
+
     // Delete account via DELETE
     const handleDelete = async () => {
         if (!detailAccount?.accountId) return;
@@ -253,15 +338,25 @@ const UserManager = () => {
                         Quản lý tài khoản, vai trò và quyền hạn.
                     </p>
                 </div>
-                <button
-                    type="button"
-                    className="btn btn-outline btn-icon"
-                    onClick={onRefresh}
-                    disabled={loading}
-                >
-                    <FiRefreshCw className={loading ? 'spin' : ''} />
-                    {loading ? 'Đang tải...' : 'Làm mới'}
-                </button>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                    <button
+                        type="button"
+                        className="btn btn-primary btn-icon"
+                        onClick={openCreateModal}
+                    >
+                        <FiUserPlus style={{ marginRight: 6 }} />
+                        Thêm tài khoản
+                    </button>
+                    <button
+                        type="button"
+                        className="btn btn-outline btn-icon"
+                        onClick={onRefresh}
+                        disabled={loading}
+                    >
+                        <FiRefreshCw className={loading ? 'spin' : ''} />
+                        {loading ? 'Đang tải...' : 'Làm mới'}
+                    </button>
+                </div>
             </div>
 
             {error && (
@@ -539,13 +634,17 @@ const UserManager = () => {
                                         />
                                     </div>
                                     <div className="detail-row">
-                                        <span className="detail-label">Role ID</span>
-                                        <input
+                                        <span className="detail-label">Vai trò</span>
+                                        <select
                                             className="detail-edit-input"
-                                            type="number"
-                                            value={editForm.roleId}
+                                            value={editForm.roleId === undefined || editForm.roleId === null ? '' : String(editForm.roleId)}
                                             onChange={(e) => handleEditChange('roleId', e.target.value)}
-                                        />
+                                        >
+                                            <option value="">-- Chọn vai trò --</option>
+                                            {ROLE_OPTIONS.map((r) => (
+                                                <option key={r.id} value={r.id}>{r.name}</option>
+                                            ))}
+                                        </select>
                                     </div>
                                     <div className="detail-row">
                                         <span className="detail-label">Saint ID</span>
@@ -726,6 +825,171 @@ const UserManager = () => {
                     </div>
                 </div>
             )}
+            {/* Create account modal */}
+            {showCreateModal && (
+                <div
+                    className="detail-overlay"
+                    onClick={closeCreateModal}
+                    role="presentation"
+                >
+                    <div
+                        className="detail-modal"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="detail-modal-header">
+                            <h3>Thêm tài khoản mới</h3>
+                            <button
+                                type="button"
+                                className="detail-close"
+                                onClick={closeCreateModal}
+                                aria-label="Đóng"
+                            >
+                                &times;
+                            </button>
+                        </div>
+                        <div className="detail-modal-body">
+                            {createSuccess && (
+                                <div className="user-manager-alert success" style={{ marginBottom: 12 }}>
+                                    Tạo tài khoản thành công!
+                                </div>
+                            )}
+                            {createError && (
+                                <div className="user-manager-alert error" style={{ marginBottom: 12 }}>
+                                    {createError}
+                                </div>
+                            )}
+                            <div className="detail-row">
+                                <span className="detail-label">Họ tên *</span>
+                                <input
+                                    className="detail-edit-input"
+                                    type="text"
+                                    value={createForm.fullName}
+                                    onChange={(e) => handleCreateChange('fullName', e.target.value)}
+                                    placeholder="Nhập họ tên"
+                                />
+                            </div>
+                            <div className="detail-row">
+                                <span className="detail-label">Email *</span>
+                                <input
+                                    className="detail-edit-input"
+                                    type="email"
+                                    value={createForm.email}
+                                    onChange={(e) => handleCreateChange('email', e.target.value)}
+                                    placeholder="email@example.com"
+                                />
+                            </div>
+                            <div className="detail-row">
+                                <span className="detail-label">Mật khẩu *</span>
+                                <input
+                                    className="detail-edit-input"
+                                    type="password"
+                                    value={createForm.password}
+                                    onChange={(e) => handleCreateChange('password', e.target.value)}
+                                    placeholder="Nhập mật khẩu"
+                                />
+                            </div>
+                            <div className="detail-row">
+                                <span className="detail-label">Số điện thoại</span>
+                                <input
+                                    className="detail-edit-input"
+                                    type="text"
+                                    value={createForm.phone}
+                                    onChange={(e) => handleCreateChange('phone', e.target.value)}
+                                    placeholder="Số điện thoại"
+                                />
+                            </div>
+                            <div className="detail-row">
+                                <span className="detail-label">Ngày sinh</span>
+                                <input
+                                    className="detail-edit-input"
+                                    type="date"
+                                    value={createForm.dateOfBirth}
+                                    onChange={(e) => handleCreateChange('dateOfBirth', e.target.value)}
+                                />
+                            </div>
+                            <div className="detail-row">
+                                <span className="detail-label">Giới tính</span>
+                                <select
+                                    className="detail-edit-input"
+                                    value={createForm.gender}
+                                    onChange={(e) => handleCreateChange('gender', e.target.value)}
+                                >
+                                    <option value="">-- Chọn --</option>
+                                    <option value="MALE">Nam</option>
+                                    <option value="FEMALE">Nữ</option>
+                                    <option value="OTHER">Khác</option>
+                                </select>
+                            </div>
+                            <div className="detail-row">
+                                <span className="detail-label">Avatar URL</span>
+                                <input
+                                    className="detail-edit-input"
+                                    type="text"
+                                    value={createForm.avtUrl}
+                                    onChange={(e) => handleCreateChange('avtUrl', e.target.value)}
+                                    placeholder="https://..."
+                                />
+                            </div>
+                            <div className="detail-row">
+                                <span className="detail-label">Vai trò *</span>
+                                <select
+                                    className="detail-edit-input"
+                                    value={createForm.roleId}
+                                    onChange={(e) => handleCreateChange('roleId', e.target.value)}
+                                >
+                                    <option value="">-- Chọn vai trò --</option>
+                                    {ROLE_OPTIONS.map((r) => (
+                                        <option key={r.id} value={r.id}>{r.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="detail-row">
+                                <span className="detail-label">Saint ID</span>
+                                <input
+                                    className="detail-edit-input"
+                                    type="text"
+                                    value={createForm.saintId}
+                                    onChange={(e) => handleCreateChange('saintId', e.target.value)}
+                                    placeholder="Saint ID"
+                                />
+                            </div>
+                            <div className="detail-row">
+                                <span className="detail-label">Đã xác thực</span>
+                                <label className="detail-checkbox-label">
+                                    <input
+                                        type="checkbox"
+                                        checked={createForm.isVerified}
+                                        onChange={(e) => handleCreateChange('isVerified', e.target.checked)}
+                                    />
+                                    <span style={{ marginLeft: 8 }}>
+                                        {createForm.isVerified ? 'Đã xác thực' : 'Chưa xác thực'}
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+                        <div className="detail-modal-footer">
+                            <button
+                                type="button"
+                                className="btn btn-outline"
+                                onClick={closeCreateModal}
+                                disabled={createLoading}
+                            >
+                                Huỷ
+                            </button>
+                            <button
+                                type="button"
+                                className="btn btn-primary"
+                                onClick={handleCreateSubmit}
+                                disabled={createLoading || !createForm.fullName?.trim() || !createForm.email?.trim() || !createForm.password || !createForm.roleId}
+                            >
+                                <FiSave style={{ marginRight: 4 }} />
+                                {createLoading ? 'Đang tạo...' : 'Tạo tài khoản'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Delete confirmation dialog */}
             {showDeleteConfirm && detailAccount && (
                 <div className="detail-overlay" style={{ zIndex: 1100 }} role="presentation">

@@ -151,8 +151,156 @@
     margin-top: var(--spacing-sm);
 }
 
+/* Register form (multi-step, unauthenticated) */
+.artisan-register-form-section .form-section-header {
+    margin-bottom: var(--spacing-md);
+}
+
+.artisan-register-steps {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.5rem;
+}
+
+.artisan-register-steps .register-step-dot {
+    display: flex;
+    align-items: center;
+    position: relative;
+}
+
+.artisan-register-steps .register-step-num {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #e5e7eb;
+    color: #555;
+    font-size: 0.8rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.artisan-register-steps .register-step-dot.active .register-step-num {
+    background: var(--color-primary, #2b4a9c);
+    color: #fff;
+}
+
+.artisan-register-steps .register-step-dot.current .register-step-num {
+    box-shadow: 0 0 0 3px rgba(43, 74, 156, 0.25);
+}
+
+.artisan-register-steps .register-step-line {
+    width: 32px;
+    height: 2px;
+    background: #e5e7eb;
+    margin: 0 4px;
+}
+
+.artisan-register-steps .register-step-dot.active:has(+ .register-step-dot.active) .register-step-line {
+    background: var(--color-primary, #2b4a9c);
+}
+
+.artisan-register-form-section .register-step-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-text);
+    margin: 0 0 var(--spacing-md) 0;
+}
+
+.artisan-register-form .register-step-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.artisan-register-form .form-select {
+    cursor: pointer;
+    appearance: auto;
+}
+
+.artisan-register-form .form-hint {
+    font-size: 0.8rem;
+    color: var(--color-text-light);
+    margin-top: 0.25rem;
+}
+
+.artisan-register-form .password-input-container {
+    display: flex;
+    align-items: center;
+    border: 1.5px solid var(--color-border-light, #ddd);
+    border-radius: var(--radius-md);
+    background: var(--color-bg);
+    transition: all 0.2s ease;
+    overflow: hidden;
+}
+
+.artisan-register-form .password-input-container:focus-within {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(43, 74, 156, 0.15);
+}
+
+.artisan-register-form .password-input-container .form-input {
+    border: none;
+    box-shadow: none;
+    background: transparent;
+    padding-right: 0.5rem;
+    flex: 1;
+}
+
+.artisan-register-form .password-toggle-btn {
+    padding: 0 0.75rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--color-text-light);
+    display: flex;
+    align-items: center;
+}
+
+.artisan-register-form .password-toggle-btn:hover {
+    color: var(--color-primary);
+}
+
+.artisan-register-form .register-form-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: var(--spacing-md);
+    flex-wrap: wrap;
+}
+
+.artisan-register-form .register-btn-back {
+    padding: 0.6rem 1rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.artisan-register-form .register-btn-back:hover {
+    background: var(--color-bg-secondary, #f5f5f5);
+    border-color: var(--color-primary);
+}
+
+.artisan-register-login-prompt {
+    margin-top: var(--spacing-md);
+    font-size: 0.9375rem;
+    color: var(--color-text-light);
+}
+
+.artisan-register-login-prompt a {
+    color: var(--color-primary);
+    font-weight: 500;
+}
+
 @media (max-width: 600px) {
-    .artisan-apply-form .form-row {
+    .artisan-apply-form .form-row,
+    .artisan-register-form .form-row {
         grid-template-columns: 1fr;
     }
 }

@@ -9,7 +9,8 @@ import {
     FiBell,
     FiSearch,
     FiLogOut,
-    FiFileText
+    FiFileText,
+    FiPackage
 } from 'react-icons/fi';
 
 const AdminLayout = () => {
@@ -25,6 +26,7 @@ const AdminLayout = () => {
     const menuItems = [
         { path: '/admin/settings', name: 'Cấu hình hệ thống', icon: <FiSettings /> },
         { path: '/admin/users', name: 'Quản lý người dùng', icon: <FiUsers /> },
+        { path: '/admin/products', name: 'Quản lý sản phẩm', icon: <FiPackage /> },
         { path: '/admin/artisan-applications', name: 'Artisan Application', icon: <FiFileText /> },
     ];
 

@@ -21,6 +21,10 @@ api.interceptors.request.use(
                 // Ignore parse errors
             }
         }
+        // Let axios set multipart/form-data with boundary when sending FormData
+        if (config.data instanceof FormData) {
+            delete config.headers['Content-Type'];
+        }
         return config;
     },
     (error) => {

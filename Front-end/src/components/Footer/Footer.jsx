@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { useLanguage } from '../../context/LanguageContext';
 import './Footer.css';
 
 const Footer = () => {
+    const { t } = useLanguage();
     const [email, setEmail] = useState('');
 
     const handleSubmit = (e) => {
@@ -25,7 +27,7 @@ const Footer = () => {
                             <span>Sanctus</span>
                         </div>
                         <p className="footer-description">
-                            Connecting faith communities with sacred artisans and craftspeople. Every purchase supports small-scale Catholic artisans and their holy work.
+                            {t('footer.description')}
                         </p>
                         <div className="footer-social">
                             <a href="#instagram" className="social-link" aria-label="Instagram">
@@ -51,43 +53,43 @@ const Footer = () => {
 
                     {/* Marketplace Column */}
                     <div className="footer-column">
-                        <h4 className="footer-title">Marketplace</h4>
+                        <h4 className="footer-title">{t('footer.marketplace')}</h4>
                         <ul className="footer-links">
-                            <li><a href="#shop">Shop All</a></li>
-                            <li><a href="#artisans">Featured Artisans</a></li>
-                            <li><a href="#new-arrivals">New Arrivals</a></li>
-                            <li><a href="#gift-cards">Gift Cards</a></li>
+                            <li><a href="/shop">{t('footer.shopAll')}</a></li>
+                            <li><a href="#artisans">{t('footer.featuredArtisans')}</a></li>
+                            <li><a href="#new-arrivals">{t('footer.newArrivals')}</a></li>
+                            <li><a href="#gift-cards">{t('footer.giftCards')}</a></li>
                         </ul>
                     </div>
 
                     {/* Community Column */}
                     <div className="footer-column">
-                        <h4 className="footer-title">Community</h4>
+                        <h4 className="footer-title">{t('footer.community')}</h4>
                         <ul className="footer-links">
-                            <li><a href="#about">About Us</a></li>
-                            <li><a href="#blog">Artisan Blog</a></li>
-                            <li><a href="#become">Become an Artisan</a></li>
-                            <li><a href="#help">Help Center</a></li>
+                            <li><a href="#about">{t('footer.aboutUs')}</a></li>
+                            <li><a href="#blog">{t('footer.artisanBlog')}</a></li>
+                            <li><a href="#become">{t('footer.becomeArtisan')}</a></li>
+                            <li><a href="#help">{t('footer.helpCenter')}</a></li>
                         </ul>
                     </div>
 
                     {/* Subscribe Column */}
                     <div className="footer-column footer-subscribe">
-                        <h4 className="footer-title">Subscribe</h4>
+                        <h4 className="footer-title">{t('footer.subscribe')}</h4>
                         <p className="subscribe-description">
-                            Get our newsletter for weekly inspiration and sales on artisan products.
+                            {t('footer.subscribeDescription')}
                         </p>
                         <form onSubmit={handleSubmit} className="subscribe-form">
                             <input
                                 type="email"
-                                placeholder="Email address"
+                                placeholder={t('footer.emailPlaceholder')}
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 className="subscribe-input"
                                 required
                             />
                             <button type="submit" className="btn btn-primary subscribe-btn">
-                                Join
+                                {t('footer.join')}
                             </button>
                         </form>
                     </div>
@@ -96,12 +98,12 @@ const Footer = () => {
                 {/* Footer Bottom */}
                 <div className="footer-bottom">
                     <p className="footer-copyright">
-                        © 2025 Sanctus Marketplace. All rights reserved.
+                        {t('footer.copyright')}
                     </p>
                     <div className="footer-legal">
-                        <a href="#privacy">Privacy Policy</a>
+                        <a href="#privacy">{t('footer.privacy')}</a>
                         <span className="separator">·</span>
-                        <a href="#terms">Terms of Service</a>
+                        <a href="#terms">{t('footer.terms')}</a>
                     </div>
                 </div>
             </div>

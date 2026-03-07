@@ -252,6 +252,28 @@
     font-size: 0.9375rem;
 }
 
+.cod-container {
+    margin-top: var(--spacing-md);
+}
+
+.cod-description {
+    color: var(--color-text-muted, #6c757d);
+    font-size: 0.95rem;
+    margin: 0;
+}
+
+.checkout-error {
+    color: var(--color-error, #dc3545);
+    font-size: 0.9rem;
+    margin: var(--spacing-md) 0 0;
+}
+
+.item-qty {
+    font-size: 0.85rem;
+    color: var(--color-text-muted, #6c757d);
+    margin-left: 0.25rem;
+}
+
 .total-row.grand-total {
     font-size: 1.25rem;
     font-weight: 800;

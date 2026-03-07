@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -67,7 +67,7 @@ const Header = () => {
                     {/* Navigation */}
                     <nav className={`header-nav ${mobileMenuOpen ? 'open' : ''}`}>
                         <div className="nav-links">
-                            <a href="#shop" className="nav-link" onClick={() => setMobileMenuOpen(false)}>{t('common.shop')}</a>
+                            <Link to="/shop" className="nav-link" onClick={() => setMobileMenuOpen(false)}>{t('common.shop')}</Link>
                             <a href="#artisans" className="nav-link" onClick={() => setMobileMenuOpen(false)}>{t('common.artisans')}</a>
                             <a href="#about" className="nav-link" onClick={() => setMobileMenuOpen(false)}>{t('common.about')}</a>
                             <a href="#blog" className="nav-link" onClick={() => setMobileMenuOpen(false)}>{t('common.blog')}</a>
@@ -105,37 +105,41 @@ const Header = () => {
                             />
                         </div>
 
-                        <div className="lang-toggle-wrapper">
+                        <div className="lang-dropdown-wrapper">
                             <button
                                 type="button"
-                                className="icon-btn"
+                                className="lang-dropdown-trigger icon-only"
                                 aria-label={language === 'vi' ? 'Tiếng Việt' : 'English'}
                                 aria-expanded={langMenuOpen}
-                                aria-haspopup="true"
+                                aria-haspopup="listbox"
                                 onClick={() => setLangMenuOpen(!langMenuOpen)}
                             >
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
-                                    <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" strokeLinecap="round" />
                                 </svg>
                             </button>
                             {langMenuOpen && (
                                 <>
-                                    <div className="lang-menu-overlay" onClick={() => setLangMenuOpen(false)} aria-hidden="true" />
-                                    <div className="lang-menu">
+                                    <div className="lang-dropdown-overlay" onClick={() => setLangMenuOpen(false)} aria-hidden="true" />
+                                    <div className="lang-dropdown-menu" role="listbox">
                                         <button
                                             type="button"
-                                            className={`lang-option ${language === 'vi' ? 'active' : ''}`}
+                                            role="option"
+                                            aria-selected={language === 'vi'}
+                                            className={`lang-dropdown-option ${language === 'vi' ? 'active' : ''}`}
                                             onClick={() => { setLanguage('vi'); setLangMenuOpen(false); }}
                                         >
-                                            VI
+                                            Tiếng Việt
                                         </button>
                                         <button
                                             type="button"
-                                            className={`lang-option ${language === 'en' ? 'active' : ''}`}
+                                            role="option"
+                                            aria-selected={language === 'en'}
+                                            className={`lang-dropdown-option ${language === 'en' ? 'active' : ''}`}
                                             onClick={() => { setLanguage('en'); setLangMenuOpen(false); }}
                                         >
-                                            EN
+                                            English
                                         </button>
                                     </div>
                                 </>

@@ -3,7 +3,17 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Header from '../components/Header/Header';
 import Footer from '../components/Footer/Footer';
 import { useCart } from '../context/CartContext';
+import productService from '../services/productService';
 import './ProductDetailsPage.css';
+
+const getProductImage = (p) => {
+    if (p?.images?.length > 0) return p.images[0].imageUrl || p.images[0].image_url;
+    if (p?.productImages?.length > 0) {
+        const img = p.productImages[0];
+        return img.imageUrl || img.image_url || img.image;
+    }
+    return p?.imageUrl || p?.image_url || p?.image;
+};
 
 const ProductDetailsPage = () => {
     const { id } = useParams();
@@ -11,19 +21,54 @@ const ProductDetailsPage = () => {
     const { addToCart } = useCart();
     const [product, setProduct] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [quantity, setQuantity] = useState(1);
 
     useEffect(() => {
         window.scrollTo(0, 0);
-        // TODO: fetch product by id from API when endpoint is available
-        setProduct(null);
-        setLoading(false);
+    }, [id]);
+
+    useEffect(() => {
+        if (!id) {
+            setProduct(null);
+            setLoading(false);
+            return;
+        }
+        const fetchProduct = async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                const result = await productService.getProductById(id);
+                if (result.success && result.data) {
+                    setProduct(result.data);
+                } else {
+                    setProduct(null);
+                    setError(result.error || 'Không tìm thấy sản phẩm.');
+                }
+            } catch (err) {
+                setProduct(null);
+                setError(err.message || 'Không tải được thông tin sản phẩm.');
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchProduct();
     }, [id]);
 
     const handleAddToCart = () => {
+        if (!product) return;
+        const productId = product.productId ?? product.id;
+        const price = product.productPrice ?? product.price;
+        const title = product.productName ?? product.title ?? '—';
+        const image = getProductImage(product);
+        const artisan = product.artisanName ?? product.artisan ?? '';
         addToCart({
-            ...product,
-            price: product.onSale ? product.salePrice : product.price
+            id: productId,
+            productId,
+            title,
+            price,
+            image,
+            artisan,
         }, quantity);
     };
 
@@ -33,42 +78,46 @@ const ProductDetailsPage = () => {
                 <Header />
                 <div className="product-loading">
                     <div className="spinner"></div>
-                    <p>Loading divine craftsmanship...</p>
+                    <p>Đang tải thông tin sản phẩm...</p>
                 </div>
                 <Footer />
             </div>
         );
     }
 
-    if (!product) {
+    if (!product && !loading) {
         return (
             <div className="product-details-page">
                 <Header />
                 <div className="product-not-found">
-                    <h2>Artifact Not Found</h2>
-                    <p>We couldn't find the sacred item you're looking for.</p>
-                    <button className="btn btn-primary" onClick={() => navigate('/')}>Return Home</button>
+                    <h2>Không tìm thấy sản phẩm</h2>
+                    <p>{error || 'Chúng tôi không tìm thấy sản phẩm bạn cần.'}</p>
+                    <button className="btn btn-primary" onClick={() => navigate('/shop')}>Về cửa hàng</button>
                 </div>
                 <Footer />
             </div>
         );
     }
+
+    const productImage = getProductImage(product);
+    const productPrice = product.productPrice ?? product.price ?? 0;
+    const productName = product.productName ?? product.title ?? '—';
+    const artisanName = product.artisanName ?? product.artisan ?? '—';
+    const productDescription = product.productDescription ?? product.description ?? '';
 
     return (
         <div className="product-details-page">
             <Header />
             <main className="product-main container">
                 <button className="back-link" onClick={() => navigate(-1)}>
-                    &larr; Back to Shop
+                    &larr; Quay lại cửa hàng
                 </button>
 
                 <div className="product-details-grid">
                     {/* Image Section */}
                     <div className="product-image-container">
-                        {product.onSale && <div className="badge badge-sale-large">SALE</div>}
-
-                        {product.image ? (
-                            <img src={product.image} alt={product.title} className="product-main-image" />
+                        {productImage ? (
+                            <img src={productImage} alt={productName} className="product-main-image" />
                         ) : (
                             <div className="product-image-placeholder">
                                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -83,42 +132,37 @@ const ProductDetailsPage = () => {
                     {/* Info Section */}
                     <div className="product-info-container">
                         <div className="product-header">
-                            <h1 className="product-title-large">{product.title}</h1>
-                            <p className="product-artisan-link">Crafted by <strong>{product.artisan}</strong></p>
+                            <h1 className="product-title-large">{productName}</h1>
+                            <p className="product-artisan-link">Tác giả: <strong>{artisanName}</strong></p>
                         </div>
 
                         <div className="product-price-large">
-                            {product.onSale ? (
-                                <>
-                                    <span className="price-sale">${product.salePrice.toFixed(2)}</span>
-                                    <span className="price-original">${product.price.toFixed(2)}</span>
-                                </>
-                            ) : (
-                                <span className="price-regular">${product.price.toFixed(2)}</span>
-                            )}
+                            <span className="price-regular">
+                                {productPrice.toLocaleString('vi-VN')} ₫
+                            </span>
                         </div>
 
                         <div className="product-description">
-                            <p>{product.description}</p>
+                            <p>{productDescription || 'Chưa có mô tả.'}</p>
                         </div>
 
                         <div className="product-meta">
-                            {product.materials && (
+                            {product.material && (
                                 <div className="meta-item">
-                                    <span className="meta-label">Materials:</span>
-                                    <span className="meta-value">{product.materials.join(', ')}</span>
+                                    <span className="meta-label">Chất liệu:</span>
+                                    <span className="meta-value">{product.material}</span>
                                 </div>
                             )}
-                            {product.dimensions && (
+                            {product.size && (
                                 <div className="meta-item">
-                                    <span className="meta-label">Dimensions:</span>
-                                    <span className="meta-value">{product.dimensions}</span>
+                                    <span className="meta-label">Kích thước:</span>
+                                    <span className="meta-value">{product.size}</span>
                                 </div>
                             )}
-                            {product.productionTime && (
+                            {product.quantity != null && (
                                 <div className="meta-item">
-                                    <span className="meta-label">Availability:</span>
-                                    <span className="meta-value">{product.productionTime}</span>
+                                    <span className="meta-label">Số lượng có sẵn:</span>
+                                    <span className="meta-value">{product.quantity}</span>
                                 </div>
                             )}
                         </div>
@@ -135,13 +179,14 @@ const ProductDetailsPage = () => {
                                 <span className="qty-value">{quantity}</span>
                                 <button
                                     className="qty-btn"
-                                    onClick={() => setQuantity(quantity + 1)}
+                                    onClick={() => setQuantity(Math.min((product.quantity ?? Infinity), quantity + 1))}
+                                    disabled={product.quantity != null && quantity >= product.quantity}
                                 >
                                     +
                                 </button>
                             </div>
                             <button className="btn btn-primary btn-add-cart" onClick={handleAddToCart}>
-                                Add to Cart
+                                Thêm vào giỏ hàng
                             </button>
                         </div>
 
@@ -154,9 +199,9 @@ const ProductDetailsPage = () => {
                                 </svg>
                             </div>
                             <div className="prompt-text">
-                                <h4>Love this but want something unique?</h4>
-                                <p>You can request a custom version of this item directly from the artisan.</p>
-                                <button className="btn btn-outline btn-sm prompt-btn">Request Custom Order</button>
+                                <h4>Muốn đặt hàng theo ý riêng?</h4>
+                                <p>Bạn có thể yêu cầu phiên bản tùy chỉnh trực tiếp từ nghệ nhân.</p>
+                                <button className="btn btn-outline btn-sm prompt-btn">Đặt hàng tùy chỉnh</button>
                             </div>
                         </div>
                     </div>

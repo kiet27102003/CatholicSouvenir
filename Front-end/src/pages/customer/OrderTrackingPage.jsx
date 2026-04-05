@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getOrderById } from '../../services/orderService';
+import { appToast } from '../../lib/appToast';
 import './OrderTrackingPage.css';
 
 const formatVnd = (value) => `${Number(value).toLocaleString('vi-VN')} ₫`;
@@ -29,29 +30,32 @@ const OrderTrackingPage = () => {
     const navigate = useNavigate();
     const [order, setOrder] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
 
     useEffect(() => {
         window.scrollTo(0, 0);
         if (!orderId) {
             setLoading(false);
-            setError('Thiếu mã đơn hàng.');
+            appToast.warning('Thiếu thông tin', 'Thiếu mã đơn hàng');
             return;
         }
         let cancelled = false;
         setLoading(true);
-        setError(null);
         getOrderById(orderId)
             .then((res) => {
                 if (cancelled) return;
                 if (res.success && res.data) {
                     setOrder(res.data);
                 } else {
-                    setError(res.error || 'Không tìm thấy đơn hàng.');
+                    setOrder(null);
+                    const msg = res.error != null ? String(res.error) : 'Vui lòng thử lại';
+                    appToast.error('Không tải được', msg);
                 }
             })
             .catch(() => {
-                if (!cancelled) setError('Không thể tải thông tin đơn hàng.');
+                if (!cancelled) {
+                    setOrder(null);
+                    appToast.error('Không tải được', 'Kiểm tra kết nối mạng');
+                }
             })
             .finally(() => {
                 if (!cancelled) setLoading(false);
@@ -70,12 +74,12 @@ const OrderTrackingPage = () => {
         );
     }
 
-    if (error || !order) {
+    if (!order) {
         return (
             <div className="order-tracking-page">
                 <div className="tracking-error">
                     <h2>Không tìm thấy đơn hàng</h2>
-                    <p>{error || 'Không thể tải thông tin theo dõi đơn hàng.'}</p>
+                    <p>Không thể hiển thị thông tin theo dõi đơn hàng.</p>
                     <button className="btn btn-primary" onClick={() => navigate('/orders')}>
                         Về danh sách đơn hàng
                     </button>

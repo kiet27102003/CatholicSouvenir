@@ -5,6 +5,7 @@ import Footer from '../components/Footer/Footer';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import authService from '../services/authService';
+import { appToast } from '../lib/appToast';
 import './ArtisanCentrePage.css';
 
 const ArtisanCentrePage = () => {
@@ -50,7 +51,6 @@ const ArtisanCentrePage = () => {
     const [portfolioUrlApply, setPortfolioUrlApply] = useState('');
     const [submitted, setSubmitted] = useState(false);
 
-    const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
@@ -66,11 +66,11 @@ const ArtisanCentrePage = () => {
     // Validation for register form
     const validateRegStep1 = () => {
         if (!firstName.trim()) {
-            setError(t('artisanCentre.errors.firstNameRequired'));
+            appToast.warning('Thiếu thông tin', t('artisanCentre.errors.firstNameRequired'));
             return false;
         }
         if (!lastName.trim()) {
-            setError(t('artisanCentre.errors.lastNameRequired'));
+            appToast.warning('Thiếu thông tin', t('artisanCentre.errors.lastNameRequired'));
             return false;
         }
         return true;
@@ -78,12 +78,12 @@ const ArtisanCentrePage = () => {
 
     const validateRegStep2 = () => {
         if (!email.trim()) {
-            setError(t('artisanCentre.errors.emailRequired'));
+            appToast.warning('Thiếu thông tin', t('artisanCentre.errors.emailRequired'));
             return false;
         }
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email.trim())) {
-            setError(t('artisanCentre.errors.emailInvalid'));
+            appToast.warning('Thiếu thông tin', t('artisanCentre.errors.emailInvalid'));
             return false;
         }
         return true;
@@ -91,16 +91,16 @@ const ArtisanCentrePage = () => {
 
     const validateRegStep3 = () => {
         if (password.length < 6) {
-            setError(t('artisanCentre.errors.passwordMin'));
+            appToast.warning('Thiếu thông tin', t('artisanCentre.errors.passwordMin'));
             return false;
         }
         if (password !== confirmPassword) {
-            setError(t('artisanCentre.errors.passwordMismatch'));
+            appToast.warning('Thiếu thông tin', t('artisanCentre.errors.passwordMismatch'));
             return false;
         }
         const expYear = experienceYear === '' ? undefined : parseInt(experienceYear, 10);
         if (experienceYear !== '' && (isNaN(expYear) || expYear < 0)) {
-            setError(t('artisanCentre.errors.experienceInvalid'));
+            appToast.warning('Thiếu thông tin', t('artisanCentre.errors.experienceInvalid'));
             return false;
         }
         return true;
@@ -108,20 +108,17 @@ const ArtisanCentrePage = () => {
 
     const goNextReg = (e) => {
         e.preventDefault();
-        setError('');
         if (regStep === 1 && !validateRegStep1()) return;
         if (regStep === 2 && !validateRegStep2()) return;
         setRegStep((s) => Math.min(s + 1, REGISTER_STEPS.length));
     };
 
     const goBackReg = () => {
-        setError('');
         setRegStep((s) => Math.max(s - 1, 1));
     };
 
     const handleRegisterSubmit = async (e) => {
         e.preventDefault();
-        setError('');
         if (!validateRegStep3()) return;
 
         const expYear = experienceYear === '' ? undefined : parseInt(experienceYear, 10);
@@ -143,12 +140,14 @@ const ArtisanCentrePage = () => {
                 specialization: specialization.trim() || undefined,
             });
             if (result.success) {
+                appToast.success('Tạo thành công', 'Đã tạo tài khoản nghệ nhân');
                 navigate('/login', { state: { message: result.message } });
             } else {
-                setError(result.error || t('artisanCentre.errors.registerFailed'));
+                const msg = result.error != null ? String(result.error) : t('artisanCentre.errors.registerFailed');
+                appToast.error('Có lỗi xảy ra', msg);
             }
         } catch {
-            setError(t('artisanCentre.errors.generic'));
+            appToast.error('Có lỗi xảy ra', t('artisanCentre.errors.generic'));
         } finally {
             setLoading(false);
         }
@@ -156,12 +155,11 @@ const ArtisanCentrePage = () => {
 
     const handleApplySubmit = async (e) => {
         e.preventDefault();
-        setError('');
         setLoading(true);
         try {
             const expYear = experienceYearApply === '' ? undefined : parseInt(experienceYearApply, 10);
             if (experienceYearApply !== '' && (isNaN(expYear) || expYear < 0)) {
-                setError(t('artisanCentre.errors.experienceInvalid'));
+                appToast.warning('Thiếu thông tin', t('artisanCentre.errors.experienceInvalid'));
                 setLoading(false);
                 return;
             }
@@ -173,12 +171,14 @@ const ArtisanCentrePage = () => {
                 portfolioUrl: portfolioUrlApply.trim() || undefined,
             });
             if (result.success) {
+                appToast.success('Tạo thành công', 'Đơn đăng ký đã được gửi');
                 setSubmitted(true);
             } else {
-                setError(result.error || t('artisanCentre.errors.applyFailed'));
+                const msg = result.error != null ? String(result.error) : t('artisanCentre.errors.applyFailed');
+                appToast.error('Có lỗi xảy ra', msg);
             }
         } catch {
-            setError(t('artisanCentre.errors.generic'));
+            appToast.error('Có lỗi xảy ra', t('artisanCentre.errors.generic'));
         } finally {
             setLoading(false);
         }
@@ -222,16 +222,6 @@ const ArtisanCentrePage = () => {
                             <p className="register-step-title">{REGISTER_STEPS[regStep - 1].title}</p>
 
                             <form onSubmit={regStep === 3 ? handleRegisterSubmit : goNextReg} className="artisan-apply-form artisan-register-form">
-                                {error && (
-                                    <div className="error-message" role="alert">
-                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                            <circle cx="12" cy="12" r="10" />
-                                            <path d="M12 8v4M12 16h.01" strokeLinecap="round" />
-                                        </svg>
-                                        {error}
-                                    </div>
-                                )}
-
                                 {regStep === 1 && (
                                     <div className="register-step-panel">
                                         <div className="form-row">
@@ -462,15 +452,6 @@ const ArtisanCentrePage = () => {
                                 <p>{t('artisanCentre.applySubtitle')}</p>
                             </div>
                             <form onSubmit={handleApplySubmit} className="artisan-apply-form">
-                                {error && (
-                                    <div className="error-message">
-                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                            <circle cx="12" cy="12" r="10" />
-                                            <path d="M12 8v4M12 16h.01" strokeLinecap="round" />
-                                        </svg>
-                                        {error}
-                                    </div>
-                                )}
                                 <div className="form-group">
                                     <label htmlFor="artisanName" className="form-label">{t('artisanCentre.artisanName')}</label>
                                     <input

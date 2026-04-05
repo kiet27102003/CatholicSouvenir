@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { FiSearch, FiFilter, FiEye, FiUsers, FiRefreshCw, FiEdit2, FiSave, FiX, FiTrash2, FiAlertTriangle, FiUserPlus } from 'react-icons/fi';
 import api from '../../cofig/api';
+import { appToast } from '../../lib/appToast';
+import AdminTopbar from './AdminTopbar';
 import './admin-common.css';
 import './UserManager.css';
 
@@ -17,7 +19,6 @@ const ROLE_OPTIONS = [
 const UserManager = () => {
     const [accounts, setAccounts] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [roleFilter, setRoleFilter] = useState('All');
     const [detailAccount, setDetailAccount] = useState(null);
@@ -31,13 +32,10 @@ const UserManager = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [editForm, setEditForm] = useState({});
     const [saveLoading, setSaveLoading] = useState(false);
-    const [saveError, setSaveError] = useState(null);
-    const [saveSuccess, setSaveSuccess] = useState(false);
 
     // Delete state
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [deleteLoading, setDeleteLoading] = useState(false);
-    const [deleteError, setDeleteError] = useState(null);
 
     // Create account state
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -54,12 +52,9 @@ const UserManager = () => {
         isVerified: false,
     });
     const [createLoading, setCreateLoading] = useState(false);
-    const [createError, setCreateError] = useState(null);
-    const [createSuccess, setCreateSuccess] = useState(false);
 
     const fetchAccounts = async (pageIndex = page) => {
         setLoading(true);
-        setError(null);
         try {
             const params = {
                 page: pageIndex,
@@ -75,7 +70,8 @@ const UserManager = () => {
             setTotalElements(pageData?.totalElements ?? (Array.isArray(list) ? list.length : 0));
             setTotalPages(pageData?.totalPages ?? 1);
         } catch (err) {
-            setError(err.response?.data?.message || err.message || 'Không tải được danh sách tài khoản.');
+            const msg = err.response?.data?.message || err.message || 'Kiểm tra kết nối mạng';
+            appToast.error('Không tải được', typeof msg === 'string' ? msg : 'Kiểm tra kết nối mạng');
             setAccounts([]);
             setTotalElements(0);
             setTotalPages(0);
@@ -163,8 +159,6 @@ const UserManager = () => {
         setDetailAccount(acc);
         setIsEditing(false);
         setEditForm({});
-        setSaveError(null);
-        setSaveSuccess(false);
     };
 
     // Close detail modal
@@ -172,10 +166,7 @@ const UserManager = () => {
         setDetailAccount(null);
         setIsEditing(false);
         setEditForm({});
-        setSaveError(null);
-        setSaveSuccess(false);
         setShowDeleteConfirm(false);
-        setDeleteError(null);
     };
 
     // Enter edit mode
@@ -191,8 +182,6 @@ const UserManager = () => {
             saintId: detailAccount.saintId || '',
             isVerified: detailAccount.verified ?? false,
         });
-        setSaveError(null);
-        setSaveSuccess(false);
         setIsEditing(true);
     };
 
@@ -200,7 +189,6 @@ const UserManager = () => {
     const cancelEditing = () => {
         setIsEditing(false);
         setEditForm({});
-        setSaveError(null);
     };
 
     // Handle form field change
@@ -212,8 +200,6 @@ const UserManager = () => {
     const handleSave = async () => {
         if (!detailAccount?.accountId) return;
         setSaveLoading(true);
-        setSaveError(null);
-        setSaveSuccess(false);
         try {
             const body = {
                 fullName: editForm.fullName,
@@ -240,11 +226,12 @@ const UserManager = () => {
                 )
             );
 
-            setSaveSuccess(true);
+            appToast.success('Đã cập nhật', 'Thông tin đã được lưu');
             setIsEditing(false);
             setEditForm({});
         } catch (err) {
-            setSaveError(err.response?.data?.message || err.message || 'Lưu thất bại.');
+            const msg = err.response?.data?.message || err.message || 'Vui lòng thử lại';
+            appToast.error('Có lỗi xảy ra', typeof msg === 'string' ? msg : 'Vui lòng thử lại');
         } finally {
             setSaveLoading(false);
         }
@@ -264,15 +251,11 @@ const UserManager = () => {
             saintId: '',
             isVerified: false,
         });
-        setCreateError(null);
-        setCreateSuccess(false);
         setShowCreateModal(true);
     };
 
     const closeCreateModal = () => {
         setShowCreateModal(false);
-        setCreateError(null);
-        setCreateSuccess(false);
     };
 
     const handleCreateChange = (field, value) => {
@@ -282,8 +265,6 @@ const UserManager = () => {
     // Create account via POST
     const handleCreateSubmit = async () => {
         setCreateLoading(true);
-        setCreateError(null);
-        setCreateSuccess(false);
         try {
             const body = {
                 fullName: createForm.fullName,
@@ -298,14 +279,13 @@ const UserManager = () => {
                 isVerified: createForm.isVerified,
             };
             await api.post(API_ACCOUNTS, body);
-            setCreateSuccess(true);
+            appToast.success('Tạo thành công', 'Đã thêm tài khoản vào hệ thống');
             setPage(0);
             fetchAccounts(0);
-            setTimeout(() => {
-                closeCreateModal();
-            }, 1200);
+            closeCreateModal();
         } catch (err) {
-            setCreateError(err.response?.data?.message || err.message || 'Tạo tài khoản thất bại.');
+            const msg = err.response?.data?.message || err.message || 'Vui lòng thử lại';
+            appToast.error('Có lỗi xảy ra', typeof msg === 'string' ? msg : 'Vui lòng thử lại');
         } finally {
             setCreateLoading(false);
         }
@@ -315,25 +295,27 @@ const UserManager = () => {
     const handleDelete = async () => {
         if (!detailAccount?.accountId) return;
         setDeleteLoading(true);
-        setDeleteError(null);
         try {
+            const removedName = detailAccount.fullName || detailAccount.email || 'Tài khoản';
             await api.delete(`${API_ACCOUNTS}/${detailAccount.accountId}`);
-            // Remove from list and close modal
+            appToast.success('Đã xóa', `${removedName} đã được xóa`);
             setAccounts((prev) => prev.filter((a) => a.accountId !== detailAccount.accountId));
             setTotalElements((prev) => Math.max(0, prev - 1));
             closeDetail();
         } catch (err) {
-            setDeleteError(err.response?.data?.message || err.message || 'Xoá tài khoản thất bại.');
+            const msg = err.response?.data?.message || err.message || 'Vui lòng thử lại';
+            appToast.error('Có lỗi xảy ra', typeof msg === 'string' ? msg : 'Vui lòng thử lại');
             setShowDeleteConfirm(false);
         } finally {
             setDeleteLoading(false);
         }
     };
     return (
-        <div className="admin-page user-manager-page">
+        <>
+            <AdminTopbar title="Quản lý người dùng" />
+            <div className="admin-page user-manager-page">
             <div className="admin-page-header user-manager-header">
                 <div>
-                    <h2>Quản lý người dùng</h2>
                     <p className="admin-page-subtitle">
                         Quản lý tài khoản, vai trò và quyền hạn.
                     </p>
@@ -358,10 +340,6 @@ const UserManager = () => {
                     </button>
                 </div>
             </div>
-
-            {error && (
-                <div className="user-manager-alert error">{error}</div>
-            )}
 
             <div className="controls-bar">
                 <div className="search-box">
@@ -551,27 +529,6 @@ const UserManager = () => {
                         </div>
 
                         <div className="detail-modal-body">
-                            {/* Success message */}
-                            {saveSuccess && (
-                                <div className="user-manager-alert success" style={{ marginBottom: '12px' }}>
-                                    Cập nhật tài khoản thành công!
-                                </div>
-                            )}
-
-                            {/* Save error */}
-                            {saveError && (
-                                <div className="user-manager-alert error" style={{ marginBottom: '12px' }}>
-                                    {saveError}
-                                </div>
-                            )}
-
-                            {/* Delete error */}
-                            {deleteError && (
-                                <div className="user-manager-alert error" style={{ marginBottom: '12px' }}>
-                                    {deleteError}
-                                </div>
-                            )}
-
                             {isEditing ? (
                                 /* ── EDIT MODE ── */
                                 <>
@@ -806,7 +763,7 @@ const UserManager = () => {
                                     <button
                                         type="button"
                                         className="btn btn-danger"
-                                        onClick={() => { setShowDeleteConfirm(true); setDeleteError(null); }}
+                                        onClick={() => setShowDeleteConfirm(true)}
                                     >
                                         <FiTrash2 style={{ marginRight: 4 }} />
                                         Xoá
@@ -848,16 +805,6 @@ const UserManager = () => {
                             </button>
                         </div>
                         <div className="detail-modal-body">
-                            {createSuccess && (
-                                <div className="user-manager-alert success" style={{ marginBottom: 12 }}>
-                                    Tạo tài khoản thành công!
-                                </div>
-                            )}
-                            {createError && (
-                                <div className="user-manager-alert error" style={{ marginBottom: 12 }}>
-                                    {createError}
-                                </div>
-                            )}
                             <div className="detail-row">
                                 <span className="detail-label">Họ tên *</span>
                                 <input
@@ -1040,6 +987,7 @@ const UserManager = () => {
                 </div>
             )}
         </div>
+        </>
     );
 };
 

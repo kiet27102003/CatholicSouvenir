@@ -1,4 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
+import { appToast } from '../lib/appToast';
 
 const AuthContext = createContext(null);
 
@@ -12,8 +13,8 @@ export const AuthProvider = ({ children }) => {
         if (storedUser) {
             try {
                 setUser(JSON.parse(storedUser));
-            } catch (error) {
-                console.error('Error parsing stored user:', error);
+            } catch {
+                appToast.warning('Phiên hết hạn', 'Vui lòng đăng nhập lại');
                 localStorage.removeItem('sanctus_user');
                 sessionStorage.removeItem('sanctus_user');
             }

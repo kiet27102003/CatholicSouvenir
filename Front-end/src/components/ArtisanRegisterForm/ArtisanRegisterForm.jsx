@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import authService from '../../services/authService';
+import { appToast } from '../../lib/appToast';
 import '../RegisterForm/RegisterForm.css';
 import './ArtisanRegisterForm.css';
 
@@ -33,7 +34,6 @@ const ArtisanRegisterForm = () => {
     const [portfolioUrl, setPortfolioUrl] = useState('');
     const [specialization, setSpecialization] = useState('');
     const [showPassword, setShowPassword] = useState(false);
-    const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
     const navigate = useNavigate();
@@ -43,11 +43,11 @@ const ArtisanRegisterForm = () => {
 
     const validateStep1 = () => {
         if (!firstName.trim()) {
-            setError('Vui lòng nhập họ.');
+            appToast.warning('Thiếu thông tin', 'Vui lòng nhập họ.');
             return false;
         }
         if (!lastName.trim()) {
-            setError('Vui lòng nhập tên.');
+            appToast.warning('Thiếu thông tin', 'Vui lòng nhập tên.');
             return false;
         }
         return true;
@@ -55,12 +55,12 @@ const ArtisanRegisterForm = () => {
 
     const validateStep2 = () => {
         if (!email.trim()) {
-            setError('Vui lòng nhập email.');
+            appToast.warning('Thiếu thông tin', 'Vui lòng nhập email.');
             return false;
         }
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email.trim())) {
-            setError('Email không hợp lệ.');
+            appToast.warning('Thiếu thông tin', 'Email không hợp lệ.');
             return false;
         }
         return true;
@@ -68,16 +68,16 @@ const ArtisanRegisterForm = () => {
 
     const validateStep3 = () => {
         if (password.length < 6) {
-            setError('Mật khẩu cần ít nhất 6 ký tự.');
+            appToast.warning('Thiếu thông tin', 'Mật khẩu cần ít nhất 6 ký tự.');
             return false;
         }
         if (password !== confirmPassword) {
-            setError('Mật khẩu và xác nhận mật khẩu không khớp.');
+            appToast.warning('Thiếu thông tin', 'Mật khẩu và xác nhận mật khẩu không khớp.');
             return false;
         }
         const expYear = experienceYear === '' ? undefined : parseInt(experienceYear, 10);
         if (experienceYear !== '' && (isNaN(expYear) || expYear < 0)) {
-            setError('Số năm kinh nghiệm không hợp lệ.');
+            appToast.warning('Thiếu thông tin', 'Số năm kinh nghiệm không hợp lệ.');
             return false;
         }
         return true;
@@ -85,20 +85,17 @@ const ArtisanRegisterForm = () => {
 
     const goNext = (e) => {
         e.preventDefault();
-        setError('');
         if (step === 1 && !validateStep1()) return;
         if (step === 2 && !validateStep2()) return;
         setStep((s) => Math.min(s + 1, totalSteps));
     };
 
     const goBack = () => {
-        setError('');
         setStep((s) => Math.max(s - 1, 1));
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setError('');
         if (!validateStep3()) return;
 
         const expYear = experienceYear === '' ? undefined : parseInt(experienceYear, 10);
@@ -122,12 +119,13 @@ const ArtisanRegisterForm = () => {
             });
 
             if (result.success) {
+                appToast.success('Tạo thành công', result.message || 'Đơn đăng ký nghệ nhân đã được gửi');
                 navigate('/login', { state: { message: result.message } });
             } else {
-                setError(result.error || 'Đăng ký nghệ nhân thất bại. Vui lòng thử lại.');
+                appToast.error('Có lỗi xảy ra', result.error || 'Đăng ký nghệ nhân thất bại. Vui lòng thử lại.');
             }
         } catch {
-            setError('Có lỗi xảy ra. Vui lòng thử lại.');
+            appToast.error('Có lỗi xảy ra', 'Vui lòng thử lại');
         } finally {
             setLoading(false);
         }
@@ -155,16 +153,6 @@ const ArtisanRegisterForm = () => {
             </div>
 
             <form onSubmit={isLastStep ? handleSubmit : goNext} className="register-form">
-                {error && (
-                    <div className="error-message" role="alert">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
-                            <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                        </svg>
-                        {error}
-                    </div>
-                )}
-
                 {/* Bước 1: Thông tin cá nhân */}
                 {step === 1 && (
                     <div className="register-step-panel">

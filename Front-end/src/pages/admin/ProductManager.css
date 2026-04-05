@@ -276,6 +276,11 @@
     color: #ef4444;
 }
 
+.btn-action.view:hover {
+    background: #e0e7ff;
+    color: #4f46e5;
+}
+
 /* Modal */
 .detail-overlay {
     position: fixed;
@@ -364,6 +369,96 @@
 .detail-edit-input:focus {
     outline: none;
     border-color: var(--color-primary);
+}
+
+.detail-value {
+    display: block;
+    font-size: 0.875rem;
+    color: var(--admin-text-secondary);
+    line-height: 1.5;
+}
+
+/* Modal chi tiết sản phẩm - layout 2 cột */
+.product-detail-modal {
+    max-width: 720px;
+}
+
+.product-detail-modal .product-detail-body {
+    display: flex;
+    gap: 0;
+    padding: 0;
+    min-height: 320px;
+    overflow: hidden;
+}
+
+.product-detail-left {
+    flex: 0 0 280px;
+    background: var(--admin-bg);
+    border-right: 1px solid var(--admin-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+
+.product-detail-right {
+    flex: 1;
+    padding: 24px;
+    overflow-y: auto;
+}
+
+.product-detail-images {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    align-items: center;
+}
+
+.product-detail-img {
+    width: 100%;
+    max-width: 220px;
+    height: 220px;
+    object-fit: cover;
+    border-radius: var(--admin-radius-sm);
+    border: 1px solid var(--admin-border);
+}
+
+.product-detail-images .product-detail-img:not(:only-child) {
+    max-width: 100px;
+    height: 100px;
+}
+
+.product-detail-img-placeholder {
+    width: 220px;
+    height: 220px;
+    background: var(--admin-card-bg);
+    border: 1px dashed var(--admin-border);
+    border-radius: var(--admin-radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+    color: var(--admin-text-muted);
+}
+
+@media (max-width: 640px) {
+    .product-detail-modal .product-detail-body {
+        flex-direction: column;
+    }
+
+    .product-detail-left {
+        flex: none;
+        border-right: none;
+        border-bottom: 1px solid var(--admin-border);
+        min-height: 200px;
+    }
+
+    .product-detail-img,
+    .product-detail-img-placeholder {
+        max-width: 180px;
+        height: 180px;
+    }
 }
 
 .detail-modal-footer {

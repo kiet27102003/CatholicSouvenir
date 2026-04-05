@@ -5,6 +5,7 @@ import Footer from '../components/Footer/Footer';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { createOrder } from '../services/orderService';
+import { appToast } from '../lib/appToast';
 import './CheckoutPage.css';
 
 const SHIPPING_FEE = 15000; // VNĐ
@@ -26,7 +27,6 @@ const CheckoutPage = () => {
     const [submitting, setSubmitting] = useState(false);
     const [success, setSuccess] = useState(false);
     const [orderId, setOrderId] = useState(null);
-    const [submitError, setSubmitError] = useState(null);
     const [formData, setFormData] = useState({
         name: 'Maria Rossi',
         cardNumber: '',
@@ -65,17 +65,16 @@ const CheckoutPage = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setSubmitError(null);
         setSubmitting(true);
 
         if (!user?.id) {
             setSubmitting(false);
-            setSubmitError('Vui lòng đăng nhập để đặt hàng.');
+            appToast.warning('Thiếu thông tin', 'Vui lòng đăng nhập để đặt hàng');
             return;
         }
         if (cartItems.length === 0) {
             setSubmitting(false);
-            setSubmitError('Giỏ hàng trống.');
+            appToast.warning('Thiếu thông tin', 'Giỏ hàng trống');
             return;
         }
 
@@ -94,10 +93,12 @@ const CheckoutPage = () => {
         if (result.success) {
             clearCart();
             setOrderId(result.data?.id ?? result.data?.orderId ?? null);
+            appToast.success('Tạo thành công', 'Đơn hàng đã được ghi nhận');
             setSuccess(true);
             setTimeout(() => navigate('/orders'), 3000);
         } else {
-            setSubmitError(result.error || 'Đặt hàng thất bại. Vui lòng thử lại.');
+            const msg = result.error != null ? String(result.error) : 'Vui lòng thử lại';
+            appToast.error('Có lỗi xảy ra', msg);
         }
     };
 
@@ -289,10 +290,6 @@ const CheckoutPage = () => {
                                     <span>{formatVnd(amount + SHIPPING_FEE)}</span>
                                 </div>
                             </div>
-
-                            {submitError && (
-                                <p className="checkout-error" role="alert">{submitError}</p>
-                            )}
 
                             {paymentMethod === 'card' && (
                                 <button

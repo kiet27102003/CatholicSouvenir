@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { FiRefreshCw, FiCheck, FiX, FiFileText, FiEye } from 'react-icons/fi';
 import api from '../../cofig/api';
+import { appToast } from '../../lib/appToast';
+import AdminTopbar from './AdminTopbar';
 import './admin-common.css';
 import './UserManager.css';
 import './ArtisanApplications.css';
@@ -12,21 +14,20 @@ const REVIEW_API = '/artisan-applications';
 const ArtisanApplications = () => {
     const [applications, setApplications] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
     const [detailApp, setDetailApp] = useState(null);
     const [actionLoading, setActionLoading] = useState(null);
-    const [rejectionModal, setRejectionModal] = useState({ open: false, applicationId: null, reason: '', error: null });
+    const [rejectionModal, setRejectionModal] = useState({ open: false, applicationId: null, reason: '' });
 
     const fetchPending = async () => {
         setLoading(true);
-        setError(null);
         try {
             const res = await api.get(API_URL);
             const payload = res.data;
             const list = payload?.data ?? (Array.isArray(payload) ? payload : []);
             setApplications(Array.isArray(list) ? list : []);
         } catch (err) {
-            setError(err.response?.data?.message || err.message || 'Không tải được danh sách.');
+            const msg = err.response?.data?.message || err.message || 'Kiểm tra kết nối mạng';
+            appToast.error('Không tải được', typeof msg === 'string' ? msg : 'Kiểm tra kết nối mạng');
             setApplications([]);
         } finally {
             setLoading(false);
@@ -42,9 +43,8 @@ const ArtisanApplications = () => {
             approved,
             rejectionReason: rejectionReason || '',
         });
-        setError(null);
         setDetailApp(null);
-        setRejectionModal({ open: false, applicationId: null, reason: '', error: null });
+        setRejectionModal({ open: false, applicationId: null, reason: '' });
         fetchPending();
     };
 
@@ -52,11 +52,12 @@ const ArtisanApplications = () => {
         const id = item.applicationId;
         if (!id) return;
         setActionLoading(id);
-        setError(null);
         try {
             await submitReview(id, true, '');
+            appToast.success('Đã duyệt', 'Nghệ nhân đã được xác minh');
         } catch (err) {
-            setError(err.response?.data?.message || err.message || 'Không thể duyệt đơn.');
+            const msg = err.response?.data?.message || err.message || 'Vui lòng thử lại';
+            appToast.error('Có lỗi xảy ra', typeof msg === 'string' ? msg : 'Vui lòng thử lại');
         } finally {
             setActionLoading(null);
         }
@@ -64,29 +65,27 @@ const ArtisanApplications = () => {
 
     const openRejectionModal = (item) => {
         setDetailApp(null);
-        setRejectionModal({ open: true, applicationId: item.applicationId, reason: '', error: null });
+        setRejectionModal({ open: true, applicationId: item.applicationId, reason: '' });
     };
 
     const closeRejectionModal = () => {
-        setRejectionModal({ open: false, applicationId: null, reason: '', error: null });
+        setRejectionModal({ open: false, applicationId: null, reason: '' });
     };
 
     const handleConfirmReject = async () => {
         const { applicationId, reason } = rejectionModal;
         const trimmed = (reason || '').trim();
         if (!trimmed) {
-            setRejectionModal((prev) => ({ ...prev, error: 'Vui lòng nhập lý do từ chối.' }));
+            appToast.warning('Thiếu thông tin', 'Vui lòng nhập lý do từ chối.');
             return;
         }
         setActionLoading(applicationId);
-        setRejectionModal((prev) => ({ ...prev, error: null }));
         try {
             await submitReview(applicationId, false, trimmed);
+            appToast.success('Đã cập nhật', 'Đơn đăng ký đã bị từ chối');
         } catch (err) {
-            setRejectionModal((prev) => ({
-                ...prev,
-                error: err.response?.data?.message || err.message || 'Không thể từ chối đơn.',
-            }));
+            const msg = err.response?.data?.message || err.message || 'Vui lòng thử lại';
+            appToast.error('Có lỗi xảy ra', typeof msg === 'string' ? msg : 'Vui lòng thử lại');
         } finally {
             setActionLoading(null);
         }
@@ -172,10 +171,11 @@ const ArtisanApplications = () => {
     };
 
     return (
-        <div className="admin-page artisan-applications-page">
+        <>
+            <AdminTopbar title="Artisan Application" />
+            <div className="admin-page artisan-applications-page">
             <div className="admin-page-header artisan-applications-header">
                 <div>
-                    <h2>Artisan Application</h2>
                     <p className="admin-page-subtitle">Duyệt đơn đăng ký trở thành thợ thủ công.</p>
                 </div>
                 <button
@@ -188,12 +188,6 @@ const ArtisanApplications = () => {
                     {loading ? 'Đang tải...' : 'Làm mới'}
                 </button>
             </div>
-
-            {error && (
-                <div className="artisan-app-alert error">
-                    {error}
-                </div>
-            )}
 
             <div className="admin-card table-card">
                 <div className="table-responsive">
@@ -399,16 +393,11 @@ const ArtisanApplications = () => {
                                 placeholder="Nhập lý do từ chối..."
                                 value={rejectionModal.reason}
                                 onChange={(e) =>
-                                    setRejectionModal((prev) => ({ ...prev, reason: e.target.value, error: null }))
+                                    setRejectionModal((prev) => ({ ...prev, reason: e.target.value }))
                                 }
                                 rows={4}
                                 disabled={!!actionLoading}
                             />
-                            {rejectionModal.error && (
-                                <div className="artisan-app-alert error" style={{ marginTop: 12 }}>
-                                    {rejectionModal.error}
-                                </div>
-                            )}
                         </div>
                         <div className="detail-modal-footer">
                             <button type="button" className="btn btn-outline" onClick={closeRejectionModal}>
@@ -427,6 +416,7 @@ const ArtisanApplications = () => {
                 </div>
             )}
         </div>
+        </>
     );
 };
 

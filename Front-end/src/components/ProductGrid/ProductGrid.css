@@ -2,6 +2,28 @@
     background-color: var(--color-bg);
 }
 
+.product-grid-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--spacing-lg);
+}
+
+.product-grid-view-all {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-md);
+    transition: all var(--transition-base);
+}
+
+.product-grid-view-all:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
 .product-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);

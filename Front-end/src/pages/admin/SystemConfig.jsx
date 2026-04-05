@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { appToast } from '../../lib/appToast';
+import AdminTopbar from './AdminTopbar';
 import './admin-common.css';
 import './SystemConfig.css';
 
@@ -31,7 +33,7 @@ const SystemConfig = () => {
         // Simulate API call
         setTimeout(() => {
             setIsSaving(false);
-            // Optional: show a toast notification here
+            appToast.success('Đã cập nhật', 'Thông tin đã được lưu');
         }, 1000);
     };
 
@@ -43,9 +45,10 @@ const SystemConfig = () => {
     ];
 
     return (
-        <div className="admin-page system-config-page">
+        <>
+            <AdminTopbar title="Cấu hình hệ thống" />
+            <div className="admin-page system-config-page">
             <div className="admin-page-header">
-                <h2>Cấu hình hệ thống</h2>
                 <p className="admin-page-subtitle">Quản lý cài đặt và tùy chọn toàn cục của ứng dụng.</p>
             </div>
 
@@ -217,6 +220,7 @@ const SystemConfig = () => {
                 </button>
             </div>
         </div>
+        </>
     );
 };
 

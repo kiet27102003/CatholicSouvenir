@@ -1,0 +1,115 @@
+/* react-toastify overrides — không che sidebar (toast nằm trong vùng content phải) */
+:root {
+    --app-toast-z: 10050;
+}
+
+.Toastify__toast-container {
+    z-index: var(--app-toast-z) !important;
+    width: 380px;
+    max-width: calc(100vw - 24px);
+    padding: 12px;
+    top: 12px !important;
+    right: 12px !important;
+}
+
+@media (max-width: 768px) {
+    .Toastify__toast-container {
+        width: 100%;
+        left: 0 !important;
+        right: 0 !important;
+        padding: 8px 12px;
+    }
+}
+
+.Toastify__toast {
+    border-radius: 12px;
+    box-shadow: 0 4px 24px rgba(15, 23, 42, 0.12);
+    border: 1px solid #e2e8f0;
+    font-family: var(--font-primary, system-ui, sans-serif);
+    min-height: auto;
+    padding: 0;
+}
+
+.Toastify__toast--success {
+    background: #fff;
+    border-color: #bbf7d0;
+}
+
+.Toastify__toast--error {
+    background: #fff;
+    border-color: #fecaca;
+}
+
+.Toastify__toast--warning {
+    background: #fff;
+    border-color: #fde68a;
+}
+
+.Toastify__toast--info {
+    background: #fff;
+    border-color: #bfdbfe;
+}
+
+.Toastify__close-button {
+    align-self: flex-start;
+    margin-top: 10px;
+    margin-right: 8px;
+    opacity: 0.55;
+}
+
+.Toastify__close-button:hover {
+    opacity: 1;
+}
+
+.Toastify__progress-bar {
+    height: 3px;
+}
+
+.Toastify__toast--success .Toastify__progress-bar {
+    background: #22c55e;
+}
+
+.Toastify__toast--error .Toastify__progress-bar {
+    background: #ef4444;
+}
+
+.Toastify__toast--warning .Toastify__progress-bar {
+    background: #eab308;
+}
+
+.Toastify__toast--info .Toastify__progress-bar {
+    background: #3b82f6;
+}
+
+.app-toast-body {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 14px 0 14px 14px;
+    text-align: left;
+}
+
+.app-toast-body-icon {
+    flex-shrink: 0;
+    line-height: 0;
+    margin-top: 2px;
+}
+
+.app-toast-body-title {
+    font-weight: 600;
+    font-size: 0.9375rem;
+    color: #0f172a;
+    line-height: 1.35;
+}
+
+.app-toast-body-message {
+    font-size: 0.8125rem;
+    color: #64748b;
+    margin-top: 4px;
+    line-height: 1.45;
+}
+
+.app-toast-item-body {
+    padding: 0 !important;
+    margin: 0 !important;
+}

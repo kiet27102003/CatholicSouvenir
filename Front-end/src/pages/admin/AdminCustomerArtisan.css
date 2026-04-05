@@ -1,0 +1,166 @@
+/* Shared layout for admin customers / artisans list pages — uses vars from AdminLayout */
+
+.admin-stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+@media (max-width: 900px) {
+    .admin-stats-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+.admin-stat-card {
+    position: relative;
+    background: var(--admin-card-bg);
+    border: 1px solid var(--admin-border);
+    border-radius: var(--admin-radius);
+    box-shadow: var(--admin-shadow);
+    padding: 18px 20px;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    min-height: 96px;
+}
+
+.admin-stat-card .stat-growth-placeholder {
+    position: absolute;
+    top: 14px;
+    right: 16px;
+    min-height: 1.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--admin-text-muted);
+}
+
+.admin-stat-icon-wrap {
+    width: 44px;
+    height: 44px;
+    border-radius: var(--admin-radius-sm);
+    background: var(--admin-bg);
+    border: 1px solid var(--admin-border-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-primary);
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.admin-stat-body {
+    flex: 1;
+    min-width: 0;
+    padding-top: 2px;
+}
+
+.admin-stat-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--admin-text-muted);
+    margin-bottom: 8px;
+    line-height: 1.35;
+}
+
+.admin-stat-value {
+    font-size: 1.375rem;
+    font-weight: 600;
+    color: var(--admin-text-primary);
+    line-height: 1.2;
+    min-height: 1.375rem;
+}
+
+.table-avatar-initials {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.8125rem;
+    background: var(--color-primary);
+    color: #fff;
+    border: 1px solid var(--admin-border);
+    flex-shrink: 0;
+    text-transform: uppercase;
+}
+
+.action-icons-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+}
+
+.action-icons-row .btn-action {
+    width: 32px;
+    height: 32px;
+}
+
+.controls-bar .filter-icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    background: var(--admin-card-bg);
+    border: 1px solid var(--admin-border);
+    border-radius: var(--admin-radius-sm);
+    color: var(--admin-text-muted);
+    cursor: pointer;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.controls-bar .filter-icon-btn:hover {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+    color: var(--color-primary);
+}
+
+.pagination-pages {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.pagination-pages .btn-page.page-num {
+    min-width: 36px;
+    padding: 6px 10px;
+}
+
+.admin-table-wrap-checkbox {
+    width: 44px;
+    text-align: center;
+}
+
+.admin-table-wrap-checkbox input[type='checkbox'] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--color-primary);
+    cursor: pointer;
+}
+
+.artisan-subid {
+    font-size: 0.75rem;
+    color: var(--admin-text-muted);
+    font-family: monospace;
+}
+
+.revenue-rating-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.8125rem;
+    color: var(--admin-text-primary);
+}
+
+.revenue-rating-cell .muted {
+    color: var(--admin-text-muted);
+    font-size: 0.75rem;
+}

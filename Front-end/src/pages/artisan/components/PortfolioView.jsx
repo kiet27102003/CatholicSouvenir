@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import productService from '../../../services/productService';
+import { appToast } from '../../../lib/appToast';
 import './PortfolioView.css';
 
 const PortfolioView = ({ user }) => {
     const [showForm, setShowForm] = useState(false);
     const [editingProduct, setEditingProduct] = useState(null);
     const [submitting, setSubmitting] = useState(false);
-    const [message, setMessage] = useState({ type: '', text: '' });
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [productToDelete, setProductToDelete] = useState(null);
+    const [deleteLoading, setDeleteLoading] = useState(false);
 
     const artisanId = user?.id || user?.artisanId || user?.artisanUuid;
 
@@ -40,27 +42,25 @@ const PortfolioView = ({ user }) => {
 
     const updateField = (field, value) => {
         setForm((prev) => ({ ...prev, [field]: value }));
-        setMessage({ type: '', text: '' });
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setMessage({ type: '', text: '' });
 
         const productName = (form.productName || '').trim();
         const productPrice = Number(form.productPrice);
         const quantity = Math.floor(Number(form.quantity));
 
         if (!productName) {
-            setMessage({ type: 'error', text: 'Vui lòng nhập tên sản phẩm.' });
+            appToast.warning('Thiếu thông tin', 'Vui lòng nhập tên sản phẩm');
             return;
         }
         if (isNaN(productPrice) || productPrice < 0) {
-            setMessage({ type: 'error', text: 'Giá sản phẩm không hợp lệ (≥ 0).' });
+            appToast.warning('Thiếu thông tin', 'Giá sản phẩm không hợp lệ (≥ 0)');
             return;
         }
         if (isNaN(quantity) || quantity < 0) {
-            setMessage({ type: 'error', text: 'Số lượng không hợp lệ (số nguyên ≥ 0).' });
+            appToast.warning('Thiếu thông tin', 'Số lượng không hợp lệ (số nguyên ≥ 0)');
             return;
         }
 
@@ -78,7 +78,7 @@ const PortfolioView = ({ user }) => {
         try {
             const result = await productService.createProduct(payload);
             if (result.success) {
-                setMessage({ type: 'success', text: 'Thêm sản phẩm thành công.' });
+                appToast.success('Tạo thành công', `Đã thêm ${productName} vào hệ thống`);
                 setForm({
                     productName: '',
                     productPrice: '',
@@ -91,15 +91,16 @@ const PortfolioView = ({ user }) => {
                 setShowForm(false);
                 fetchProducts();
             } else {
-                setMessage({ type: 'error', text: result.error ?? 'Không thể thêm sản phẩm.' });
+                const msg = result.error != null ? String(result.error) : 'Vui lòng thử lại';
+                appToast.error('Có lỗi xảy ra', msg);
             }
         } catch (err) {
             const msg =
                 err.response?.data?.message ??
                 err.response?.data?.error ??
                 err.message ??
-                'Không thể thêm sản phẩm. Vui lòng thử lại.';
-            setMessage({ type: 'error', text: msg });
+                'Vui lòng thử lại';
+            appToast.error('Có lỗi xảy ra', typeof msg === 'string' ? msg : 'Vui lòng thử lại');
         } finally {
             setSubmitting(false);
         }
@@ -120,65 +121,95 @@ const PortfolioView = ({ user }) => {
                 image_url: img.image_url ?? img.imageUrl ?? img.image,
                 publicId: img.publicId ?? '',
             })),
+            deletedImageIds: [],
+            newImageItems: [], // { file: File, preview: string } | { file: null, preview: string } (URL)
         });
-        setMessage({ type: '', text: '' });
     };
 
     const closeEditForm = () => {
+        editingProduct?.newImageItems?.forEach((item) => {
+            if (item.file && item.preview?.startsWith('blob:')) URL.revokeObjectURL(item.preview);
+        });
         setEditingProduct(null);
-        setMessage({ type: '', text: '' });
     };
 
     const handleEditSubmit = async (e) => {
         e.preventDefault();
         if (!editingProduct || !artisanId) return;
-        setMessage({ type: '', text: '' });
 
         const productName = (editingProduct.productName || '').trim();
         const productPrice = Number(editingProduct.productPrice);
         const quantity = Math.floor(Number(editingProduct.quantity));
 
         if (!productName) {
-            setMessage({ type: 'error', text: 'Vui lòng nhập tên sản phẩm.' });
+            appToast.warning('Thiếu thông tin', 'Vui lòng nhập tên sản phẩm');
             return;
         }
         if (isNaN(productPrice) || productPrice < 0) {
-            setMessage({ type: 'error', text: 'Giá sản phẩm không hợp lệ (≥ 0).' });
+            appToast.warning('Thiếu thông tin', 'Giá sản phẩm không hợp lệ (≥ 0)');
             return;
         }
         if (isNaN(quantity) || quantity < 0) {
-            setMessage({ type: 'error', text: 'Số lượng không hợp lệ (số nguyên ≥ 0).' });
+            appToast.warning('Thiếu thông tin', 'Số lượng không hợp lệ (số nguyên ≥ 0)');
             return;
         }
 
-        const payload = {
-            artisanId,
+        const productId = editingProduct.productId;
+        const productPayload = {
             productName,
-            productPrice,
             productDescription: (editingProduct.productDescription || '').trim() || undefined,
-            size: (editingProduct.size || '').trim() || undefined,
-            material: (editingProduct.material || '').trim() || undefined,
+            productPrice,
             quantity,
-            productImages: editingProduct.productImages || [],
+            material: (editingProduct.material || '').trim() || undefined,
+            size: (editingProduct.size || '').trim() || undefined,
         };
+
+        const deleteImageIds = editingProduct.deletedImageIds || [];
+        const newImageItems = editingProduct.newImageItems || [];
+        const newImageStrings = (await Promise.all(
+            newImageItems.map((item) => {
+                if (item.file instanceof File) {
+                    return new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = () => resolve(reader.result || '');
+                        reader.onerror = () => reject(reader.error);
+                        reader.readAsDataURL(item.file);
+                    });
+                }
+                return Promise.resolve(item.preview && item.preview.startsWith('http') ? item.preview : '');
+            })
+        )).filter(Boolean);
+        const hasImageChanges = deleteImageIds.length > 0 || newImageStrings.length > 0;
 
         setSubmitting(true);
         try {
-            const result = await productService.updateProduct(editingProduct.productId, payload);
-            if (result.success) {
-                setMessage({ type: 'success', text: 'Cập nhật sản phẩm thành công.' });
-                closeEditForm();
-                fetchProducts();
-            } else {
-                setMessage({ type: 'error', text: result.error ?? 'Không thể cập nhật sản phẩm.' });
+            const resultProduct = await productService.updateProduct(productId, productPayload);
+            if (!resultProduct.success) {
+                const msg = resultProduct.error != null ? String(resultProduct.error) : 'Vui lòng thử lại';
+                appToast.error('Có lỗi xảy ra', msg);
+                return;
             }
+            if (hasImageChanges) {
+                const resultImages = await productService.updateProductImages(productId, {
+                    deleteImageIds,
+                    newImages: newImageStrings,
+                });
+                if (!resultImages.success) {
+                    const msg = resultImages.error != null ? String(resultImages.error) : 'Vui lòng thử lại';
+                    appToast.error('Có lỗi xảy ra', msg);
+                    return;
+                }
+            }
+            appToast.success('Đã cập nhật', 'Thông tin đã được lưu');
+            closeEditForm();
+            fetchProducts();
         } catch (err) {
             const msg =
                 err.response?.data?.message ??
                 err.response?.data?.error ??
                 err.message ??
-                'Không thể cập nhật sản phẩm. Vui lòng thử lại.';
-            setMessage({ type: 'error', text: msg });
+                'Vui lòng thử lại';
+            appToast.error('Có lỗi xảy ra', typeof msg === 'string' ? msg : 'Vui lòng thử lại');
         } finally {
             setSubmitting(false);
         }
@@ -186,7 +217,85 @@ const PortfolioView = ({ user }) => {
 
     const updateEditField = (field, value) => {
         setEditingProduct((prev) => (prev ? { ...prev, [field]: value } : null));
-        setMessage({ type: '', text: '' });
+    };
+
+    const markImageForDeletion = (imageId) => {
+        if (!editingProduct || !imageId) return;
+        setEditingProduct((prev) =>
+            prev
+                ? {
+                      ...prev,
+                      deletedImageIds: [...(prev.deletedImageIds || []), imageId],
+                  }
+                : null
+        );
+    };
+
+    const unmarkImageForDeletion = (imageId) => {
+        if (!editingProduct) return;
+        setEditingProduct((prev) =>
+            prev
+                ? {
+                      ...prev,
+                      deletedImageIds: (prev.deletedImageIds || []).filter((id) => id !== imageId),
+                  }
+                : null
+        );
+    };
+
+    const addNewImageUrl = (url) => {
+        const trimmed = (url || '').trim();
+        if (!trimmed || !editingProduct) return;
+        setEditingProduct((prev) =>
+            prev
+                ? { ...prev, newImageItems: [...(prev.newImageItems || []), { file: null, preview: trimmed }] }
+                : null
+        );
+    };
+
+    const addNewImageFile = (file) => {
+        if (!file || !file.type.startsWith('image/') || !editingProduct) return;
+        const preview = URL.createObjectURL(file);
+        setEditingProduct((prev) =>
+            prev ? { ...prev, newImageItems: [...(prev.newImageItems || []), { file, preview }] } : null
+        );
+    };
+
+    const removeNewImage = (index) => {
+        if (!editingProduct) return;
+        setEditingProduct((prev) => {
+            const list = [...(prev.newImageItems || [])];
+            const removed = list[index];
+            if (removed?.preview?.startsWith('blob:')) URL.revokeObjectURL(removed.preview);
+            list.splice(index, 1);
+            return { ...prev, newImageItems: list };
+        });
+    };
+
+    const closeDeleteModal = () => {
+        setProductToDelete(null);
+    };
+
+    const handleDeleteProduct = async () => {
+        if (!productToDelete?.productId) return;
+        const name = productToDelete.productName || 'Sản phẩm';
+        setDeleteLoading(true);
+        try {
+            const result = await productService.deleteProduct(productToDelete.productId);
+            if (result.success) {
+                setProducts((prev) => prev.filter((p) => p.productId !== productToDelete.productId));
+                appToast.success('Đã xóa', `${name} đã được xóa`);
+                closeDeleteModal();
+            } else {
+                const msg = result.error != null ? String(result.error) : 'Vui lòng thử lại';
+                appToast.error('Có lỗi xảy ra', msg);
+            }
+        } catch (err) {
+            const msg = err?.message ?? 'Vui lòng thử lại';
+            appToast.error('Có lỗi xảy ra', msg);
+        } finally {
+            setDeleteLoading(false);
+        }
     };
 
     return (
@@ -203,19 +312,12 @@ const PortfolioView = ({ user }) => {
                         onClick={() => {
                             setShowForm(!showForm);
                             setEditingProduct(null);
-                            setMessage({ type: '', text: '' });
                         }}
                     >
                         {showForm ? 'Đóng form' : '+ Thêm sản phẩm'}
                     </button>
                 </div>
             </header>
-
-            {message.text && (
-                <div className={`portfolio-message ${message.type}`}>
-                    {message.text}
-                </div>
-            )}
 
             {editingProduct && (
                 <div className="edit-modal-overlay" onClick={closeEditForm}>
@@ -232,15 +334,86 @@ const PortfolioView = ({ user }) => {
                             </svg>
                         </button>
                         <div className="edit-modal-body">
-                            <div className="edit-modal-image">
-                                {editingProduct.productImages && editingProduct.productImages.length > 0 ? (
-                                    <img
-                                        src={editingProduct.productImages[0].image_url || editingProduct.productImages[0].imageUrl}
-                                        alt={editingProduct.productName}
-                                    />
-                                ) : (
-                                    <div className="edit-modal-image-placeholder">Không có ảnh</div>
+                            <div className="edit-modal-image edit-modal-images-section">
+                                <span className="edit-modal-images-label">Ảnh sản phẩm</span>
+                                <div className="edit-modal-images-list">
+                                    {editingProduct.productImages
+                                        ?.filter((img) => !(editingProduct.deletedImageIds || []).includes(img.id))
+                                        .map((img) => (
+                                            <div key={img.id} className="edit-modal-image-item">
+                                                <img
+                                                    src={img.image_url || img.imageUrl}
+                                                    alt=""
+                                                />
+                                                <button
+                                                    type="button"
+                                                    className="edit-modal-image-remove"
+                                                    onClick={() => markImageForDeletion(img.id)}
+                                                    title="Gỡ ảnh (sẽ xóa khi lưu)"
+                                                >
+                                                    ×
+                                                </button>
+                                            </div>
+                                        ))}
+                                    {(editingProduct.newImageItems || []).map((item, idx) => (
+                                        <div key={`new-${idx}`} className="edit-modal-image-item edit-modal-image-item-new">
+                                            <img src={item.preview} alt="" />
+                                            {!item.file && (
+                                                <span className="edit-modal-image-url-hint" title="Ảnh từ URL không gửi lên server (chỉ ảnh chọn từ máy mới được upload)">
+                                                    URL
+                                                </span>
+                                            )}
+                                            <button
+                                                type="button"
+                                                className="edit-modal-image-remove"
+                                                onClick={() => removeNewImage(idx)}
+                                                title="Bỏ ảnh"
+                                            >
+                                                ×
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                                {(editingProduct.deletedImageIds || []).length > 0 && (
+                                    <div className="edit-modal-deleted-hint">
+                                        {editingProduct.deletedImageIds.length} ảnh sẽ bị xóa khi lưu.
+                                    </div>
                                 )}
+                                <div className="edit-modal-add-images">
+                                    <label className="form-label">Thêm ảnh mới</label>
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        className="form-input"
+                                        onChange={(e) => {
+                                            const f = e.target.files?.[0];
+                                            if (f) addNewImageFile(f);
+                                            e.target.value = '';
+                                        }}
+                                    />
+                                    <input
+                                        type="url"
+                                        className="form-input edit-modal-url-input"
+                                        placeholder="Hoặc dán URL ảnh"
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                addNewImageUrl(e.target.value);
+                                                e.target.value = '';
+                                            }
+                                        }}
+                                        onBlur={(e) => {
+                                            if (e.target.value.trim()) {
+                                                addNewImageUrl(e.target.value);
+                                                e.target.value = '';
+                                            }
+                                        }}
+                                    />
+                                </div>
+                                {(!editingProduct.productImages?.length || editingProduct.productImages.every((img) => (editingProduct.deletedImageIds || []).includes(img.id))) &&
+                                (!editingProduct.newImageItems || editingProduct.newImageItems.length === 0) ? (
+                                    <div className="edit-modal-image-placeholder">Chưa có ảnh — chọn file hoặc dán URL để thêm (chỉ ảnh chọn từ máy mới được upload)</div>
+                                ) : null}
                             </div>
                             <div className="edit-modal-form">
                                 <form onSubmit={handleEditSubmit}>
@@ -468,6 +641,14 @@ const PortfolioView = ({ user }) => {
                                         >
                                             Chỉnh sửa
                                         </button>
+                                        <button
+                                            type="button"
+                                            className="btn-delete"
+                                            onClick={() => setProductToDelete(p)}
+                                            title="Xóa sản phẩm"
+                                        >
+                                            Xóa
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -475,6 +656,35 @@ const PortfolioView = ({ user }) => {
                     </div>
                 )}
             </section>
+
+            {productToDelete && (
+                <div className="delete-confirm-overlay" onClick={closeDeleteModal} role="dialog" aria-modal="true" aria-labelledby="delete-confirm-title">
+                    <div className="delete-confirm-modal" onClick={(e) => e.stopPropagation()}>
+                        <h3 id="delete-confirm-title" className="delete-confirm-title">Xác nhận xóa</h3>
+                        <p className="delete-confirm-text">
+                            Bạn có chắc chắn muốn xóa sản phẩm <strong>{productToDelete.productName}</strong>? Hành động này không thể hoàn tác.
+                        </p>
+                        <div className="delete-confirm-actions">
+                            <button
+                                type="button"
+                                className="btn-outline"
+                                onClick={closeDeleteModal}
+                                disabled={deleteLoading}
+                            >
+                                Hủy
+                            </button>
+                            <button
+                                type="button"
+                                className="btn-danger"
+                                onClick={handleDeleteProduct}
+                                disabled={deleteLoading}
+                            >
+                                {deleteLoading ? 'Đang xóa...' : 'Xóa sản phẩm'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

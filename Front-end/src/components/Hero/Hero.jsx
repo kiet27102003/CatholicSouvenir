@@ -1,23 +1,28 @@
 import React from 'react';
-import { useLanguage } from '../../context/LanguageContext';
+import { useNavigate } from 'react-router-dom';
 import './Hero.css';
 
 const Hero = () => {
-    const { t } = useLanguage();
+    const navigate = useNavigate();
     return (
         <section className="hero">
             <div className="hero-overlay"></div>
-            <div className="container">
+            <div className="container hero-container">
                 <div className="hero-content">
                     <h1 className="hero-title">
-                        {t('home.heroTitle')}
+                        Vẻ Đẹp <span className="hero-highlight">THÁNH THIÊNG</span> Qua Bàn Tay <span className="hero-highlight">NGHỆ NHÂN</span>
                     </h1>
                     <p className="hero-description">
-                        {t('home.heroSubtitle')}
+                        Kết nối tín hữu với những nghệ nhân thủ công tâm huyết trên khắp thế giới.
                     </p>
-                    <button className="btn btn-primary hero-cta">
-                        {t('home.heroCta')}
-                    </button>
+                    <div className="hero-ctas">
+                        <button className="btn hero-cta hero-cta-gold" onClick={() => navigate('/shop')}>
+                            MUA NGAY
+                        </button>
+                        <button className="btn hero-cta hero-cta-outline" onClick={() => navigate('/custom-requests')}>
+                            YÊU CẦU THIẾT KẾ RIÊNG
+                        </button>
+                    </div>
                 </div>
             </div>
         </section>

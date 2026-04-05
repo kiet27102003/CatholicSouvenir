@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import authService from '../../services/authService';
+import { appToast } from '../../lib/appToast';
 import './LoginForm.css';
 
 const LoginForm = () => {
@@ -9,7 +10,6 @@ const LoginForm = () => {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [rememberMe, setRememberMe] = useState(false);
-    const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
     const { login } = useAuth();
@@ -17,7 +17,6 @@ const LoginForm = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setError('');
         setLoading(true);
 
         try {
@@ -32,10 +31,10 @@ const LoginForm = () => {
                     navigate('/');
                 }
             } else {
-                setError(result.error || 'Login failed. Please try again.');
+                appToast.error('Có lỗi xảy ra', result.error || 'Đăng nhập thất bại. Vui lòng thử lại.');
             }
         } catch {
-            setError('An unexpected error occurred. Please try again.');
+            appToast.error('Có lỗi xảy ra', 'Vui lòng thử lại');
         } finally {
             setLoading(false);
         }
@@ -49,16 +48,6 @@ const LoginForm = () => {
             </div>
 
             <form onSubmit={handleSubmit} className="login-form">
-                {error && (
-                    <div className="error-message">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
-                            <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                        </svg>
-                        {error}
-                    </div>
-                )}
-
                 <div className="form-group">
                     <label htmlFor="email" className="form-label">Email Address</label>
                     <input

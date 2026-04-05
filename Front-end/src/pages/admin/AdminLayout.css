@@ -223,6 +223,15 @@
     font-weight: 500;
 }
 
+.admin-breadcrumb a {
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+.admin-breadcrumb a:hover {
+    text-decoration: underline;
+}
+
 .page-title {
     font-size: 1.25rem;
     font-weight: 600;

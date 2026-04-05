@@ -107,7 +107,11 @@ export const getProducts = async () => {
             };
         }
 
-        const data = Array.isArray(res?.data) ? res.data : [];
+        // API có thể trả data là mảng trực tiếp hoặc object phân trang { content: [...] }
+        const raw = res?.data;
+        const data = Array.isArray(raw)
+            ? raw
+            : (Array.isArray(raw?.content) ? raw.content : []);
         return {
             success: true,
             data,
@@ -165,48 +169,36 @@ export const updateProductStatus = async (productId, payload) => {
 };
 
 /**
- * Cập nhật sản phẩm (PUT /api/product/{productId}) - Artisan.
+ * Cập nhật thông tin sản phẩm (PUT /api/product/{productId}) - không bao gồm hình ảnh.
  * @param {string} productId - ID sản phẩm
  * @param {Object} payload
- * @param {string} payload.artisanId - Bắt buộc
  * @param {string} payload.productName - Bắt buộc
- * @param {number} payload.productPrice - Bắt buộc, >= 0
  * @param {string} [payload.productDescription]
+ * @param {number} payload.productPrice - Bắt buộc, >= 0
+ * @param {number} payload.quantity - Bắt buộc, >= 0
  * @param {string} [payload.material]
  * @param {string} [payload.size]
- * @param {number} payload.quantity - Bắt buộc, >= 0
- * @param {Array<{ id: string, image_url: string, publicId: string }>} [payload.productImages] - Danh sách ảnh hiện có
  * @returns {Promise<{ success: boolean, data?: object, error?: string }>}
  */
 export const updateProduct = async (productId, payload) => {
     try {
         const body = {
-            artisanId: payload.artisanId,
             productName: (payload.productName ?? '').trim(),
-            productPrice: Number(payload.productPrice),
-            quantity: Math.max(0, Math.floor(Number(payload.quantity))),
             productDescription:
                 payload.productDescription != null && String(payload.productDescription).trim() !== ''
                     ? String(payload.productDescription).trim()
-                    : undefined,
+                    : '',
+            productPrice: Number(payload.productPrice),
+            quantity: Math.max(0, Math.floor(Number(payload.quantity))),
             material:
                 payload.material != null && String(payload.material).trim() !== ''
                     ? String(payload.material).trim()
-                    : undefined,
+                    : '',
             size:
                 payload.size != null && String(payload.size).trim() !== ''
                     ? String(payload.size).trim()
-                    : undefined,
+                    : '',
         };
-        if (payload.productImages && Array.isArray(payload.productImages) && payload.productImages.length > 0) {
-            body.productImages = payload.productImages.map((img) => ({
-                id: img.id,
-                image_url: img.image_url ?? img.imageUrl ?? '',
-                publicId: img.publicId ?? '',
-            }));
-        } else {
-            body.productImages = [];
-        }
 
         const response = await api.put(`/product/${productId}`, body);
         const res = response.data;
@@ -226,6 +218,50 @@ export const updateProduct = async (productId, payload) => {
             error.response?.data?.message ??
             error.message ??
             'Cập nhật sản phẩm thất bại.';
+        return {
+            success: false,
+            error: typeof message === 'string' ? message : 'Lỗi không xác định.',
+        };
+    }
+};
+
+/**
+ * Cập nhật hình ảnh sản phẩm (PUT /api/product-image/{productId}).
+ * @param {string} productId - ID sản phẩm
+ * @param {Object} payload
+ * @param {string[]} [payload.deleteImageIds] - Danh sách ID ảnh cần xóa
+ * @param {string[]} [payload.newImages] - Danh sách ảnh mới (URL hoặc base64 data URL)
+ * @returns {Promise<{ success: boolean, data?: object, error?: string }>}
+ */
+export const updateProductImages = async (productId, payload) => {
+    try {
+        const body = {
+            deleteImageIds: Array.isArray(payload.deleteImageIds)
+                ? payload.deleteImageIds.filter((id) => id != null && String(id).trim() !== '')
+                : [],
+            newImages: Array.isArray(payload.newImages)
+                ? payload.newImages.filter((s) => s != null && String(s).trim() !== '')
+                : [],
+        };
+
+        const response = await api.put(`/product-image/${productId}`, body);
+        const res = response.data;
+
+        if (res?.code !== 200) {
+            return {
+                success: false,
+                error: res?.message || 'Cập nhật ảnh sản phẩm thất bại.',
+            };
+        }
+        return {
+            success: true,
+            data: res?.data ?? {},
+        };
+    } catch (error) {
+        const message =
+            error.response?.data?.message ??
+            error.message ??
+            'Cập nhật ảnh sản phẩm thất bại.';
         return {
             success: false,
             error: typeof message === 'string' ? message : 'Lỗi không xác định.',
@@ -269,13 +305,15 @@ export const deleteProduct = async (productId) => {
 };
 
 /**
- * Lấy danh sách sản phẩm do artisan đăng (GET /api/product/artisan/{artisanId}).
+ * Lấy danh sách sản phẩm do artisan đăng.
+ * API: GET {baseURL}/product/artisan/{artisanId}?status=APPROVED&page=0&size=10&sort=createdAt,DESC
+ * Response: { code: 200, data: { content: [...], totalElements, totalPages, number, size, first, last, empty } }
  * @param {string|number} artisanId - ID artisan
  * @param {Object} [options] - Query params
  * @param {string} [options.status] - PENDING | APPROVED | REJECTED (optional)
  * @param {number} [options.page=0] - Trang (0-based)
  * @param {number} [options.size=10] - Số phần tử mỗi trang
- * @param {string} [options.sort='createdAt,DESC'] - Sort, ví dụ 'createdAt,DESC'
+ * @param {string} [options.sort='createdAt,DESC'] - Sort (axios encode thành createdAt%2CDESC)
  * @returns {Promise<{ success: boolean, data?: { content, totalElements, totalPages, number, size }, error?: string }>}
  */
 export const getProductsByArtisan = async (artisanId, options = {}) => {
@@ -295,10 +333,11 @@ export const getProductsByArtisan = async (artisanId, options = {}) => {
         }
 
         const data = res?.data ?? {};
+        const content = data.content;
         return {
             success: true,
             data: {
-                content: data.content ?? [],
+                content: Array.isArray(content) ? content : [],
                 totalElements: data.totalElements ?? 0,
                 totalPages: data.totalPages ?? 0,
                 number: data.number ?? 0,
@@ -326,6 +365,7 @@ export default {
     getProductById,
     getProductsByArtisan,
     updateProduct,
+    updateProductImages,
     updateProductStatus,
     deleteProduct,
 };

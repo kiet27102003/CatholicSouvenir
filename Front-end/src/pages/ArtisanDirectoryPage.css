@@ -124,6 +124,25 @@
     color: var(--color-text-light);
 }
 
+.directory-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-lg);
+    margin-top: var(--spacing-3xl);
+    flex-wrap: wrap;
+}
+
+.directory-pagination .pagination-info {
+    font-size: 0.9375rem;
+    color: var(--color-text-light);
+}
+
+.directory-pagination button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .directory-hero {

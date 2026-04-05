@@ -4,6 +4,7 @@ import Header from '../components/Header/Header';
 import Footer from '../components/Footer/Footer';
 import { useCart } from '../context/CartContext';
 import productService from '../services/productService';
+import { appToast } from '../lib/appToast';
 import './ProductDetailsPage.css';
 
 const getProductImage = (p) => {
@@ -21,7 +22,6 @@ const ProductDetailsPage = () => {
     const { addToCart } = useCart();
     const [product, setProduct] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
     const [quantity, setQuantity] = useState(1);
 
     useEffect(() => {
@@ -36,18 +36,19 @@ const ProductDetailsPage = () => {
         }
         const fetchProduct = async () => {
             setLoading(true);
-            setError(null);
             try {
                 const result = await productService.getProductById(id);
                 if (result.success && result.data) {
                     setProduct(result.data);
                 } else {
                     setProduct(null);
-                    setError(result.error || 'Không tìm thấy sản phẩm.');
+                    const msg = result.error != null ? String(result.error) : 'Vui lòng thử lại';
+                    appToast.error('Không tải được', msg);
                 }
             } catch (err) {
                 setProduct(null);
-                setError(err.message || 'Không tải được thông tin sản phẩm.');
+                const msg = err.message || 'Kiểm tra kết nối mạng';
+                appToast.error('Không tải được', msg);
             } finally {
                 setLoading(false);
             }
@@ -91,7 +92,7 @@ const ProductDetailsPage = () => {
                 <Header />
                 <div className="product-not-found">
                     <h2>Không tìm thấy sản phẩm</h2>
-                    <p>{error || 'Chúng tôi không tìm thấy sản phẩm bạn cần.'}</p>
+                    <p>Chúng tôi không tìm thấy sản phẩm bạn cần.</p>
                     <button className="btn btn-primary" onClick={() => navigate('/shop')}>Về cửa hàng</button>
                 </div>
                 <Footer />
@@ -103,6 +104,7 @@ const ProductDetailsPage = () => {
     const productPrice = product.productPrice ?? product.price ?? 0;
     const productName = product.productName ?? product.title ?? '—';
     const artisanName = product.artisanName ?? product.artisan ?? '—';
+    const artisanId = product.artisanId ?? product.artisan_id ?? null;
     const productDescription = product.productDescription ?? product.description ?? '';
 
     return (
@@ -133,7 +135,20 @@ const ProductDetailsPage = () => {
                     <div className="product-info-container">
                         <div className="product-header">
                             <h1 className="product-title-large">{productName}</h1>
-                            <p className="product-artisan-link">Tác giả: <strong>{artisanName}</strong></p>
+                            <p className="product-artisan-link">
+                                Tác giả:{' '}
+                                {artisanId ? (
+                                    <button
+                                        type="button"
+                                        className="artisan-name-link"
+                                        onClick={() => navigate(`/artisans/${artisanId}`)}
+                                    >
+                                        <strong>{artisanName}</strong>
+                                    </button>
+                                ) : (
+                                    <strong>{artisanName}</strong>
+                                )}
+                            </p>
                         </div>
 
                         <div className="product-price-large">

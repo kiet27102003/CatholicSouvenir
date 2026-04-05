@@ -1,70 +1,91 @@
-import React from 'react';
-import { NavLink, Outlet, Navigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { NavLink, Outlet, Navigate, useLocation } from 'react-router-dom';
+import { FiUser, FiShield, FiBell, FiCreditCard, FiTruck, FiLogOut, FiEdit2, FiInbox } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import Header from '../../components/Header/Header';
 import Footer from '../../components/Footer/Footer';
 import './CustomerLayout.css';
 
 const CustomerLayout = () => {
-    const { user, isAuthenticated } = useAuth();
+    const { user, logout, isAuthenticated } = useAuth();
+    const location = useLocation();
+
+    useEffect(() => {
+        if (location.pathname === '/profile' && location.hash) {
+            const id = location.hash.slice(1);
+            const el = document.getElementById(id);
+            if (el) {
+                const timer = setTimeout(() => {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
+                return () => clearTimeout(timer);
+            }
+        }
+    }, [location.pathname, location.hash]);
 
     if (!isAuthenticated || user?.role !== 'customer') {
         return <Navigate to="/login" replace />;
     }
+
+    const isProfile = location.pathname === '/profile';
+    const isProfileNoHash = isProfile && !location.hash;
+    const isSecurityActive = isProfile && location.hash === '#security';
+    const isNotificationsActive = isProfile && location.hash === '#notifications';
+    const isPaymentActive = isProfile && location.hash === '#payment';
 
     return (
         <div className="customer-layout">
             <Header />
             <div className="customer-main-container">
                 <aside className="customer-sidebar">
-                    <div className="sidebar-profile">
-                        {user.avatar ? (
-                            <img src={user.avatar} alt="Avatar" className="sidebar-avatar" />
-                        ) : (
-                            <div className="sidebar-avatar-placeholder">
-                                {user.name ? user.name.charAt(0) : user.email.charAt(0)}
-                            </div>
-                        )}
-                        <h3 className="sidebar-name">{user.name || 'Customer'}</h3>
-                        <p className="sidebar-email">{user.email}</p>
-                    </div>
-
                     <nav className="sidebar-nav">
-                        <NavLink to="/profile" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} end>
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                                <circle cx="12" cy="7" r="4"></circle>
-                            </svg>
-                            My Profile
+                        <NavLink to="/profile" className={`sidebar-link ${isProfileNoHash ? 'active' : ''}`} end>
+                            <FiUser size={20} strokeWidth={2} />
+                            Hồ sơ cá nhân
                         </NavLink>
-
+                        <a href="/profile#security" className={`sidebar-link ${isSecurityActive ? 'active' : ''}`}>
+                            <FiShield size={20} strokeWidth={2} />
+                            Bảo mật
+                        </a>
+                        <a href="/profile#notifications" className={`sidebar-link ${isNotificationsActive ? 'active' : ''}`}>
+                            <FiBell size={20} strokeWidth={2} />
+                            Thông báo
+                        </a>
+                        <a href="/profile#payment" className={`sidebar-link ${isPaymentActive ? 'active' : ''}`}>
+                            <FiCreditCard size={20} strokeWidth={2} />
+                            Thanh toán
+                        </a>
                         <NavLink to="/orders" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <circle cx="9" cy="21" r="1"></circle>
-                                <circle cx="20" cy="21" r="1"></circle>
-                                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
-                            </svg>
-                            Order History
+                            <FiTruck size={20} strokeWidth={2} />
+                            Đơn hàng của tôi
                         </NavLink>
-
                         <NavLink to="/custom-requests" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                            </svg>
-                            Custom Requests
+                            <FiEdit2 size={20} strokeWidth={2} />
+                            Yêu cầu đặt riêng
                         </NavLink>
-
+                        <NavLink to="/my-custom-requests" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+                            <FiInbox size={20} strokeWidth={2} />
+                            Quản lý yêu cầu
+                        </NavLink>
                         <NavLink to="/messages" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                            </svg>
-                            Messages
+                            <FiBell size={20} strokeWidth={2} />
+                            Tin nhắn
                         </NavLink>
+                        <div className="sidebar-divider" role="separator" aria-hidden="true" />
+                        <button type="button" className="sidebar-link sidebar-logout" onClick={logout}>
+                            <FiLogOut size={20} strokeWidth={2} />
+                            Đăng xuất
+                        </button>
                     </nav>
+
+                    <div className="sidebar-support">
+                        <h4 className="sidebar-support-title">Cần hỗ trợ?</h4>
+                        <p className="sidebar-support-desc">Liên hệ với đội ngũ CSKH của chúng tôi 24/7.</p>
+                        <button type="button" className="btn sidebar-support-btn">Gửi yêu cầu</button>
+                    </div>
                 </aside>
 
-                <main className="customer-content">
+                <main className="customer-content-wrapper">
                     <Outlet />
                 </main>
             </div>

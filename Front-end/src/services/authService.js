@@ -1,4 +1,5 @@
 import api from '../cofig/api';
+import { appToast } from '../lib/appToast';
 
 /** Decode JWT payload (base64url) without verification - only to read user info from token */
 function decodeJwtPayload(token) {
@@ -66,7 +67,8 @@ export const authService = {
             const list = Array.isArray(data) ? data : data?.content ?? data?.list ?? [];
             return list[0] || null;
         } catch (err) {
-            console.error('Error fetching user:', err);
+            const msg = err.response?.data?.message ?? err.message ?? 'Vui lòng thử lại';
+            appToast.error('Có lỗi xảy ra', typeof msg === 'string' ? msg : 'Vui lòng thử lại');
             return null;
         }
     },

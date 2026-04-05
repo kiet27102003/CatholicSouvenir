@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { appToast } from '../../lib/appToast';
 import './ForgotPasswordForm.css';
 
 const ForgotPasswordForm = () => {
@@ -14,6 +15,7 @@ const ForgotPasswordForm = () => {
         // Simulate API call to send reset link
         setTimeout(() => {
             setLoading(false);
+            appToast.success('Đã gửi', 'Kiểm tra hộp thư của bạn');
             setIsSubmitted(true);
         }, 1500);
     };

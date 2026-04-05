@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
+import { AppToastContainer } from './lib/appToast'
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
 import ArtisanDashboard from './pages/artisan/ArtisanDashboard'
@@ -15,7 +16,9 @@ import ArtisanProfilePage from './pages/ArtisanProfilePage'
 import ArtisanCentrePage from './pages/ArtisanCentrePage'
 import ShopPage from './pages/ShopPage'
 import CustomRequestPage from './pages/customer/CustomRequestPage'
+import MyCustomRequestsPage from './pages/customer/MyCustomRequestsPage'
 import MessageCenterPage from './pages/customer/MessageCenterPage'
+
 import CheckoutPage from './pages/CheckoutPage'
 import OrderTrackingPage from './pages/customer/OrderTrackingPage'
 import CartDrawer from './components/CartDrawer/CartDrawer'
@@ -23,12 +26,16 @@ import CartDrawer from './components/CartDrawer/CartDrawer'
 import AdminLayout from './pages/admin/AdminLayout'
 import SystemConfig from './pages/admin/SystemConfig'
 import UserManager from './pages/admin/UserManager'
+import CustomerManager from './pages/admin/CustomerManager'
+import CustomerDetailPage from './pages/admin/CustomerDetailPage'
+import ArtisanManager from './pages/admin/ArtisanManager'
 import ProductManager from './pages/admin/ProductManager'
 import ArtisanApplications from './pages/admin/ArtisanApplications'
 
 function App() {
   return (
     <AuthProvider>
+      <AppToastContainer />
       <CartDrawer />
       <Routes>
         <Route path="/" element={<HomePage />} />
@@ -48,6 +55,9 @@ function App() {
           <Route index element={<Navigate to="/admin/settings" replace />} />
           <Route path="settings" element={<SystemConfig />} />
           <Route path="users" element={<UserManager />} />
+          <Route path="customers" element={<CustomerManager />} />
+          <Route path="customers/:id" element={<CustomerDetailPage />} />
+          <Route path="artisans" element={<ArtisanManager />} />
           <Route path="products" element={<ProductManager />} />
           <Route path="artisan-applications" element={<ArtisanApplications />} />
         </Route>
@@ -58,6 +68,7 @@ function App() {
           <Route path="/orders" element={<OrderHistoryPage />} />
           <Route path="/orders/:id/tracking" element={<OrderTrackingPage />} />
           <Route path="/custom-requests" element={<CustomRequestPage />} />
+          <Route path="/my-custom-requests" element={<MyCustomRequestsPage />} />
           <Route path="/messages" element={<MessageCenterPage />} />
         </Route>
       </Routes>

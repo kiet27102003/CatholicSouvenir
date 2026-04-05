@@ -7,22 +7,30 @@
 
 .footer-content {
     display: grid;
-    grid-template-columns: 2fr 1fr 1fr 1.5fr;
+    grid-template-columns: 1.5fr 1fr 1fr;
     gap: var(--spacing-xl);
     padding-bottom: var(--spacing-xl);
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* Logo */
+/* Logo - Sanctus */
 .footer-logo {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    color: var(--color-text-white);
-    font-family: var(--font-display);
-    font-size: 1.25rem;
-    font-weight: 700;
     margin-bottom: var(--spacing-md);
+}
+
+.footer-logo-icon-svg {
+    flex-shrink: 0;
+    color: white;
+}
+
+.footer-logo-text {
+    font-family: var(--font-display);
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: white;
 }
 
 .footer-description {
@@ -42,16 +50,20 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
-    border-radius: var(--radius-md);
+    min-width: 36px;
+    height: 36px;
+    padding: 0 0.5rem;
+    border-radius: var(--radius-sm);
     background-color: rgba(255, 255, 255, 0.1);
     color: var(--color-text-white);
+    font-size: 0.8125rem;
+    font-weight: 600;
     transition: all var(--transition-base);
 }
 
 .social-link:hover {
-    background-color: var(--color-primary);
+    background-color: var(--color-accent);
+    color: var(--color-bg-dark);
     transform: translateY(-2px);
 }
 
@@ -86,86 +98,27 @@
     color: var(--color-text-white);
 }
 
-/* Subscribe */
-.subscribe-description {
-    font-size: 0.9375rem;
-    line-height: 1.6;
-    color: rgba(255, 255, 255, 0.7);
-    margin-bottom: var(--spacing-md);
-}
-
-.subscribe-form {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-}
-
-.subscribe-input {
-    padding: 0.75rem 1rem;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    background-color: rgba(255, 255, 255, 0.05);
-    border-radius: var(--radius-md);
-    font-family: var(--font-primary);
-    font-size: 0.9375rem;
-    color: var(--color-text-white);
-    outline: none;
-    transition: all var(--transition-base);
-}
-
-.subscribe-input::placeholder {
-    color: rgba(255, 255, 255, 0.5);
-}
-
-.subscribe-input:focus {
-    border-color: var(--color-primary);
-    background-color: rgba(255, 255, 255, 0.08);
-}
-
-.subscribe-btn {
-    padding: 0.75rem 1.5rem;
-}
-
 /* Footer Bottom */
 .footer-bottom {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
     padding-top: var(--spacing-lg);
+    text-align: center;
 }
 
 .footer-copyright {
-    font-size: 0.875rem;
-    color: rgba(255, 255, 255, 0.6);
-}
-
-.footer-legal {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-sm);
-    font-size: 0.875rem;
-}
-
-.footer-legal a {
-    color: rgba(255, 255, 255, 0.6);
-    transition: color var(--transition-fast);
-}
-
-.footer-legal a:hover {
-    color: var(--color-text-white);
-}
-
-.separator {
-    color: rgba(255, 255, 255, 0.3);
+    font-size: 0.8125rem;
+    color: rgba(255, 255, 255, 0.7);
 }
 
 /* Responsive */
 @media (max-width: 1024px) {
     .footer-content {
         grid-template-columns: 1fr 1fr;
-        gap: var(--spacing-lg);
     }
 
-    .footer-column:first-child {
+    .footer-column.footer-brand {
         grid-column: 1 / -1;
     }
 }
@@ -181,7 +134,7 @@
         padding-bottom: var(--spacing-lg);
     }
 
-    .footer-column:first-child {
+    .footer-column.footer-brand {
         grid-column: 1;
     }
 

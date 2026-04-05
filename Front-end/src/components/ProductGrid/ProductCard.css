@@ -1,10 +1,15 @@
 .product-card {
+    position: relative;
     background-color: var(--color-bg);
     border-radius: var(--radius-lg);
     overflow: hidden;
-    cursor: pointer;
     transition: all var(--transition-slow);
     border: 1px solid var(--color-border-light);
+}
+
+.product-card-link {
+    display: block;
+    cursor: pointer;
 }
 
 .product-card:hover {
@@ -60,10 +65,64 @@
     line-height: 1.4;
 }
 
-.product-artisan {
+.product-artisan,
+.product-category {
     font-size: 0.875rem;
     color: var(--color-text-light);
     margin-bottom: var(--spacing-sm);
+}
+
+.product-style-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.25rem;
+}
+
+.product-card-shop .product-card-cart-btn {
+    background-color: var(--color-accent);
+}
+
+.product-card-shop .product-card-cart-btn:hover {
+    background-color: var(--color-accent-dark);
+}
+
+.badge-custom-order {
+    background-color: var(--color-accent-red);
+    top: var(--spacing-sm);
+    left: var(--spacing-sm);
+    right: auto;
+}
+
+.product-price-quote {
+    font-size: 0.9375rem;
+    color: var(--color-primary);
+    font-weight: 500;
+}
+
+.product-card-cart-btn {
+    position: absolute;
+    bottom: var(--spacing-md);
+    right: var(--spacing-md);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: none;
+    background-color: var(--color-primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all var(--transition-base);
+    box-shadow: var(--shadow-md);
+}
+
+.product-card-cart-btn:hover {
+    background-color: var(--color-primary-dark);
+    transform: scale(1.08);
 }
 
 .product-pricing {

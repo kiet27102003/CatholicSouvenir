@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { FiSearch, FiMenu, FiX, FiGlobe, FiSun, FiMoon, FiBell, FiShoppingCart, FiUser, FiLogOut, FiPackage } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -44,68 +45,35 @@ const Header = () => {
                             aria-label="Menu"
                             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                         >
-                            {mobileMenuOpen ? (
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                                </svg>
-                            ) : (
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
-                                </svg>
-                            )}
+                            {mobileMenuOpen ? <FiX size={24} /> : <FiMenu size={24} />}
                         </button>
                         <div className="header-logo" onClick={() => navigate('/')}>
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                            <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                            <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                        <span className="logo-text">Sanctus</span>
+                            <svg className="logo-icon-svg" width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M14 2L26 14L14 26L2 14L14 2Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                <path d="M16 4L26 14L16 24L6 14L16 4Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                <path d="M18 6L26 14L18 22L10 14L18 6Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                            <span className="logo-text">Sanctus</span>
                         </div>
                     </div>
 
                     {/* Navigation */}
                     <nav className={`header-nav ${mobileMenuOpen ? 'open' : ''}`}>
                         <div className="nav-links">
-                            <Link to="/shop" className="nav-link" onClick={() => setMobileMenuOpen(false)}>{t('common.shop')}</Link>
-                            <a href="#artisans" className="nav-link" onClick={() => setMobileMenuOpen(false)}>{t('common.artisans')}</a>
-                            <a href="#about" className="nav-link" onClick={() => setMobileMenuOpen(false)}>{t('common.about')}</a>
-                            <a href="#blog" className="nav-link" onClick={() => setMobileMenuOpen(false)}>{t('common.blog')}</a>
-                        </div>
-                        <div className="nav-right">
-                            <span className="nav-separator" aria-hidden="true">|</span>
-                            <button
-                                type="button"
-                                className="nav-link nav-link-btn"
-                                onClick={() => {
-                                    setMobileMenuOpen(false);
-                                    if (user?.role === 'artisan') {
-                                        navigate('/artisan');
-                                    } else {
-                                        navigate('/artisan-centre');
-                                    }
-                                }}
-                            >
-                                {t('common.artisanCentre')}
-                            </button>
+                            <Link to="/shop" className="nav-link" onClick={() => setMobileMenuOpen(false)}>SẢN PHẨM</Link>
+                            <Link to="/artisans" className="nav-link" onClick={() => setMobileMenuOpen(false)}>NGHỆ NHÂN</Link>
+                            <Link to="/custom-requests" className="nav-link" onClick={() => setMobileMenuOpen(false)}>ĐẶT LÀM RIÊNG</Link>
+                            <a href="#about" className="nav-link" onClick={() => setMobileMenuOpen(false)}>VỀ CHÚNG TÔI</a>
                         </div>
                     </nav>
 
                     {/* Search and Actions */}
                     <div className="header-actions">
-                        <div className="search-bar">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
-                                <path d="M21 21L16.65 16.65" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                            </svg>
-                            <input
-                                type="text"
-                                placeholder={t('common.searchPlaceholder')}
-                                className="search-input"
-                            />
-                        </div>
+                        <button type="button" className="icon-btn" aria-label={t('common.searchPlaceholder')} onClick={() => navigate('/shop')}>
+                            <FiSearch size={20} strokeWidth={2} />
+                        </button>
 
-                        <div className="lang-dropdown-wrapper">
+                        <div className="lang-dropdown-wrapper header-lang-desktop">
                             <button
                                 type="button"
                                 className="lang-dropdown-trigger icon-only"
@@ -114,10 +82,7 @@ const Header = () => {
                                 aria-haspopup="listbox"
                                 onClick={() => setLangMenuOpen(!langMenuOpen)}
                             >
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <circle cx="12" cy="12" r="10" />
-                                    <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" strokeLinecap="round" />
-                                </svg>
+                                <FiGlobe size={20} strokeWidth={2} />
                             </button>
                             {langMenuOpen && (
                                 <>
@@ -152,31 +117,15 @@ const Header = () => {
                             aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
                             onClick={toggleTheme}
                         >
-                            {theme === 'dark' ? (
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <circle cx="12" cy="12" r="5" stroke="currentColor" strokeWidth="2" />
-                                    <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                                </svg>
-                            ) : (
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                </svg>
-                            )}
+                            {theme === 'dark' ? <FiSun size={20} strokeWidth={2} /> : <FiMoon size={20} strokeWidth={2} />}
                         </button>
 
                         <button className="icon-btn" aria-label="Notifications" onClick={() => navigate('/notifications')}>
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                <path d="M13.73 21a2 2 0 0 1-3.46 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
+                            <FiBell size={20} strokeWidth={2} />
                         </button>
 
                         <button className="icon-btn" aria-label="Shopping cart" onClick={toggleCart} style={{ position: 'relative' }}>
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <circle cx="9" cy="21" r="1" stroke="currentColor" strokeWidth="2" />
-                                <circle cx="20" cy="21" r="1" stroke="currentColor" strokeWidth="2" />
-                                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
+                            <FiShoppingCart size={20} strokeWidth={2} />
                             {cartItemsCount > 0 && (
                                 <span className="cart-badge">{cartItemsCount}</span>
                             )}
@@ -202,18 +151,11 @@ const Header = () => {
                                     {user.role === 'customer' && (
                                         <>
                                             <button onClick={() => navigate('/profile')} className="dropdown-item">
-                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                                                    <circle cx="12" cy="7" r="4"></circle>
-                                                </svg>
+                                                <FiUser size={16} strokeWidth={2} />
                                                 {t('common.myProfile')}
                                             </button>
                                             <button onClick={() => navigate('/orders')} className="dropdown-item">
-                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                    <circle cx="9" cy="21" r="1"></circle>
-                                                    <circle cx="20" cy="21" r="1"></circle>
-                                                    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
-                                                </svg>
+                                                <FiShoppingCart size={16} strokeWidth={2} />
                                                 {t('common.myOrders')}
                                             </button>
                                         </>
@@ -221,26 +163,20 @@ const Header = () => {
 
                                     {user.role === 'artisan' && (
                                         <button onClick={() => navigate('/artisan')} className="dropdown-item">
-                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                                                <line x1="3" y1="9" x2="21" y2="9"></line>
-                                                <line x1="9" y1="21" x2="9" y2="9"></line>
-                                            </svg>
+                                            <FiPackage size={16} strokeWidth={2} />
                                             {t('common.dashboard')}
                                         </button>
                                     )}
 
                                     <div className="dropdown-divider"></div>
                                     <button onClick={handleAuthAction} className="dropdown-item dropdown-logout">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                        </svg>
+                                        <FiLogOut size={16} strokeWidth={2} />
                                         {t('common.logout')}
                                     </button>
                                 </div>
                             </div>
                         ) : (
-                            <button onClick={handleAuthAction} className="btn btn-primary header-login-btn">
+                            <button onClick={handleAuthAction} className="btn header-login-btn header-login-btn-red">
                                 {t('common.login')}
                             </button>
                         )}

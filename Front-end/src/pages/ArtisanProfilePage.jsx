@@ -3,23 +3,66 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Header from '../components/Header/Header';
 import Footer from '../components/Footer/Footer';
 import ProductCard from '../components/ProductGrid/ProductCard';
+import { getArtisanById } from '../services/artisanService';
+import { getProductsByArtisan } from '../services/productService';
 import './ArtisanProfilePage.css';
+
+const PLACEHOLDER_AVATAR = 'https://ui-avatars.com/api/?name=Artisan&background=6b7280&color=fff';
 
 const ArtisanProfilePage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const [artisan, setArtisan] = useState(null);
+    const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [productsLoading, setProductsLoading] = useState(false);
 
     useEffect(() => {
         window.scrollTo(0, 0);
-        // TODO: fetch artisan by id from API when endpoint is available
-        setArtisan(null);
-        setLoading(false);
+        if (!id) {
+            setArtisan(null);
+            setLoading(false);
+            return;
+        }
+        let cancelled = false;
+        setLoading(true);
+        getArtisanById(id).then((result) => {
+            if (cancelled) return;
+            if (result.success && result.data) {
+                setArtisan(result.data);
+            } else {
+                setArtisan(null);
+            }
+            setLoading(false);
+        });
+        return () => { cancelled = true; };
     }, [id]);
 
+    // GET /api/product/artisan/{artisanId}?status=APPROVED&page=0&size=10&sort=createdAt,DESC
+    useEffect(() => {
+        const artisanId = artisan?.artisanId ?? id;
+        if (!artisanId) return;
+        let cancelled = false;
+        setProductsLoading(true);
+        getProductsByArtisan(artisanId, {
+            status: 'APPROVED',
+            page: 0,
+            size: 10,
+            sort: 'createdAt,DESC',
+        }).then((result) => {
+            if (cancelled) return;
+            const list = result.success && result.data && Array.isArray(result.data.content)
+                ? result.data.content
+                : [];
+            setProducts(list);
+            setProductsLoading(false);
+        });
+        return () => { cancelled = true; };
+    }, [id, artisan?.artisanId]);
+
     const handleCustomRequest = () => {
-        navigate('/custom-requests', { state: { artisanId: artisan.id, artisanName: artisan.name } });
+        if (!artisan) return;
+        navigate('/custom-requests', { state: { artisanId: artisan.artisanId, artisanName: artisan.artisanName } });
     };
 
     if (loading) {
@@ -54,16 +97,29 @@ const ArtisanProfilePage = () => {
         );
     }
 
+    const getProductImage = (product) => {
+        if (product.images && product.images.length > 0) {
+            return product.images[0].imageUrl || product.images[0].image_url;
+        }
+        if (product.productImages && product.productImages.length > 0) {
+            const img = product.productImages[0];
+            return img.imageUrl || img.image_url || img.image;
+        }
+        return product.imageUrl || product.image_url;
+    };
+
+    const profileImage = artisan.profileImageUrl || PLACEHOLDER_AVATAR;
+    const coverImage = artisan.portfolioUrl || null;
+
     return (
         <div className="artisan-profile-page">
             <Header />
 
             <main className="artisan-main">
-                {/* Cover Image */}
                 <div
                     className="artisan-cover"
                     style={{
-                        backgroundImage: artisan.coverImage ? `url(${artisan.coverImage})` : 'linear-gradient(135deg, var(--color-primary-dark) 0%, var(--color-primary) 100%)'
+                        backgroundImage: coverImage ? `url(${coverImage})` : 'linear-gradient(135deg, var(--color-primary-dark) 0%, var(--color-primary) 100%)'
                     }}
                 ></div>
 
@@ -74,63 +130,79 @@ const ArtisanProfilePage = () => {
 
                     <div className="artisan-profile-header">
                         <div className="profile-image-container">
-                            <img src={artisan.profileImage} alt={artisan.name} />
+                            <img src={profileImage} alt={artisan.artisanName} />
                         </div>
 
                         <div className="profile-info">
                             <div className="profile-title-row">
-                                <h1>{artisan.name}</h1>
+                                <h1>{artisan.artisanName || 'Nghệ nhân'}</h1>
                                 <button className="btn btn-primary btn-custom-order" onClick={handleCustomRequest}>
                                     Request Custom Order
                                 </button>
                             </div>
 
                             <div className="profile-meta">
-                                <span className="meta-location">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" stroke="currentColor" strokeWidth="2" />
-                                        <circle cx="12" cy="10" r="3" stroke="currentColor" strokeWidth="2" />
-                                    </svg>
-                                    {artisan.location}
-                                </span>
-                                <span className="meta-rating">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none" xmlns="http://www.w3.org/2000/svg">
-                                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-                                    </svg>
-                                    {artisan.rating} ({artisan.reviews} reviews)
-                                </span>
+                                {artisan.specialization && (
+                                    <span className="meta-location">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" stroke="currentColor" strokeWidth="2" />
+                                            <circle cx="12" cy="10" r="3" stroke="currentColor" strokeWidth="2" />
+                                        </svg>
+                                        {artisan.specialization}
+                                    </span>
+                                )}
+                                {artisan.experienceYears != null && artisan.experienceYears > 0 && (
+                                    <span className="meta-rating">
+                                        {artisan.experienceYears} năm kinh nghiệm
+                                    </span>
+                                )}
+                                {artisan.phoneNumber && (
+                                    <span className="meta-phone">{artisan.phoneNumber}</span>
+                                )}
                             </div>
 
-                            <div className="profile-specialties">
-                                {(artisan.specialties || []).map(spec => (
-                                    <span key={spec} className="badge badge-outline">{spec}</span>
-                                ))}
-                            </div>
+                            {(artisan.specialization || artisan.portfolioUrl) && (
+                                <div className="profile-specialties">
+                                    {artisan.specialization && (
+                                        <span className="badge badge-outline">{artisan.specialization}</span>
+                                    )}
+                                    {artisan.portfolioUrl && (
+                                        <a href={artisan.portfolioUrl} target="_blank" rel="noopener noreferrer" className="badge badge-outline">Portfolio</a>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
 
                     <div className="artisan-profile-body">
-                        <div className="artisan-about-section">
-                            <h2>About the Artisan</h2>
-                            <p>{artisan.about}</p>
-                        </div>
+                        {artisan.bio && (
+                            <div className="artisan-about-section">
+                                <h2>About the Artisan</h2>
+                                <p>{artisan.bio}</p>
+                            </div>
+                        )}
                     </div>
 
                     <div className="artisan-products-section">
-                        <h2>Crafted by {artisan.name}</h2>
+                        <h2>Crafted by {artisan.artisanName || 'Nghệ nhân'}</h2>
 
-                        {artisan.products && artisan.products.length > 0 ? (
+                        {productsLoading ? (
+                            <div className="artisan-products-loading">
+                                <div className="spinner"></div>
+                                <p>Đang tải sản phẩm...</p>
+                            </div>
+                        ) : products.length > 0 ? (
                             <div className="artisan-products-grid">
-                                {artisan.products.map(product => (
+                                {products.map(product => (
                                     <ProductCard
-                                        key={product.id}
-                                        id={product.id}
-                                        image={product.image}
-                                        title={product.title}
-                                        artisan={artisan.name}
-                                        price={product.price}
+                                        key={product.productId}
+                                        id={product.productId}
+                                        image={getProductImage(product)}
+                                        title={product.productName}
+                                        artisan={artisan.artisanName || 'Nghệ nhân'}
+                                        price={product.productPrice}
                                         salePrice={product.salePrice}
-                                        onSale={product.onSale}
+                                        onSale={product.onSale || false}
                                     />
                                 ))}
                             </div>

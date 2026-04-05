@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { getOrders } from '../../services/orderService';
+import { appToast } from '../../lib/appToast';
 import './OrderHistoryPage.css';
 
 const formatVnd = (value) => `${Number(value).toLocaleString('vi-VN')} ₫`;
@@ -10,7 +11,7 @@ const OrderHistoryPage = () => {
     const { user } = useAuth();
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const [listLoadOk, setListLoadOk] = useState(true);
 
     useEffect(() => {
         if (!user?.id) {
@@ -19,18 +20,25 @@ const OrderHistoryPage = () => {
         }
         let cancelled = false;
         setLoading(true);
-        setError(null);
         getOrders()
             .then((res) => {
                 if (cancelled) return;
                 if (res.success && Array.isArray(res.data)) {
                     setOrders(res.data);
+                    setListLoadOk(true);
                 } else {
-                    setError(res.error || 'Không thể tải đơn hàng.');
+                    setOrders([]);
+                    setListLoadOk(false);
+                    const msg = res.error != null ? String(res.error) : 'Kiểm tra kết nối mạng';
+                    appToast.error('Không tải được', msg);
                 }
             })
             .catch(() => {
-                if (!cancelled) setError('Không thể tải đơn hàng.');
+                if (!cancelled) {
+                    setOrders([]);
+                    setListLoadOk(false);
+                    appToast.error('Không tải được', 'Kiểm tra kết nối mạng');
+                }
             })
             .finally(() => {
                 if (!cancelled) setLoading(false);
@@ -80,16 +88,16 @@ const OrderHistoryPage = () => {
                 <p className="orders-subtitle">Xem và theo dõi đơn hàng của bạn.</p>
             </div>
 
-            {error && (
-                <div className="orders-error">
-                    <p>{error}</p>
-                </div>
-            )}
-
             {loading ? (
                 <div className="orders-loading">
                     <div className="spinner"></div>
                     <p>Đang tải đơn hàng...</p>
+                </div>
+            ) : orders.length === 0 && !listLoadOk ? (
+                <div className="orders-empty">
+                    <button type="button" className="btn btn-primary" onClick={() => window.location.reload()}>
+                        Thử lại
+                    </button>
                 </div>
             ) : orders.length === 0 ? (
                 <div className="orders-empty">

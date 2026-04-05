@@ -1,11 +1,50 @@
 .header {
-    background-color: var(--color-header-bg);
-    border-bottom: 1px solid var(--color-border-light);
-    padding: 1rem 0;
+    background-color: var(--color-primary);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0.875rem 0;
     position: sticky;
     top: 0;
     z-index: 100;
-    backdrop-filter: blur(10px);
+}
+
+/* Light theme / White mode - header với nền sáng, chữ và icon tối */
+[data-theme="light"] .header {
+    background-color: var(--color-bg);
+    border-bottom-color: var(--color-border-light);
+}
+
+[data-theme="light"] .logo-icon-svg,
+[data-theme="light"] .logo-text {
+    color: var(--color-primary);
+}
+
+[data-theme="light"] .nav-link {
+    color: var(--color-text);
+}
+
+[data-theme="light"] .nav-link:hover {
+    color: var(--color-primary);
+}
+
+[data-theme="light"] .nav-link::after {
+    background-color: var(--color-primary);
+}
+
+[data-theme="light"] .icon-btn {
+    color: var(--color-text);
+}
+
+[data-theme="light"] .icon-btn:hover {
+    background-color: rgba(27, 67, 50, 0.1);
+    color: var(--color-primary);
+}
+
+[data-theme="light"] .lang-dropdown-trigger.icon-only {
+    color: var(--color-text);
+}
+
+[data-theme="light"] .hamburger-btn {
+    color: var(--color-text);
 }
 
 .header .container {
@@ -20,24 +59,29 @@
     gap: var(--spacing-lg);
 }
 
-/* Logo */
+/* Logo - Sanctus */
 .header-logo {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    color: var(--color-primary);
-    font-weight: 700;
-    font-size: 1.25rem;
     cursor: pointer;
-    transition: color var(--transition-base);
+    transition: opacity var(--transition-base);
 }
 
 .header-logo:hover {
-    color: var(--color-primary-dark);
+    opacity: 0.9;
+}
+
+.logo-icon-svg {
+    flex-shrink: 0;
+    color: white;
 }
 
 .logo-text {
     font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1.25rem;
+    color: white;
 }
 
 /* Navigation */
@@ -67,7 +111,7 @@
 }
 
 .nav-link {
-    color: var(--color-text);
+    color: rgba(255, 255, 255, 0.95);
     font-weight: 500;
     font-size: 0.9375rem;
     transition: color var(--transition-fast);
@@ -81,12 +125,12 @@
     left: 0;
     width: 0;
     height: 2px;
-    background-color: var(--color-primary);
+    background-color: var(--color-accent);
     transition: width var(--transition-base);
 }
 
 .nav-link:hover {
-    color: var(--color-text);
+    color: var(--color-accent);
 }
 
 .nav-link:hover::after {
@@ -114,41 +158,6 @@
     margin-left: auto;
 }
 
-.search-bar {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    background-color: var(--color-bg-secondary);
-    border-radius: var(--radius-md);
-    border: 1px solid var(--color-border-light);
-    transition: all var(--transition-base);
-}
-
-.search-bar:focus-within {
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px rgba(43, 74, 156, 0.1);
-}
-
-.search-bar svg {
-    color: var(--color-text-light);
-    flex-shrink: 0;
-}
-
-.search-input {
-    border: none;
-    background: transparent;
-    outline: none;
-    font-family: var(--font-primary);
-    font-size: 0.9375rem;
-    color: var(--color-text);
-    width: 200px;
-}
-
-.search-input::placeholder {
-    color: var(--color-text-light);
-}
-
 .icon-btn {
     display: flex;
     align-items: center;
@@ -157,25 +166,31 @@
     height: 40px;
     border: none;
     background-color: transparent;
-    color: var(--color-text);
+    color: rgba(255, 255, 255, 0.9);
     border-radius: var(--radius-md);
     cursor: pointer;
     transition: all var(--transition-base);
 }
 
 .icon-btn:hover {
-    background-color: rgba(43, 74, 156, 0.12);
-    color: var(--color-primary);
+    background-color: rgba(255, 255, 255, 0.15);
+    color: var(--color-accent);
 }
 
-[data-theme="dark"] .icon-btn:hover {
-    background-color: rgba(74, 111, 191, 0.2);
-}
-
-/* Login Button */
+/* Login Button - Vatican red */
 .header-login-btn {
     padding: 0.5rem 1.25rem;
     font-size: 0.9375rem;
+}
+
+.header-login-btn-red {
+    background-color: var(--color-accent-red) !important;
+    color: white !important;
+}
+
+.header-login-btn-red:hover {
+    background-color: var(--color-accent-red-dark) !important;
+    color: white !important;
 }
 
 /* User Profile */
@@ -357,7 +372,17 @@
     }
 
     .hamburger-btn:hover {
-        background-color: rgba(43, 74, 156, 0.12);
+        background-color: rgba(27, 67, 50, 0.12);
+    }
+
+    [data-theme="light"] .header-nav {
+        background: var(--color-bg);
+        box-shadow: -4px 0 20px rgba(0, 0, 0, 0.1);
+    }
+
+    [data-theme="light"] .header-nav .nav-link {
+        color: var(--color-text);
+        border-bottom-color: var(--color-border-light);
     }
 
     [data-theme="dark"] .hamburger-btn:hover {
@@ -370,7 +395,7 @@
         right: 0;
         width: min(280px, 85vw);
         height: 100vh;
-        background: var(--color-bg);
+        background: var(--color-primary);
         flex-direction: column;
         padding: 80px 24px 24px;
         gap: 0;
@@ -408,15 +433,11 @@
         display: none;
     }
 
-    .header-nav .nav-link,
-    .header-nav .nav-link-btn {
+    .header-nav .nav-link {
         padding: 14px 0;
-        border-bottom: 1px solid var(--color-border-light);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.15);
         font-size: 1rem;
-    }
-
-    .search-bar {
-        display: none;
+        color: rgba(255, 255, 255, 0.95);
     }
 
     .header-actions {

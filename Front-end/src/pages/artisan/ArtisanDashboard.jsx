@@ -1,21 +1,44 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Workbench from './components/Workbench';
 import PortfolioView from './components/PortfolioView';
+import TemplatesView from './components/TemplatesView';
 import './ArtisanDashboard.css';
+
+const getViewFromPath = (pathname) => {
+    if (pathname === '/artisan/templates') return 'templates';
+    return 'dashboard';
+};
+
+const viewToPath = (view) => {
+    if (view === 'templates') return '/artisan/templates';
+    return '/artisan';
+};
 
 const ArtisanDashboard = () => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
-    const [activeView, setActiveView] = useState('dashboard');
+    const location = useLocation();
+    const [activeView, setActiveView] = useState(getViewFromPath(location.pathname));
     const [sidebarOpen, setSidebarOpen] = useState(false);
+
+    useEffect(() => {
+        setActiveView(getViewFromPath(location.pathname));
+    }, [location.pathname]);
 
     if (!user || user.role !== 'artisan') {
         navigate('/login');
         return null;
     }
+
+    const handleChangeView = (view) => {
+        setActiveView(view);
+        setSidebarOpen(false);
+        const nextPath = viewToPath(view);
+        if (location.pathname !== nextPath) navigate(nextPath);
+    };
 
     return (
         <div className="artisan-dashboard">
@@ -28,7 +51,7 @@ const ArtisanDashboard = () => {
             <Sidebar
                 user={user}
                 activeView={activeView}
-                setActiveView={(v) => { setActiveView(v); setSidebarOpen(false); }}
+                setActiveView={handleChangeView}
                 onLogout={logout}
                 isOpen={sidebarOpen}
                 onClose={() => setSidebarOpen(false)}
@@ -38,6 +61,7 @@ const ArtisanDashboard = () => {
                 {activeView === 'commissions' && <div className="view-placeholder">Commissions View</div>}
                 {activeView === 'messages' && <div className="view-placeholder">Messages View</div>}
                 {activeView === 'portfolio' && <PortfolioView user={user} />}
+                {activeView === 'templates' && <TemplatesView user={user} />}
                 {activeView === 'earnings' && <div className="view-placeholder">Earnings View</div>}
             </main>
         </div>

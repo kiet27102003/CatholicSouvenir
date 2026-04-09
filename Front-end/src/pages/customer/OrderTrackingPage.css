@@ -472,6 +472,55 @@
     color: var(--color-primary) !important;
 }
 
+.payment-history-section {
+    margin-top: var(--spacing-md);
+}
+
+.payment-history-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.payment-history-item {
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.payment-history-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.payment-history-top code {
+    font-family: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas, "DejaVu Sans Mono", monospace;
+    font-size: 0.8125rem;
+    color: var(--color-text-light);
+    background: var(--color-bg-secondary);
+    border-radius: 6px;
+    padding: 2px 6px;
+}
+
+.payment-stage {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--color-text-light);
+}
+
+.payment-meta-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 4px;
+    font-size: 0.875rem;
+    color: var(--color-text-light);
+}
+
 .summary-actions {
     margin-top: var(--spacing-xl);
     padding-top: var(--spacing-lg);

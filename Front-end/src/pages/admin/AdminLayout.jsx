@@ -3,7 +3,7 @@ import { Outlet, NavLink, useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { AdminLayoutContext } from './AdminLayoutContext';
 import './AdminLayout.css';
-import { FiSettings, FiUsers, FiUser, FiAward, FiLogOut, FiFileText, FiPackage } from 'react-icons/fi';
+import { FiSettings, FiUsers, FiUser, FiAward, FiLogOut, FiFileText, FiPackage, FiGrid } from 'react-icons/fi';
 
 const AdminLayout = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -22,6 +22,7 @@ const AdminLayout = () => {
         { path: '/admin/customers', name: 'Quản lý khách hàng', icon: <FiUser /> },
         { path: '/admin/artisans', name: 'Quản lý nghệ nhân', icon: <FiAward /> },
         { path: '/admin/products', name: 'Quản lý sản phẩm', icon: <FiPackage /> },
+        { path: '/admin/categories', name: 'Danh mục', icon: <FiGrid /> },
         { path: '/admin/artisan-applications', name: 'Artisan Application', icon: <FiFileText /> },
     ];
 

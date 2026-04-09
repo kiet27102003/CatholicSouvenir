@@ -20,6 +20,9 @@ import MyCustomRequestsPage from './pages/customer/MyCustomRequestsPage'
 import MessageCenterPage from './pages/customer/MessageCenterPage'
 
 import CheckoutPage from './pages/CheckoutPage'
+import CartPage from './pages/CartPage'
+import PaymentSuccessPage from './pages/PaymentSuccessPage'
+import PaymentFailedPage from './pages/PaymentFailedPage'
 import OrderTrackingPage from './pages/customer/OrderTrackingPage'
 import CartDrawer from './components/CartDrawer/CartDrawer'
 
@@ -30,6 +33,7 @@ import CustomerManager from './pages/admin/CustomerManager'
 import CustomerDetailPage from './pages/admin/CustomerDetailPage'
 import ArtisanManager from './pages/admin/ArtisanManager'
 import ProductManager from './pages/admin/ProductManager'
+import CategoryManager from './pages/admin/CategoryManager'
 import ArtisanApplications from './pages/admin/ArtisanApplications'
 
 function App() {
@@ -40,6 +44,7 @@ function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/shop" element={<ShopPage />} />
+        <Route path="/products" element={<ShopPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterForm />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
@@ -48,7 +53,11 @@ function App() {
         <Route path="/artisans/:id" element={<ArtisanProfilePage />} />
         <Route path="/artisan-centre" element={<ArtisanCentrePage />} />
         <Route path="/checkout" element={<CheckoutPage />} />
+        <Route path="/payment/success" element={<PaymentSuccessPage />} />
+        <Route path="/payment/failed" element={<PaymentFailedPage />} />
+        <Route path="/cart" element={<CartPage />} />
         <Route path="/artisan" element={<ArtisanDashboard />} />
+        <Route path="/artisan/templates" element={<ArtisanDashboard />} />
 
         {/* Admin Routes with Layout */}
         <Route path="/admin" element={<AdminLayout />}>
@@ -59,6 +68,7 @@ function App() {
           <Route path="customers/:id" element={<CustomerDetailPage />} />
           <Route path="artisans" element={<ArtisanManager />} />
           <Route path="products" element={<ProductManager />} />
+          <Route path="categories" element={<CategoryManager />} />
           <Route path="artisan-applications" element={<ArtisanApplications />} />
         </Route>
 
@@ -66,6 +76,7 @@ function App() {
         <Route element={<CustomerLayout />}>
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/orders" element={<OrderHistoryPage />} />
+          <Route path="/orders/:id" element={<OrderTrackingPage />} />
           <Route path="/orders/:id/tracking" element={<OrderTrackingPage />} />
           <Route path="/custom-requests" element={<CustomRequestPage />} />
           <Route path="/my-custom-requests" element={<MyCustomRequestsPage />} />

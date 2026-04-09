@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import productService from '../../../services/productService';
+import api from '../../../cofig/api';
 import { appToast } from '../../../lib/appToast';
 import './PortfolioView.css';
 
@@ -30,64 +31,142 @@ const PortfolioView = ({ user }) => {
     useEffect(() => {
         fetchProducts();
     }, [fetchProducts]);
+
+    const [categories, setCategories] = useState([]);
+    const [categoryLoading, setCategoryLoading] = useState(false);
+    const [categoryLoadError, setCategoryLoadError] = useState('');
+
     const [form, setForm] = useState({
         productName: '',
         productPrice: '',
         productDescription: '',
         size: '',
-        material: '',
+        categoryId: '',
         quantity: 0,
-        image: null, // File (single image)
+        tags: [''],
+        images: [],
     });
+    const [formErrors, setFormErrors] = useState({});
 
     const updateField = (field, value) => {
         setForm((prev) => ({ ...prev, [field]: value }));
     };
+
+    const clearCreateImages = useCallback((images) => {
+        (images || []).forEach((item) => {
+            if (item?.preview && item.preview.startsWith('blob:')) {
+                URL.revokeObjectURL(item.preview);
+            }
+        });
+    }, []);
+
+    const resetCreateForm = useCallback(() => {
+        setForm((prev) => {
+            clearCreateImages(prev.images);
+            return {
+                productName: '',
+                productPrice: '',
+                productDescription: '',
+                size: '',
+                categoryId: '',
+                quantity: 0,
+                tags: [''],
+                images: [],
+            };
+        });
+        setFormErrors({});
+    }, [clearCreateImages]);
+
+    const closeCreateForm = useCallback(() => {
+        resetCreateForm();
+        setShowForm(false);
+    }, [resetCreateForm]);
+
+    const fetchCategories = useCallback(async () => {
+        setCategoryLoading(true);
+        setCategoryLoadError('');
+        try {
+            const response = await api.get('/categories');
+            const res = response?.data;
+            const rawList = Array.isArray(res)
+                ? res
+                : Array.isArray(res?.data)
+                    ? res.data
+                    : Array.isArray(res?.data?.content)
+                        ? res.data.content
+                        : Array.isArray(res?.content)
+                            ? res.content
+                            : [];
+
+            const normalized = rawList
+                .map((item) => ({
+                    id: item?.id || item?.categoryId || item?.uuid || '',
+                    name: item?.name || item?.categoryName || item?.title || '',
+                    isActive: item?.isActive !== false,
+                    sortOrder: Number.isFinite(Number(item?.sortOrder)) ? Number(item.sortOrder) : 0,
+                }))
+                .filter((item) => item.id && item.name && item.isActive)
+                .sort((a, b) => a.sortOrder - b.sortOrder);
+
+            setCategories(normalized);
+        } catch {
+            setCategories([]);
+            setCategoryLoadError('Không tải được danh mục');
+        } finally {
+            setCategoryLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchCategories();
+    }, [fetchCategories]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
 
         const productName = (form.productName || '').trim();
         const productPrice = Number(form.productPrice);
-        const quantity = Math.floor(Number(form.quantity));
+        const quantityRaw = Number(form.quantity);
+        const quantity = Math.floor(quantityRaw);
+        const nextErrors = {};
 
         if (!productName) {
-            appToast.warning('Thiếu thông tin', 'Vui lòng nhập tên sản phẩm');
-            return;
+            nextErrors.productName = 'Tên sản phẩm không được để trống';
         }
-        if (isNaN(productPrice) || productPrice < 0) {
-            appToast.warning('Thiếu thông tin', 'Giá sản phẩm không hợp lệ (≥ 0)');
-            return;
+        if (Number.isNaN(productPrice) || productPrice < 0) {
+            nextErrors.productPrice = 'Giá phải là số và >= 0';
         }
-        if (isNaN(quantity) || quantity < 0) {
-            appToast.warning('Thiếu thông tin', 'Số lượng không hợp lệ (số nguyên ≥ 0)');
-            return;
+        if (Number.isNaN(quantityRaw) || quantityRaw < 0 || !Number.isInteger(quantityRaw)) {
+            nextErrors.quantity = 'Số lượng phải là số nguyên >= 0';
         }
+
+        setFormErrors(nextErrors);
+        if (Object.keys(nextErrors).length > 0) return;
+
+        const normalizedTags = (form.tags || [])
+            .map((tag) => (tag || '').trim())
+            .filter(Boolean);
+        const imageFiles = (form.images || [])
+            .map((item) => item?.file)
+            .filter((f) => f instanceof File);
 
         const payload = {
             productName,
             productPrice,
+            quantity,
             productDescription: (form.productDescription || '').trim() || undefined,
             size: (form.size || '').trim() || undefined,
-            material: (form.material || '').trim() || undefined,
-            quantity,
-            image: form.image instanceof File ? form.image : undefined,
+            categoryId: (form.categoryId || '').trim() || undefined,
+            tags: normalizedTags.length > 0 ? normalizedTags : undefined,
+            images: imageFiles.length > 0 ? imageFiles : undefined,
         };
 
         setSubmitting(true);
         try {
             const result = await productService.createProduct(payload);
             if (result.success) {
-                appToast.success('Tạo thành công', `Đã thêm ${productName} vào hệ thống`);
-                setForm({
-                    productName: '',
-                    productPrice: '',
-                    productDescription: '',
-                    size: '',
-                    material: '',
-                    quantity: 0,
-                    image: null,
-                });
+                appToast.success('Tạo sản phẩm thành công');
+                resetCreateForm();
                 setShowForm(false);
                 fetchProducts();
             } else {
@@ -114,7 +193,8 @@ const PortfolioView = ({ user }) => {
             productPrice: product.productPrice ?? '',
             productDescription: product.productDescription ?? '',
             size: product.size ?? '',
-            material: product.material ?? '',
+            categoryId: product.categoryId ?? product.category?.id ?? '',
+            tags: Array.isArray(product.tags) && product.tags.length > 0 ? product.tags : [''],
             quantity: product.quantity ?? 0,
             productImages: (product.images || product.productImages || []).map((img) => ({
                 id: img.id ?? img.imageId,
@@ -122,7 +202,7 @@ const PortfolioView = ({ user }) => {
                 publicId: img.publicId ?? '',
             })),
             deletedImageIds: [],
-            newImageItems: [], // { file: File, preview: string } | { file: null, preview: string } (URL)
+            newImageItems: [],
         });
     };
 
@@ -139,29 +219,32 @@ const PortfolioView = ({ user }) => {
 
         const productName = (editingProduct.productName || '').trim();
         const productPrice = Number(editingProduct.productPrice);
-        const quantity = Math.floor(Number(editingProduct.quantity));
+        const quantityRaw = Number(editingProduct.quantity);
+        const quantity = Math.floor(quantityRaw);
 
         if (!productName) {
-            appToast.warning('Thiếu thông tin', 'Vui lòng nhập tên sản phẩm');
+            appToast.warning('Thiếu thông tin', 'Tên sản phẩm không được để trống');
             return;
         }
-        if (isNaN(productPrice) || productPrice < 0) {
-            appToast.warning('Thiếu thông tin', 'Giá sản phẩm không hợp lệ (≥ 0)');
+        if (Number.isNaN(productPrice) || productPrice < 0) {
+            appToast.warning('Thiếu thông tin', 'Giá phải là số và >= 0');
             return;
         }
-        if (isNaN(quantity) || quantity < 0) {
-            appToast.warning('Thiếu thông tin', 'Số lượng không hợp lệ (số nguyên ≥ 0)');
+        if (Number.isNaN(quantityRaw) || quantityRaw < 0 || !Number.isInteger(quantityRaw)) {
+            appToast.warning('Thiếu thông tin', 'Số lượng phải là số nguyên >= 0');
             return;
         }
 
         const productId = editingProduct.productId;
+        const normalizedTags = (editingProduct.tags || []).map((tag) => (tag || '').trim()).filter(Boolean);
         const productPayload = {
             productName,
             productDescription: (editingProduct.productDescription || '').trim() || undefined,
             productPrice,
             quantity,
-            material: (editingProduct.material || '').trim() || undefined,
             size: (editingProduct.size || '').trim() || undefined,
+            categoryId: (editingProduct.categoryId || '').trim() || undefined,
+            tags: normalizedTags.length > 0 ? normalizedTags : undefined,
         };
 
         const deleteImageIds = editingProduct.deletedImageIds || [];
@@ -231,28 +314,6 @@ const PortfolioView = ({ user }) => {
         );
     };
 
-    const unmarkImageForDeletion = (imageId) => {
-        if (!editingProduct) return;
-        setEditingProduct((prev) =>
-            prev
-                ? {
-                      ...prev,
-                      deletedImageIds: (prev.deletedImageIds || []).filter((id) => id !== imageId),
-                  }
-                : null
-        );
-    };
-
-    const addNewImageUrl = (url) => {
-        const trimmed = (url || '').trim();
-        if (!trimmed || !editingProduct) return;
-        setEditingProduct((prev) =>
-            prev
-                ? { ...prev, newImageItems: [...(prev.newImageItems || []), { file: null, preview: trimmed }] }
-                : null
-        );
-    };
-
     const addNewImageFile = (file) => {
         if (!file || !file.type.startsWith('image/') || !editingProduct) return;
         const preview = URL.createObjectURL(file);
@@ -269,6 +330,67 @@ const PortfolioView = ({ user }) => {
             if (removed?.preview?.startsWith('blob:')) URL.revokeObjectURL(removed.preview);
             list.splice(index, 1);
             return { ...prev, newImageItems: list };
+        });
+    };
+
+    const addEditTagField = () => {
+        setEditingProduct((prev) => (prev ? { ...prev, tags: [...(prev.tags || []), ''] } : null));
+    };
+
+    const updateEditTagField = (index, value) => {
+        setEditingProduct((prev) => {
+            if (!prev) return null;
+            const tags = [...(prev.tags || [])];
+            tags[index] = value;
+            return { ...prev, tags };
+        });
+    };
+
+    const removeEditTagField = (index) => {
+        setEditingProduct((prev) => {
+            if (!prev) return null;
+            const tags = [...(prev.tags || [])];
+            tags.splice(index, 1);
+            return { ...prev, tags: tags.length > 0 ? tags : [''] };
+        });
+    };
+
+    const addTagField = () => {
+        setForm((prev) => ({ ...prev, tags: [...(prev.tags || []), ''] }));
+    };
+
+    const updateTagField = (index, value) => {
+        setForm((prev) => {
+            const tags = [...(prev.tags || [])];
+            tags[index] = value;
+            return { ...prev, tags };
+        });
+    };
+
+    const removeTagField = (index) => {
+        setForm((prev) => {
+            const tags = [...(prev.tags || [])];
+            tags.splice(index, 1);
+            return { ...prev, tags: tags.length > 0 ? tags : [''] };
+        });
+    };
+
+    const addCreateImages = (fileList) => {
+        const files = Array.from(fileList || []).filter((file) => file?.type?.startsWith('image/'));
+        if (files.length === 0) return;
+        const newItems = files.map((file) => ({ file, preview: URL.createObjectURL(file) }));
+        setForm((prev) => ({ ...prev, images: [...(prev.images || []), ...newItems] }));
+    };
+
+    const removeCreateImage = (index) => {
+        setForm((prev) => {
+            const images = [...(prev.images || [])];
+            const removed = images[index];
+            if (removed?.preview?.startsWith('blob:')) {
+                URL.revokeObjectURL(removed.preview);
+            }
+            images.splice(index, 1);
+            return { ...prev, images };
         });
     };
 
@@ -310,8 +432,12 @@ const PortfolioView = ({ user }) => {
                         type="button"
                         className="btn-primary"
                         onClick={() => {
-                            setShowForm(!showForm);
-                            setEditingProduct(null);
+                            if (showForm) {
+                                closeCreateForm();
+                            } else {
+                                setEditingProduct(null);
+                                setShowForm(true);
+                            }
                         }}
                     >
                         {showForm ? 'Đóng form' : '+ Thêm sản phẩm'}
@@ -358,11 +484,6 @@ const PortfolioView = ({ user }) => {
                                     {(editingProduct.newImageItems || []).map((item, idx) => (
                                         <div key={`new-${idx}`} className="edit-modal-image-item edit-modal-image-item-new">
                                             <img src={item.preview} alt="" />
-                                            {!item.file && (
-                                                <span className="edit-modal-image-url-hint" title="Ảnh từ URL không gửi lên server (chỉ ảnh chọn từ máy mới được upload)">
-                                                    URL
-                                                </span>
-                                            )}
                                             <button
                                                 type="button"
                                                 className="edit-modal-image-remove"
@@ -384,35 +505,18 @@ const PortfolioView = ({ user }) => {
                                     <input
                                         type="file"
                                         accept="image/*"
+                                        multiple
                                         className="form-input"
                                         onChange={(e) => {
-                                            const f = e.target.files?.[0];
-                                            if (f) addNewImageFile(f);
+                                            const files = Array.from(e.target.files || []);
+                                            files.forEach((f) => addNewImageFile(f));
                                             e.target.value = '';
-                                        }}
-                                    />
-                                    <input
-                                        type="url"
-                                        className="form-input edit-modal-url-input"
-                                        placeholder="Hoặc dán URL ảnh"
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter') {
-                                                e.preventDefault();
-                                                addNewImageUrl(e.target.value);
-                                                e.target.value = '';
-                                            }
-                                        }}
-                                        onBlur={(e) => {
-                                            if (e.target.value.trim()) {
-                                                addNewImageUrl(e.target.value);
-                                                e.target.value = '';
-                                            }
                                         }}
                                     />
                                 </div>
                                 {(!editingProduct.productImages?.length || editingProduct.productImages.every((img) => (editingProduct.deletedImageIds || []).includes(img.id))) &&
                                 (!editingProduct.newImageItems || editingProduct.newImageItems.length === 0) ? (
-                                    <div className="edit-modal-image-placeholder">Chưa có ảnh — chọn file hoặc dán URL để thêm (chỉ ảnh chọn từ máy mới được upload)</div>
+                                    <div className="edit-modal-image-placeholder">Chưa có ảnh — chọn file để thêm</div>
                                 ) : null}
                             </div>
                             <div className="edit-modal-form">
@@ -473,15 +577,46 @@ const PortfolioView = ({ user }) => {
                                             />
                                         </div>
                                         <div className="form-group">
-                                            <label className="form-label">Chất liệu</label>
-                                            <input
-                                                type="text"
+                                            <label className="form-label">Danh mục</label>
+                                            <select
                                                 className="form-input"
-                                                placeholder="VD: Gỗ olive"
-                                                value={editingProduct.material}
-                                                onChange={(e) => updateEditField('material', e.target.value)}
-                                            />
+                                                value={editingProduct.categoryId || ''}
+                                                onChange={(e) => updateEditField('categoryId', e.target.value)}
+                                                disabled={categoryLoading}
+                                            >
+                                                <option value="">-- Chọn danh mục --</option>
+                                                {categories.map((category) => (
+                                                    <option key={category.id} value={category.id}>
+                                                        {category.name}
+                                                    </option>
+                                                ))}
+                                            </select>
                                         </div>
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Tags</label>
+                                        {(editingProduct.tags || []).map((tag, index) => (
+                                            <div key={`edit-tag-${index}`} className="form-row" style={{ marginBottom: 8 }}>
+                                                <input
+                                                    type="text"
+                                                    className="form-input"
+                                                    value={tag}
+                                                    onChange={(e) => updateEditTagField(index, e.target.value)}
+                                                    placeholder={`Tag ${index + 1}`}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    className="btn-outline"
+                                                    onClick={() => removeEditTagField(index)}
+                                                    style={{ minWidth: 44 }}
+                                                >
+                                                    -
+                                                </button>
+                                            </div>
+                                        ))}
+                                        <button type="button" className="btn-outline" onClick={addEditTagField}>
+                                            + Thêm tag
+                                        </button>
                                     </div>
                                     <div className="form-actions">
                                         <button type="button" className="btn-outline" onClick={closeEditForm}>
@@ -505,10 +640,10 @@ const PortfolioView = ({ user }) => {
                         <input
                             type="text"
                             className="form-input"
-                            required
                             value={form.productName}
                             onChange={(e) => updateField('productName', e.target.value)}
                         />
+                        {formErrors.productName && <span className="form-hint" style={{ color: '#dc2626' }}>{formErrors.productName}</span>}
                     </div>
 
                     <div className="form-row">
@@ -522,6 +657,7 @@ const PortfolioView = ({ user }) => {
                                 value={form.productPrice === '' ? '' : form.productPrice}
                                 onChange={(e) => updateField('productPrice', e.target.value)}
                             />
+                            {formErrors.productPrice && <span className="form-hint" style={{ color: '#dc2626' }}>{formErrors.productPrice}</span>}
                         </div>
                         <div className="form-group">
                             <label className="form-label">Số lượng <span className="required">*</span></label>
@@ -533,6 +669,7 @@ const PortfolioView = ({ user }) => {
                                 value={form.quantity === '' ? '' : form.quantity}
                                 onChange={(e) => updateField('quantity', e.target.value)}
                             />
+                            {formErrors.quantity && <span className="form-hint" style={{ color: '#dc2626' }}>{formErrors.quantity}</span>}
                         </div>
                     </div>
 
@@ -558,32 +695,85 @@ const PortfolioView = ({ user }) => {
                             />
                         </div>
                         <div className="form-group">
-                            <label className="form-label">Chất liệu</label>
-                            <input
-                                type="text"
+                            <label className="form-label">Danh mục</label>
+                            <select
                                 className="form-input"
-                                placeholder="VD: Gỗ olive"
-                                value={form.material}
-                                onChange={(e) => updateField('material', e.target.value)}
-                            />
+                                value={form.categoryId}
+                                onChange={(e) => updateField('categoryId', e.target.value)}
+                                disabled={categoryLoading}
+                            >
+                                <option value="">-- Chọn danh mục --</option>
+                                {categories.map((category) => (
+                                    <option key={category.id} value={category.id}>
+                                        {category.name}
+                                    </option>
+                                ))}
+                            </select>
+                            {categoryLoading && <span className="form-hint">Đang tải...</span>}
+                            {categoryLoadError && <span className="form-hint" style={{ color: '#dc2626' }}>{categoryLoadError}</span>}
                         </div>
                     </div>
 
                     <div className="form-group">
-                        <label className="form-label">Ảnh sản phẩm (upload lên Cloudinary)</label>
+                        <label className="form-label">Tags</label>
+                        {(form.tags || []).map((tag, index) => (
+                            <div key={`tag-${index}`} className="form-row" style={{ marginBottom: 8 }}>
+                                <div className="form-group" style={{ marginBottom: 0, flex: 1 }}>
+                                    <input
+                                        type="text"
+                                        className="form-input"
+                                        placeholder={`Tag ${index + 1}`}
+                                        value={tag}
+                                        onChange={(e) => updateTagField(index, e.target.value)}
+                                    />
+                                </div>
+                                <button
+                                    type="button"
+                                    className="btn-outline"
+                                    onClick={() => removeTagField(index)}
+                                >
+                                    -
+                                </button>
+                            </div>
+                        ))}
+                        <button type="button" className="btn-outline" onClick={addTagField}>
+                            + Thêm tag
+                        </button>
+                    </div>
+
+                    <div className="form-group">
+                        <label className="form-label">Ảnh sản phẩm</label>
                         <input
                             type="file"
                             className="form-input"
                             accept="image/*"
-                            onChange={(e) => updateField('image', e.target.files?.[0] ?? null)}
+                            multiple
+                            onChange={(e) => {
+                                addCreateImages(e.target.files);
+                                e.target.value = '';
+                            }}
                         />
-                        {form.image && (
-                            <span className="form-hint">{form.image.name}</span>
+                        {(form.images || []).length > 0 && (
+                            <div className="edit-modal-images-list" style={{ marginTop: 10 }}>
+                                {form.images.map((img, idx) => (
+                                    <div key={`create-image-${idx}`} className="edit-modal-image-item">
+                                        <img src={img.preview} alt={`Ảnh ${idx + 1}`} />
+                                        <button
+                                            type="button"
+                                            className="edit-modal-image-remove"
+                                            onClick={() => removeCreateImage(idx)}
+                                            title="Xóa ảnh"
+                                        >
+                                            ×
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
                         )}
                     </div>
 
                     <div className="form-actions">
-                        <button type="button" className="btn-outline" onClick={() => setShowForm(false)}>
+                        <button type="button" className="btn-outline" onClick={closeCreateForm}>
                             Hủy
                         </button>
                         <button type="submit" className="btn-primary" disabled={submitting}>
@@ -606,7 +796,7 @@ const PortfolioView = ({ user }) => {
                                 <div className="portfolio-product-image">
                                     {p.images && p.images.length > 0 ? (
                                         <img
-                                            src={p.images[0].imageUrl}
+                                            src={p.images[0].image_url || p.images[0].imageUrl || p.images[0].image}
                                             alt={p.productName}
                                         />
                                     ) : (

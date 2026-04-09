@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiX, FiShoppingCart, FiImage } from 'react-icons/fi';
 import { useCart } from '../../context/CartContext';
+import { appToast } from '../../lib/appToast';
 import './CartDrawer.css';
 
 const CartDrawer = () => {
@@ -11,23 +12,58 @@ const CartDrawer = () => {
         setCartOpen,
         cartTotalAmount,
         removeFromCart,
-        updateQuantity
+        updateQuantity,
     } = useCart();
 
     const navigate = useNavigate();
+    const [navigating, setNavigating] = useState(false);
+
+    useEffect(() => {
+        if (!isCartOpen) return undefined;
+
+        const bodyStyle = document.body.style;
+        const htmlStyle = document.documentElement.style;
+
+        const prevBodyOverflow = bodyStyle.overflow;
+        const prevBodyHeight = bodyStyle.height;
+        const prevHtmlOverflow = htmlStyle.overflow;
+        const prevHtmlHeight = htmlStyle.height;
+
+        bodyStyle.overflow = 'hidden';
+        bodyStyle.height = '100%';
+        htmlStyle.overflow = 'hidden';
+        htmlStyle.height = '100%';
+
+        return () => {
+            bodyStyle.overflow = prevBodyOverflow;
+            bodyStyle.height = prevBodyHeight;
+            htmlStyle.overflow = prevHtmlOverflow;
+            htmlStyle.height = prevHtmlHeight;
+        };
+    }, [isCartOpen]);
 
     if (!isCartOpen) return null;
 
-    const handleCheckout = () => {
-        setCartOpen(false);
-        navigate('/checkout', {
-            state: {
-                amount: cartTotalAmount,
-                isCustom: false,
-                title: cartItems.length === 1 ? cartItems[0].title : `Order with ${cartItems.length} items`
-            }
-        });
+    const isCartEmpty = cartItems.length === 0;
+    const disableActions = navigating || isCartEmpty;
+
+    const closeThenNavigate = (to) => {
+        try {
+            setNavigating(true);
+            setCartOpen(false);
+            window.setTimeout(() => {
+                navigate(to);
+                setNavigating(false);
+            }, 260);
+        } catch (error) {
+            setNavigating(false);
+            appToast.error('Không thể điều hướng', error?.message || 'Vui lòng thử lại');
+            navigate('/cart');
+        }
     };
+
+    const handleViewCart = () => closeThenNavigate('/cart');
+    const handleCheckout = () => closeThenNavigate('/checkout');
 
     return (
         <div className="cart-overlay" onClick={() => setCartOpen(false)}>
@@ -40,10 +76,10 @@ const CartDrawer = () => {
                 </div>
 
                 <div className="cart-body">
-                    {cartItems.length === 0 ? (
+                    {isCartEmpty ? (
                         <div className="empty-cart">
                             <FiShoppingCart size={48} strokeWidth={1.5} />
-                            <p>Your cart is empty.</p>
+                            <p>Giỏ hàng của bạn đang trống</p>
                             <button className="btn btn-primary" onClick={() => { setCartOpen(false); navigate('/'); }}>
                                 Continue Shopping
                             </button>
@@ -51,10 +87,10 @@ const CartDrawer = () => {
                     ) : (
                         <div className="cart-items-list">
                             {cartItems.map((item) => (
-                                <div key={item.id} className="cart-item">
+                                <div key={item.productId || item.id} className="cart-item">
                                     <div className="cart-item-image">
-                                        {item.image ? (
-                                            <img src={item.image} alt={item.title} />
+                                        {item.image || item.imageUrl ? (
+                                            <img src={item.image || item.imageUrl} alt={item.title || item.productName} />
                                         ) : (
                                             <div className="cart-item-image-placeholder">
                                                 <FiImage size={32} strokeWidth={1.5} />
@@ -63,22 +99,22 @@ const CartDrawer = () => {
                                     </div>
 
                                     <div className="cart-item-details">
-                                        <h4>{item.title}</h4>
-                                        <p className="cart-item-artisan">by {item.artisan || 'Sanctus Artisan'}</p>
-                                        <div className="cart-item-price">{(item.price ?? 0).toLocaleString('vi-VN')} ₫</div>
+                                        <h4>{item.title || item.productName}</h4>
+                                        <p className="cart-item-artisan">by {item.artisan || item.artisanName || 'Sanctus Artisan'}</p>
+                                        <div className="cart-item-price">{(item.totalPrice ?? item.price ?? 0).toLocaleString('vi-VN')} ₫</div>
 
                                         <div className="cart-item-actions">
                                             <div className="quantity-controls">
                                                 <button
                                                     className="qty-btn"
-                                                    onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                                                    onClick={() => updateQuantity(item.productId, item.quantity - 1)}
                                                 >
                                                     -
                                                 </button>
                                                 <span className="qty-value">{item.quantity}</span>
                                                 <button
                                                     className="qty-btn"
-                                                    onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                                                    onClick={() => updateQuantity(item.productId, item.quantity + 1)}
                                                 >
                                                     +
                                                 </button>
@@ -86,7 +122,7 @@ const CartDrawer = () => {
 
                                             <button
                                                 className="remove-btn"
-                                                onClick={() => removeFromCart(item.id)}
+                                                onClick={() => removeFromCart(item.productId)}
                                             >
                                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                                     <polyline points="3 6 5 6 21 6"></polyline>
@@ -101,18 +137,32 @@ const CartDrawer = () => {
                     )}
                 </div>
 
-                {cartItems.length > 0 && (
-                    <div className="cart-footer">
-                        <div className="cart-subtotal">
-                            <span>Subtotal</span>
-                            <span className="subtotal-amount">{cartTotalAmount.toLocaleString('vi-VN')} ₫</span>
-                        </div>
-                        <p className="shipping-note">Shipping & taxes calculated at checkout</p>
-                        <button className="btn btn-primary btn-checkout" onClick={handleCheckout}>
-                            Proceed to Checkout
+                <div className="cart-footer">
+                    <div className="cart-subtotal">
+                        <span>Tạm tính</span>
+                        <span className="subtotal-amount">{cartTotalAmount.toLocaleString('vi-VN')} ₫</span>
+                    </div>
+                    <p className="shipping-note">
+                        {isCartEmpty ? 'Giỏ hàng của bạn đang trống' : 'Phí vận chuyển & thuế tính khi thanh toán'}
+                    </p>
+
+                    <div className="cart-footer-actions">
+                        <button
+                            className="btn btn-primary btn-checkout"
+                            onClick={handleCheckout}
+                            disabled={disableActions}
+                        >
+                            {navigating ? 'Đang chuyển trang...' : 'Tiến hành thanh toán'}
+                        </button>
+                        <button
+                            className="btn btn-outline btn-view-cart"
+                            onClick={handleViewCart}
+                            disabled={disableActions}
+                        >
+                            Xem giỏ hàng đầy đủ
                         </button>
                     </div>
-                )}
+                </div>
             </div>
         </div>
     );

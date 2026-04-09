@@ -7,9 +7,10 @@ import api from '../cofig/api';
  * @param {string} [payload.productDescription]
  * @param {number} payload.productPrice - Bắt buộc, >= 0
  * @param {number} payload.quantity - Bắt buộc, >= 0 (integer)
- * @param {string} [payload.material]
  * @param {string} [payload.size]
- * @param {File} [payload.image] - Một file ảnh (upload Cloudinary)
+ * @param {string} [payload.categoryId]
+ * @param {string[]} [payload.tags]
+ * @param {File[]} [payload.images]
  * @returns {Promise<{ success: boolean, data?: object, error?: string }>}
  */
 export const createProduct = async (payload) => {
@@ -21,14 +22,22 @@ export const createProduct = async (payload) => {
         }
         formData.append('productPrice', Number(payload.productPrice));
         formData.append('quantity', Math.max(0, Math.floor(Number(payload.quantity))));
-        if (payload.material != null && String(payload.material).trim() !== '') {
-            formData.append('material', String(payload.material).trim());
-        }
         if (payload.size != null && String(payload.size).trim() !== '') {
             formData.append('size', String(payload.size).trim());
         }
-        if (payload.image instanceof File) {
-            formData.append('image', payload.image);
+        if (payload.categoryId != null && String(payload.categoryId).trim() !== '') {
+            formData.append('categoryId', String(payload.categoryId).trim());
+        }
+        if (Array.isArray(payload.tags)) {
+            payload.tags
+                .map((tag) => (tag != null ? String(tag).trim() : ''))
+                .filter(Boolean)
+                .forEach((tag) => formData.append('tags', tag));
+        }
+        if (Array.isArray(payload.images)) {
+            payload.images
+                .filter((file) => file instanceof File)
+                .forEach((file) => formData.append('images', file));
         }
 
         const response = await api.post('/product', formData);
@@ -176,8 +185,9 @@ export const updateProductStatus = async (productId, payload) => {
  * @param {string} [payload.productDescription]
  * @param {number} payload.productPrice - Bắt buộc, >= 0
  * @param {number} payload.quantity - Bắt buộc, >= 0
- * @param {string} [payload.material]
  * @param {string} [payload.size]
+ * @param {string} [payload.categoryId]
+ * @param {string[]} [payload.tags]
  * @returns {Promise<{ success: boolean, data?: object, error?: string }>}
  */
 export const updateProduct = async (productId, payload) => {
@@ -190,14 +200,17 @@ export const updateProduct = async (productId, payload) => {
                     : '',
             productPrice: Number(payload.productPrice),
             quantity: Math.max(0, Math.floor(Number(payload.quantity))),
-            material:
-                payload.material != null && String(payload.material).trim() !== ''
-                    ? String(payload.material).trim()
-                    : '',
             size:
                 payload.size != null && String(payload.size).trim() !== ''
                     ? String(payload.size).trim()
                     : '',
+            categoryId:
+                payload.categoryId != null && String(payload.categoryId).trim() !== ''
+                    ? String(payload.categoryId).trim()
+                    : '',
+            tags: Array.isArray(payload.tags)
+                ? payload.tags.map((tag) => (tag != null ? String(tag).trim() : '')).filter(Boolean)
+                : [],
         };
 
         const response = await api.put(`/product/${productId}`, body);

@@ -1,23 +1,15 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiGrid, FiLayers, FiImage, FiPackage, FiBriefcase, FiZap } from 'react-icons/fi';
+import { FiGrid, FiLayers } from 'react-icons/fi';
 import Header from '../components/Header/Header';
 import Footer from '../components/Footer/Footer';
 import ProductCard from '../components/ProductGrid/ProductCard';
 import productService from '../services/productService';
+import api from '../cofig/api';
 import aiService from '../services/aiService';
 import { useLanguage } from '../context/LanguageContext';
 import { appToast } from '../lib/appToast';
 import './ShopPage.css';
-
-const CATEGORIES = [
-    { id: 'all', label: 'Tất cả', Icon: FiGrid },
-    { id: 'rosary', label: 'Chuỗi Mân Côi', Icon: FiLayers },
-    { id: 'icon', label: 'Ảnh Thánh', Icon: FiImage },
-    { id: 'statue', label: 'Tượng Thánh', Icon: FiPackage },
-    { id: 'vestment', label: 'Phẩm Phục', Icon: FiBriefcase },
-    { id: 'candle', label: 'Nến', Icon: FiZap },
-];
 
 const MATERIALS = ['GỖ', 'CẨM THẠCH', 'BẠC'];
 
@@ -27,6 +19,7 @@ const ShopPage = () => {
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [listLoadOk, setListLoadOk] = useState(true);
+    const [categories, setCategories] = useState([{ id: 'all', label: 'Tất cả', Icon: FiGrid }]);
     const [selectedCategory, setSelectedCategory] = useState('all');
     const [selectedMaterial, setSelectedMaterial] = useState(null);
     const [sortBy, setSortBy] = useState('newest');
@@ -74,27 +67,68 @@ const ShopPage = () => {
                 setLoading(false);
             }
         };
+
+        const fetchCategories = async () => {
+            try {
+                const response = await api.get('/categories');
+                const res = response?.data;
+                const rawList = Array.isArray(res)
+                    ? res
+                    : Array.isArray(res?.data)
+                        ? res.data
+                        : Array.isArray(res?.data?.content)
+                            ? res.data.content
+                            : Array.isArray(res?.content)
+                                ? res.content
+                                : [];
+
+                const normalized = rawList
+                    .map((item) => ({
+                        id: item?.id || item?.categoryId || item?.uuid || '',
+                        label: item?.name || item?.categoryName || item?.title || '',
+                        isActive: item?.isActive !== false,
+                        sortOrder: Number.isFinite(Number(item?.sortOrder)) ? Number(item.sortOrder) : 0,
+                        Icon: FiLayers,
+                    }))
+                    .filter((item) => item.id && item.label && item.isActive)
+                    .sort((a, b) => a.sortOrder - b.sortOrder);
+
+                setCategories([{ id: 'all', label: 'Tất cả', Icon: FiGrid }, ...normalized]);
+            } catch {
+                setCategories([{ id: 'all', label: 'Tất cả', Icon: FiGrid }]);
+                appToast.error('Không tải được', 'Không tải được danh mục');
+            }
+        };
+
         fetchProducts();
+        fetchCategories();
     }, []);
 
     const getProductImage = (product) => {
-        if (product.images && product.images.length > 0)
-            return product.images[0].imageUrl || product.images[0].image_url;
-        if (product.productImages && product.productImages.length > 0) {
-            const img = product.productImages[0];
-            return img.imageUrl || img.image_url || img.image;
+        if (product?.images?.length > 0) {
+            const firstImage = product.images[0];
+            return firstImage?.image_url || undefined;
         }
-        return product.imageUrl || product.image_url;
+        return undefined;
     };
 
     const filteredProducts = useMemo(() => {
         let list = [...products];
+
+        if (selectedCategory !== 'all') {
+            list = list.filter((p) => {
+                const pid = p.categoryId || p.category?.id || '';
+                return pid === selectedCategory;
+            });
+        }
+
         if (selectedMaterial) {
             const mat = selectedMaterial.toLowerCase();
             list = list.filter(
                 (p) => (p.material || '').toLowerCase().includes(mat)
             );
         }
+
         if (sortBy === 'newest') {
             list.sort((a, b) => (b.productId || 0) - (a.productId || 0));
         } else if (sortBy === 'price-asc') {
@@ -103,7 +137,7 @@ const ShopPage = () => {
             list.sort((a, b) => (b.productPrice || 0) - (a.productPrice || 0));
         }
         return list;
-    }, [products, selectedMaterial, sortBy]);
+    }, [products, selectedCategory, selectedMaterial, sortBy]);
 
     const totalPages = Math.ceil(filteredProducts.length / itemsPerPage) || 1;
     const paginatedProducts = useMemo(() => {
@@ -150,14 +184,14 @@ const ShopPage = () => {
                         <div className="shop-sidebar-section">
                             <h3 className="shop-sidebar-title">DANH MỤC</h3>
                             <ul className="shop-category-list">
-                                {CATEGORIES.map(({ id, label, Icon }) => (
+                                {categories.map(({ id, label }) => (
                                     <li key={id}>
                                         <button
                                             type="button"
                                             className={`shop-category-btn ${selectedCategory === id ? 'active' : ''}`}
                                             onClick={() => setSelectedCategory(id)}
                                         >
-                                            <span className="shop-category-icon"><Icon size={18} strokeWidth={2} /></span>
+                                            <span className="shop-category-icon"><FiLayers size={18} strokeWidth={2} /></span>
                                             {label}
                                         </button>
                                     </li>

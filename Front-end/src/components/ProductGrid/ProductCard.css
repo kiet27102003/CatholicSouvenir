@@ -1,9 +1,14 @@
+.product-card-shell {
+    position: relative;
+}
+
 .product-card {
     position: relative;
     background-color: var(--color-bg);
     border-radius: var(--radius-lg);
     overflow: hidden;
-    transition: all var(--transition-slow);
+    cursor: none;
+    transition: all 0.3s ease;
     border: 1px solid var(--color-border-light);
 }
 
@@ -12,9 +17,10 @@
     cursor: pointer;
 }
 
-.product-card:hover {
+.product-card:hover,
+.product-card.is-overlay-open {
     box-shadow: var(--shadow-lg);
-    transform: translateY(-6px);
+    transform: translateY(-4px);
 }
 
 .product-image {
@@ -29,7 +35,12 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform var(--transition-slow);
+    transition: transform 0.4s ease;
+}
+
+.product-card:hover .product-image img,
+.product-card.is-overlay-open .product-image img {
+    transform: scale(1.08);
 }
 
 .product-image-placeholder {
@@ -42,8 +53,168 @@
     color: var(--color-text-light);
 }
 
-.product-card:hover .product-image img {
-    transform: scale(1.08);
+.product-hover-progress-cursor {
+    position: absolute;
+    width: 44px;
+    height: 44px;
+    transform: translate(-50%, -50%);
+    z-index: 30;
+    pointer-events: none;
+    filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.2));
+}
+
+.product-hover-progress-ring {
+    width: 44px;
+    height: 44px;
+    display: block;
+}
+
+.product-hover-progress-ring .ring-track {
+    fill: rgba(255, 255, 255, 0.08);
+    stroke: rgba(255, 255, 255, 0.4);
+    stroke-width: 3;
+}
+
+.product-hover-progress-ring .ring-progress {
+    fill: none;
+    stroke: var(--color-accent, #d4a373);
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-dasharray: 113.097;
+    stroke-dashoffset: 113.097;
+    transform: rotate(-90deg);
+    transform-origin: 22px 22px;
+    transition: stroke-dashoffset 0.05s linear;
+}
+
+.product-quick-view-pop {
+    position: absolute;
+    left: 50%;
+    top: calc(100% + 10px);
+    transform: translateX(-50%) scale(0.95);
+    width: min(360px, 92vw);
+    background: var(--color-bg);
+    border: 1px solid var(--color-border-light);
+    border-radius: 14px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
+    z-index: 40;
+    padding: 14px;
+    opacity: 0;
+    animation: quick-view-in 240ms ease-out forwards;
+    pointer-events: auto;
+}
+
+@keyframes quick-view-in {
+    to {
+        opacity: 1;
+        transform: translateX(-50%) scale(1);
+    }
+}
+
+.quick-view-title {
+    margin: 0 0 8px;
+    font-size: 1rem;
+    color: var(--color-text);
+}
+
+.product-quick-view-pop p {
+    margin: 0 0 6px;
+    font-size: 0.875rem;
+    color: var(--color-text-light);
+    line-height: 1.35;
+}
+
+.quick-view-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.product-image-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: flex-end;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.75), transparent);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 5;
+    pointer-events: none;
+}
+
+.product-card:hover .product-image-overlay,
+.product-card.is-overlay-open .product-image-overlay {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.product-overlay-content {
+    width: 100%;
+    padding: var(--spacing-md);
+    transform: translateY(10px);
+    transition: transform 0.3s ease;
+}
+
+.product-card:hover .product-overlay-content,
+.product-card.is-overlay-open .product-overlay-content {
+    transform: translateY(0);
+}
+
+.product-overlay-title {
+    color: #fff;
+    font-size: 1.125rem;
+    font-weight: 700;
+    margin-bottom: 0.35rem;
+}
+
+.product-overlay-description {
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.875rem;
+    margin-bottom: 0.4rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.product-overlay-rating {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.8rem;
+    margin-bottom: 0.65rem;
+}
+
+.product-overlay-actions {
+    display: grid;
+    gap: 0.5rem;
+    transform: translateY(10px);
+    transition: transform 0.3s ease 0.05s;
+}
+
+.product-card:hover .product-overlay-actions,
+.product-card.is-overlay-open .product-overlay-actions {
+    transform: translateY(0);
+}
+
+.product-overlay-btn {
+    width: 100%;
+    border-radius: var(--radius-md);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.product-overlay-btn-outline {
+    border: 1px solid rgba(255, 255, 255, 0.95);
+    background: transparent;
+    color: #fff;
+}
+
+.product-overlay-btn-filled {
+    border: 1px solid var(--color-accent);
+    background: var(--color-accent);
+    color: #fff;
 }
 
 .badge {
@@ -118,6 +289,7 @@
     cursor: pointer;
     transition: all var(--transition-base);
     box-shadow: var(--shadow-md);
+    z-index: 11;
 }
 
 .product-card-cart-btn:hover {
@@ -151,6 +323,10 @@
 @media (max-width: 768px) {
     .product-image {
         height: 220px;
+    }
+
+    .product-card {
+        cursor: pointer;
     }
 }
 

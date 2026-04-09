@@ -1,10 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getOrderById } from '../../services/orderService';
+import paymentService from '../../services/paymentService';
+import { useAuth } from '../../context/AuthContext';
+import PaymentStatusBadge from '../../components/payment/PaymentStatusBadge';
 import { appToast } from '../../lib/appToast';
 import './OrderTrackingPage.css';
 
-const formatVnd = (value) => `${Number(value).toLocaleString('vi-VN')} ₫`;
+const formatVnd = (value) => `${new Intl.NumberFormat('vi-VN').format(Number(value || 0))} đ`;
+
+const formatDateTime = (value) => {
+    if (!value) return '—';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '—';
+    return new Intl.DateTimeFormat('vi-VN', {
+        day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
+    }).format(date);
+};
 
 const STATUS_STEPS = [
     { key: 'PENDING', label: 'Chờ xử lý' },
@@ -28,8 +40,14 @@ const getStatusLabel = (status) => {
 const OrderTrackingPage = () => {
     const { id: orderId } = useParams();
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [order, setOrder] = useState(null);
+    const [payments, setPayments] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [refundingId, setRefundingId] = useState('');
+
+    const normalizedRole = String(user?.role || user?.roleName || user?.userRole || '').toUpperCase();
+    const isAdmin = normalizedRole.includes('ADMIN');
 
     useEffect(() => {
         window.scrollTo(0, 0);
@@ -41,10 +59,14 @@ const OrderTrackingPage = () => {
         let cancelled = false;
         setLoading(true);
         getOrderById(orderId)
-            .then((res) => {
+            .then(async (res) => {
                 if (cancelled) return;
                 if (res.success && res.data) {
                     setOrder(res.data);
+                    const payRes = await paymentService.getPaymentsByOrder(orderId);
+                    if (!cancelled) {
+                        setPayments(payRes.success ? (payRes.data || []) : []);
+                    }
                 } else {
                     setOrder(null);
                     const msg = res.error != null ? String(res.error) : 'Vui lòng thử lại';
@@ -94,6 +116,25 @@ const OrderTrackingPage = () => {
         : 0;
     const details = order.orderDetails || [];
     const productsSubtotal = details.reduce((sum, d) => sum + (d.subTotal || 0), 0);
+
+    const handleRefund = async (paymentId) => {
+        if (!paymentId || refundingId) return;
+        setRefundingId(paymentId);
+        const reason = `Admin refund cho đơn ${orderId}`;
+        const refundRes = await paymentService.refundPayment(paymentId, reason);
+        setRefundingId('');
+
+        if (!refundRes.success) {
+            appToast.error('Hoàn tiền thất bại', refundRes.error || 'Vui lòng thử lại');
+            return;
+        }
+
+        appToast.success('Hoàn tiền thành công');
+        const payRes = await paymentService.getPaymentsByOrder(orderId);
+        if (payRes.success) {
+            setPayments(payRes.data || []);
+        }
+    };
 
     return (
         <div className="order-tracking-page">
@@ -192,6 +233,43 @@ const OrderTrackingPage = () => {
                             <h4>Tổng thanh toán</h4>
                             <p className="price-total">{formatVnd(order.total)}</p>
                         </div>
+
+                        {payments.length > 0 && (
+                            <div className="summary-section payment-history-section">
+                                <h4>Lịch sử thanh toán</h4>
+                                <div className="payment-history-list">
+                                    {payments.map((pay, index) => {
+                                        const status = String(pay?.status || '').toUpperCase();
+                                        const canRefund = isAdmin && status === 'SUCCESS';
+                                        return (
+                                            <div key={pay.paymentId || pay.transactionId || `${orderId}-${index}`} className="payment-history-item">
+                                                <div className="payment-history-top">
+                                                    <code>{pay.transactionId || 'N/A'}</code>
+                                                    <PaymentStatusBadge status={status || 'PENDING'} />
+                                                </div>
+                                                {pay.stageName ? <p className="payment-stage">Giai đoạn: {pay.stageName}</p> : null}
+                                                <div className="payment-meta-grid">
+                                                    <span>Số tiền: <strong>{formatVnd(pay.amount)}</strong></span>
+                                                    <span>Phương thức: <strong>{pay.paymentMethod || 'VNPAY'}</strong></span>
+                                                    <span>Tạo lúc: <strong>{formatDateTime(pay.createdAt)}</strong></span>
+                                                    <span>Thanh toán: <strong>{formatDateTime(pay.paidAt)}</strong></span>
+                                                </div>
+                                                {canRefund && (
+                                                    <button
+                                                        type="button"
+                                                        className="btn btn-outline btn-sm"
+                                                        onClick={() => handleRefund(pay.paymentId)}
+                                                        disabled={refundingId === pay.paymentId}
+                                                    >
+                                                        {refundingId === pay.paymentId ? 'Đang hoàn tiền...' : 'Hoàn tiền'}
+                                                    </button>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
 
                         <div className="summary-actions">
                             <button type="button" className="btn btn-outline btn-full" onClick={() => navigate('/orders')}>

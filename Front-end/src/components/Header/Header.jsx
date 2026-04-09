@@ -9,7 +9,7 @@ import './Header.css';
 
 const Header = () => {
     const { user, logout, isAuthenticated } = useAuth();
-    const { cartItemsCount, toggleCart } = useCart();
+    const { cartItemsCount, openCart } = useCart();
     const { language, setLanguage, t } = useLanguage();
     const { theme, toggleTheme } = useTheme();
     const navigate = useNavigate();
@@ -124,7 +124,7 @@ const Header = () => {
                             <FiBell size={20} strokeWidth={2} />
                         </button>
 
-                        <button className="icon-btn" aria-label="Shopping cart" onClick={toggleCart} style={{ position: 'relative' }}>
+                        <button className="icon-btn" aria-label="Shopping cart" onClick={openCart} style={{ position: 'relative' }}>
                             <FiShoppingCart size={20} strokeWidth={2} />
                             {cartItemsCount > 0 && (
                                 <span className="cart-badge">{cartItemsCount}</span>

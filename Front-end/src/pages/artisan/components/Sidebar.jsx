@@ -8,6 +8,7 @@ const Sidebar = ({ user, activeView, setActiveView, onLogout, isOpen = false, on
         { id: 'messages', icon: 'mail', label: 'Messages', badge: 2 },
         { id: 'portfolio', icon: 'portfolio', label: 'Portfolio', badge: null },
         { id: 'templates', icon: 'templates', label: 'Mẫu thiết kế', badge: null },
+        { id: 'wallet', icon: 'money', label: 'Ví của tôi', badge: null },
         { id: 'earnings', icon: 'money', label: 'Earnings', badge: null },
     ];
 

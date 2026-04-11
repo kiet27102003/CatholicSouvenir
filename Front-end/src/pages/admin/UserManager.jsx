@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { FiSearch, FiFilter, FiEye, FiUsers, FiRefreshCw, FiEdit2, FiSave, FiX, FiTrash2, FiAlertTriangle, FiUserPlus } from 'react-icons/fi';
 import api from '../../cofig/api';
 import { appToast } from '../../lib/appToast';
-import AdminTopbar from './AdminTopbar';
 import './admin-common.css';
 import './UserManager.css';
 
@@ -311,11 +310,10 @@ const UserManager = () => {
         }
     };
     return (
-        <>
-            <AdminTopbar title="Quản lý người dùng" />
-            <div className="admin-page user-manager-page">
+        <div className="admin-page user-manager-page">
             <div className="admin-page-header user-manager-header">
                 <div>
+                    <h1 className="admin-page-title">Quản lý người dùng</h1>
                     <p className="admin-page-subtitle">
                         Quản lý tài khoản, vai trò và quyền hạn.
                     </p>
@@ -987,7 +985,6 @@ const UserManager = () => {
                 </div>
             )}
         </div>
-        </>
     );
 };
 

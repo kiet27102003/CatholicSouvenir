@@ -14,6 +14,7 @@ const getViewFromPath = (pathname) => {
 
 const viewToPath = (view) => {
     if (view === 'templates') return '/artisan/templates';
+    if (view === 'wallet') return '/wallet';
     return '/artisan';
 };
 

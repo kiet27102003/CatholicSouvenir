@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { appToast } from '../../lib/appToast';
-import AdminTopbar from './AdminTopbar';
 import './admin-common.css';
 import './SystemConfig.css';
 
@@ -45,10 +44,9 @@ const SystemConfig = () => {
     ];
 
     return (
-        <>
-            <AdminTopbar title="Cấu hình hệ thống" />
-            <div className="admin-page system-config-page">
+        <div className="admin-page system-config-page">
             <div className="admin-page-header">
+                <h1 className="admin-page-title">Cấu hình hệ thống</h1>
                 <p className="admin-page-subtitle">Quản lý cài đặt và tùy chọn toàn cục của ứng dụng.</p>
             </div>
 
@@ -220,7 +218,6 @@ const SystemConfig = () => {
                 </button>
             </div>
         </div>
-        </>
     );
 };
 

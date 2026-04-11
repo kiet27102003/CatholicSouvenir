@@ -24,9 +24,12 @@ import CartPage from './pages/CartPage'
 import PaymentSuccessPage from './pages/PaymentSuccessPage'
 import PaymentFailedPage from './pages/PaymentFailedPage'
 import OrderTrackingPage from './pages/customer/OrderTrackingPage'
+import WalletPage from './pages/customer/WalletPage'
 import CartDrawer from './components/CartDrawer/CartDrawer'
 
 import AdminLayout from './pages/admin/AdminLayout'
+import AdminWallets from './pages/admin/AdminWallets'
+import AdminDashboard from './pages/admin/AdminDashboard'
 import SystemConfig from './pages/admin/SystemConfig'
 import UserManager from './pages/admin/UserManager'
 import CustomerManager from './pages/admin/CustomerManager'
@@ -35,6 +38,7 @@ import ArtisanManager from './pages/admin/ArtisanManager'
 import ProductManager from './pages/admin/ProductManager'
 import CategoryManager from './pages/admin/CategoryManager'
 import ArtisanApplications from './pages/admin/ArtisanApplications'
+import AdminComingSoon from './pages/admin/AdminComingSoon'
 
 function App() {
   return (
@@ -61,13 +65,17 @@ function App() {
 
         {/* Admin Routes with Layout */}
         <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<Navigate to="/admin/settings" replace />} />
+          <Route index element={<Navigate to="/admin/dashboard" replace />} />
+          <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="settings" element={<SystemConfig />} />
           <Route path="users" element={<UserManager />} />
           <Route path="customers" element={<CustomerManager />} />
           <Route path="customers/:id" element={<CustomerDetailPage />} />
           <Route path="artisans" element={<ArtisanManager />} />
           <Route path="products" element={<ProductManager />} />
+          <Route path="orders" element={<AdminComingSoon title="Đơn hàng" />} />
+          <Route path="payments" element={<AdminComingSoon title="Thanh toán" />} />
+          <Route path="wallets" element={<AdminWallets />} />
           <Route path="categories" element={<CategoryManager />} />
           <Route path="artisan-applications" element={<ArtisanApplications />} />
         </Route>
@@ -75,9 +83,10 @@ function App() {
         {/* Customer Routes inside Layout */}
         <Route element={<CustomerLayout />}>
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/wallet" element={<WalletPage />} />
           <Route path="/orders" element={<OrderHistoryPage />} />
-          <Route path="/orders/:id" element={<OrderTrackingPage />} />
-          <Route path="/orders/:id/tracking" element={<OrderTrackingPage />} />
+          <Route path="/orders/:orderId" element={<OrderTrackingPage />} />
+          <Route path="/orders/:orderId/tracking" element={<OrderTrackingPage />} />
           <Route path="/custom-requests" element={<CustomRequestPage />} />
           <Route path="/my-custom-requests" element={<MyCustomRequestsPage />} />
           <Route path="/messages" element={<MessageCenterPage />} />

@@ -94,7 +94,7 @@ export const clearCart = async () => {
 
 export const checkoutCart = async (productIds) => {
     try {
-        const response = await api.post('/cart/check_out', productIds);
+        const response = await api.post('/checkout', productIds);
         const payload = normalizeResponse(response);
         if (payload.code !== 200 && payload.code !== 201) {
             return { success: false, error: payload.message || 'Thanh toán thất bại.' };

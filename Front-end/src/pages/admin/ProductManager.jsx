@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { FiSearch, FiFilter, FiRefreshCw, FiPackage, FiCheck, FiX, FiTrash2, FiAlertTriangle, FiEye } from 'react-icons/fi';
 import productService from '../../services/productService';
 import { appToast } from '../../lib/appToast';
-import AdminTopbar from './AdminTopbar';
 import './admin-common.css';
 import './ProductManager.css';
 
@@ -175,11 +174,10 @@ const ProductManager = () => {
     };
 
     return (
-        <>
-            <AdminTopbar title="Quản lý sản phẩm" />
-            <div className="admin-page product-manager-page">
+        <div className="admin-page product-manager-page">
             <div className="admin-page-header product-manager-header">
                 <div>
+                    <h1 className="admin-page-title">Quản lý sản phẩm</h1>
                     <p className="admin-page-subtitle">
                         Xem và quản lý toàn bộ sản phẩm từ các artisan.
                     </p>
@@ -535,7 +533,6 @@ const ProductManager = () => {
                 </div>
             )}
         </div>
-        </>
     );
 };
 

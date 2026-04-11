@@ -15,7 +15,6 @@ import {
 } from 'react-icons/fi';
 import api from '../../cofig/api';
 import { appToast } from '../../lib/appToast';
-import AdminTopbar from './AdminTopbar';
 import './admin-common.css';
 import './UserManager.css';
 import './AdminCustomerArtisan.css';
@@ -154,11 +153,10 @@ const CustomerManager = () => {
     const totalSpend = (acc) => acc.totalSpent ?? acc.totalSpend ?? acc.totalSpending;
 
     return (
-        <>
-            <AdminTopbar title="Quản lý khách hàng" />
-            <div className="admin-page user-manager-page">
+        <div className="admin-page user-manager-page">
             <div className="admin-page-header user-manager-header">
                 <div>
+                    <h1 className="admin-page-title">Quản lý khách hàng</h1>
                     <p className="admin-page-subtitle">
                         Theo dõi và quản lý thông tin khách hàng trên hệ thống
                     </p>
@@ -415,7 +413,6 @@ const CustomerManager = () => {
             </div>
 
         </div>
-        </>
     );
 };
 

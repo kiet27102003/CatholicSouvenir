@@ -3,12 +3,26 @@ import { Outlet, NavLink, useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { AdminLayoutContext } from './AdminLayoutContext';
 import './AdminLayout.css';
-import { FiSettings, FiUsers, FiUser, FiAward, FiLogOut, FiFileText, FiPackage, FiGrid } from 'react-icons/fi';
+import {
+    FiUsers,
+    FiUser,
+    FiAward,
+    FiLogOut,
+    FiFileText,
+    FiPackage,
+    FiGrid,
+    FiHome,
+    FiClipboard,
+    FiDollarSign,
+    FiActivity,
+    FiGift,
+    FiCreditCard,
+} from 'react-icons/fi';
 
 const AdminLayout = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const navigate = useNavigate();
-    const { isAuthenticated, logout } = useAuth();
+    const { isAuthenticated, logout, user } = useAuth();
 
     const toggleSidebar = useCallback(() => {
         setIsSidebarOpen((open) => !open);
@@ -17,13 +31,17 @@ const AdminLayout = () => {
     const layoutValue = useMemo(() => ({ toggleSidebar }), [toggleSidebar]);
 
     const menuItems = [
-        { path: '/admin/settings', name: 'Cấu hình hệ thống', icon: <FiSettings /> },
-        { path: '/admin/users', name: 'Quản lý người dùng', icon: <FiUsers /> },
-        { path: '/admin/customers', name: 'Quản lý khách hàng', icon: <FiUser /> },
-        { path: '/admin/artisans', name: 'Quản lý nghệ nhân', icon: <FiAward /> },
-        { path: '/admin/products', name: 'Quản lý sản phẩm', icon: <FiPackage /> },
+        { path: '/admin/dashboard', name: 'Bảng điều khiển', icon: <FiHome /> },
+        { path: '/admin/users', name: 'Tài khoản', icon: <FiUsers /> },
+        { path: '/admin/artisan-applications', name: 'Đơn đăng ký Nghệ nhân', icon: <FiFileText /> },
+        { path: '/admin/products', name: 'Duyệt sản phẩm', icon: <FiPackage /> },
+        { path: '/admin/orders', name: 'Đơn hàng', icon: <FiClipboard /> },
+        { path: '/admin/payments', name: 'Thanh toán', icon: <FiDollarSign /> },
+        { path: '/admin/wallets', name: 'Quản lý ví', icon: <FiCreditCard /> },
+        { path: '/admin/settings', name: 'Giám sát hệ thống', icon: <FiActivity /> },
+        { path: '/admin/customers', name: 'Khách hàng', icon: <FiUser /> },
+        { path: '/admin/artisans', name: 'Nghệ nhân', icon: <FiAward /> },
         { path: '/admin/categories', name: 'Danh mục', icon: <FiGrid /> },
-        { path: '/admin/artisan-applications', name: 'Artisan Application', icon: <FiFileText /> },
     ];
 
     const handleLogout = () => {
@@ -41,7 +59,11 @@ const AdminLayout = () => {
                 <aside className={`admin-sidebar ${isSidebarOpen ? 'open' : 'closed'}`}>
                     <div className="sidebar-header">
                         <div className="logo">
-                            Sanctus<span>Admin</span>
+                            <span className="logo-icon"><FiGift /></span>
+                            <div>
+                                <strong>Catholic Market</strong>
+                                <p>CÔNG QUẢN TRỊ</p>
+                            </div>
                         </div>
                         <button type="button" className="mobile-close-btn" onClick={toggleSidebar}>
                             &times;
@@ -49,7 +71,6 @@ const AdminLayout = () => {
                     </div>
 
                     <nav className="sidebar-nav">
-                        <div className="nav-section-title">Menu chính</div>
                         <ul>
                             {menuItems.map((item) => (
                                 <li key={item.path}>
@@ -66,10 +87,23 @@ const AdminLayout = () => {
                     </nav>
 
                     <div className="sidebar-footer">
-                        <button type="button" className="logout-btn" onClick={handleLogout}>
-                            <FiLogOut className="nav-icon" />
-                            <span className="nav-text">Đăng xuất</span>
-                        </button>
+                        <div className="admin-user-card">
+                            <img
+                                src={
+                                    user?.avatar ||
+                                    `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'Quản trị viên')}&background=fff7ed&color=9a3412`
+                                }
+                                alt="Quản trị viên"
+                                className="admin-user-avatar"
+                            />
+                            <div className="admin-user-info">
+                                <strong>{user?.name || 'Quản trị viên'}</strong>
+                                <p>Quản trị hệ thống</p>
+                            </div>
+                            <button type="button" className="logout-btn" onClick={handleLogout} title="Đăng xuất">
+                                <FiLogOut className="nav-icon" />
+                            </button>
+                        </div>
                     </div>
                 </aside>
 

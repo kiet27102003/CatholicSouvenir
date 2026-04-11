@@ -1,8 +1,7 @@
-import React, { createContext, useContext, useEffect, useMemo, useReducer, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useReducer } from 'react';
 import { appToast } from '../lib/appToast';
 import cartService from '../services/cartService';
 
-const STORAGE_KEY = 'cart_items';
 const CartContext = createContext();
 
 const formatZoneInputs = (zoneInputs) => {
@@ -134,23 +133,8 @@ const cartReducer = (state, action) => {
     }
 };
 
-const loadLocalItems = () => {
-    try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        const parsed = raw ? JSON.parse(raw) : [];
-        return Array.isArray(parsed) ? parsed.map(normalizeIncomingItem) : [];
-    } catch {
-        return [];
-    }
-};
-
 export const CartProvider = ({ children }) => {
-    const [state, dispatch] = useReducer(cartReducer, { items: loadLocalItems(), isOpen: false });
-    const fallbackWarnedRef = useRef(false);
-
-    useEffect(() => {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(state.items));
-    }, [state.items]);
+    const [state, dispatch] = useReducer(cartReducer, { items: [], isOpen: false });
 
     useEffect(() => {
         let cancelled = false;
@@ -165,11 +149,7 @@ export const CartProvider = ({ children }) => {
                 return;
             }
 
-            if (!fallbackWarnedRef.current) {
-                appToast.warning('Đang dùng giỏ hàng tạm thời');
-                fallbackWarnedRef.current = true;
-            }
-            dispatch({ type: 'HYDRATE_ITEMS', payload: loadLocalItems() });
+            dispatch({ type: 'HYDRATE_ITEMS', payload: [] });
         };
 
         syncCart();

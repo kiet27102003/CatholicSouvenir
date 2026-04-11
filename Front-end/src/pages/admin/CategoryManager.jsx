@@ -9,7 +9,6 @@ import {
     FiSearch,
     FiTrash2,
 } from 'react-icons/fi';
-import AdminTopbar from './AdminTopbar';
 import { appToast } from '../../lib/appToast';
 import categoryService from '../../services/categoryService';
 import './admin-common.css';
@@ -542,11 +541,10 @@ const CategoryManager = () => {
 
     return (
         <>
-            <AdminTopbar title="Quản lý danh mục" />
             <div className="admin-page category-manager-page">
                 <div className="admin-page-header category-manager-header">
                     <div>
-                        <h2>Quản lý danh mục</h2>
+                        <h1 className="admin-page-title">Quản lý danh mục</h1>
                         <p className="admin-page-subtitle">Quản lý danh mục sản phẩm và danh mục con</p>
                     </div>
                     <button type="button" className="btn btn-primary" onClick={openCreateModal}>

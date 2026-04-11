@@ -1,170 +1,270 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import dayjs from 'dayjs';
 import { useAuth } from '../../context/AuthContext';
-import { getOrders } from '../../services/orderService';
+import { getOrdersByAccount } from '../../services/orderService';
 import { appToast } from '../../lib/appToast';
 import './OrderHistoryPage.css';
 
-const formatVnd = (value) => `${Number(value).toLocaleString('vi-VN')} ₫`;
+const PAGE_SIZE = 10;
+
+const ORDER_TABS = [
+    { id: 'ALL', label: 'Tất cả' },
+    { id: 'PENDING', label: 'Chờ thanh toán' },
+    { id: 'SHIPPING', label: 'Đang giao' },
+    { id: 'DELIVERED', label: 'Hoàn thành' },
+    { id: 'CANCELLED', label: 'Đã huỷ' },
+];
+
+const STATUS_META = {
+    PENDING: { label: 'Chờ thanh toán', className: 'badge-pending' },
+    PAID: { label: 'Chờ lấy hàng', className: 'badge-paid' },
+    SHIPPING: { label: 'Đang giao hàng', className: 'badge-shipping' },
+    DELIVERED: { label: 'Hoàn thành', className: 'badge-delivered' },
+    CANCELLED: { label: 'Đã huỷ', className: 'badge-cancelled' },
+};
+
+const formatCurrency = (value) => `${new Intl.NumberFormat('vi-VN').format(Number(value || 0))} đ`;
+const formatDateTime = (value) => (value ? dayjs(value).format('DD/MM/YYYY · HH:mm') : '—');
+const shortenOrderCode = (orderId) => {
+    if (!orderId) return '#ORD-----';
+    const tail = String(orderId).replace(/[^a-zA-Z0-9]/g, '').slice(-4).toUpperCase();
+    return `#ORD-${tail || '----'}`;
+};
+
+const statusForTab = (status) => {
+    const s = String(status || '').toUpperCase();
+    if (s === 'PAID') return 'SHIPPING';
+    return s;
+};
+
+const getItemImage = (item) => item?.images?.[0]?.image_url || item?.thumbnail || 'https://via.placeholder.com/72x72?text=SP';
 
 const OrderHistoryPage = () => {
     const { user } = useAuth();
+    const navigate = useNavigate();
+
+    const accountId = user?.accountId || user?.id || user?.userId || '';
+
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [listLoadOk, setListLoadOk] = useState(true);
+    const [page, setPage] = useState(0);
+    const [pageInfo, setPageInfo] = useState({ totalElements: 0, totalPages: 0, pageSize: PAGE_SIZE, pageNumber: 0 });
+    const [activeTab, setActiveTab] = useState('ALL');
+    const [search, setSearch] = useState('');
+    const [sortDirection, setSortDirection] = useState('DESC');
 
     useEffect(() => {
-        if (!user?.id) {
+        if (!accountId) {
             setLoading(false);
             return;
         }
-        let cancelled = false;
-        setLoading(true);
-        getOrders()
-            .then((res) => {
-                if (cancelled) return;
-                if (res.success && Array.isArray(res.data)) {
-                    setOrders(res.data);
-                    setListLoadOk(true);
-                } else {
-                    setOrders([]);
-                    setListLoadOk(false);
-                    const msg = res.error != null ? String(res.error) : 'Kiểm tra kết nối mạng';
-                    appToast.error('Không tải được', msg);
-                }
-            })
-            .catch(() => {
-                if (!cancelled) {
-                    setOrders([]);
-                    setListLoadOk(false);
-                    appToast.error('Không tải được', 'Kiểm tra kết nối mạng');
-                }
-            })
-            .finally(() => {
-                if (!cancelled) setLoading(false);
-            });
-        return () => { cancelled = true; };
-    }, [user?.id]);
 
-    const getStatusStyle = (status) => {
-        const s = (status || '').toUpperCase();
-        switch (s) {
-            case 'DELIVERED':
-            case 'COMPLETED':
-                return 'status-delivered';
-            case 'IN_PROGRESS':
-            case 'PROCESSING':
-            case 'SHIPPED':
-                return 'status-in-progress';
-            case 'PENDING':
-                return 'status-pending';
-            case 'CANCELLED':
-            case 'CANCELED':
-                return 'status-cancelled';
-            default:
-                return '';
-        }
+        let cancelled = false;
+        const fetchOrders = async () => {
+            setLoading(true);
+            const res = await getOrdersByAccount(accountId, {
+                page,
+                size: PAGE_SIZE,
+                sortBy: 'createAt',
+                sortDirection,
+            });
+
+            if (cancelled) return;
+
+            if (!res.success) {
+                setOrders([]);
+                appToast.error('Không tải được đơn hàng', res.error || 'Vui lòng thử lại sau');
+                setLoading(false);
+                return;
+            }
+
+            setOrders(Array.isArray(res.data?.content) ? res.data.content : []);
+            setPageInfo({
+                totalElements: Number(res.data?.totalElements || 0),
+                totalPages: Number(res.data?.totalPages || 0),
+                pageSize: Number(res.data?.pageSize || PAGE_SIZE),
+                pageNumber: Number(res.data?.pageNumber || 0),
+            });
+            setLoading(false);
+        };
+
+        fetchOrders();
+        return () => {
+            cancelled = true;
+        };
+    }, [accountId, page, sortDirection]);
+
+    const filteredOrders = useMemo(() => {
+        const query = search.trim().toLowerCase();
+
+        return orders.filter((order) => {
+            const matchedTab = activeTab === 'ALL' || statusForTab(order.status) === activeTab;
+            const matchedSearch = !query || String(order.orderId || '').toLowerCase().includes(query);
+            return matchedTab && matchedSearch;
+        });
+    }, [orders, activeTab, search]);
+
+    const paginationText = useMemo(() => {
+        if (pageInfo.totalElements <= 0) return 'Hiển thị 0–0 trong tổng 0 đơn hàng';
+        const from = pageInfo.pageNumber * pageInfo.pageSize + 1;
+        const to = Math.min((pageInfo.pageNumber + 1) * pageInfo.pageSize, pageInfo.totalElements);
+        return `Hiển thị ${from}–${to} trong tổng ${pageInfo.totalElements} đơn hàng`;
+    }, [pageInfo]);
+
+    const handleChangeSort = (event) => {
+        const direction = event.target.value;
+        setSortDirection(direction);
+        setPage(0);
     };
 
-    const getStatusLabel = (status) => {
-        const s = (status || '').toUpperCase();
-        const map = {
-            PENDING: 'Chờ xử lý',
-            PROCESSING: 'Đang xử lý',
-            IN_PROGRESS: 'Đang giao',
-            SHIPPED: 'Đang giao',
-            DELIVERED: 'Đã giao',
-            COMPLETED: 'Hoàn thành',
-            CANCELLED: 'Đã hủy',
-            CANCELED: 'Đã hủy',
-        };
-        return map[s] || status || '—';
+    const handleReview = () => {
+        appToast.info('Tính năng sắp ra mắt', 'Chức năng đánh giá sẽ được cập nhật sớm.');
     };
 
     return (
-        <div className="orders-page">
-            <div className="orders-header">
-                <h1 className="orders-title">Lịch sử đơn hàng</h1>
-                <p className="orders-subtitle">Xem và theo dõi đơn hàng của bạn.</p>
+        <div className="orders-v2-page">
+            <header className="orders-v2-header">
+                <h1>Đơn hàng của tôi</h1>
+                <p>Theo dõi và quản lý đơn hàng</p>
+            </header>
+
+            <div className="orders-v2-toolbar">
+                <div className="orders-v2-tabs" role="tablist" aria-label="Bộ lọc trạng thái">
+                    {ORDER_TABS.map((tab) => (
+                        <button
+                            key={tab.id}
+                            type="button"
+                            role="tab"
+                            className={`orders-v2-tab ${activeTab === tab.id ? 'active' : ''}`}
+                            onClick={() => setActiveTab(tab.id)}
+                        >
+                            {tab.label}
+                        </button>
+                    ))}
+                </div>
+
+                <div className="orders-v2-filters">
+                    <input
+                        type="text"
+                        className="orders-v2-search"
+                        placeholder="Tìm theo mã đơn hàng"
+                        value={search}
+                        onChange={(event) => setSearch(event.target.value)}
+                    />
+                    <select className="orders-v2-sort" value={sortDirection} onChange={handleChangeSort}>
+                        <option value="DESC">Mới nhất</option>
+                        <option value="ASC">Cũ nhất</option>
+                    </select>
+                </div>
             </div>
 
             {loading ? (
-                <div className="orders-loading">
-                    <div className="spinner"></div>
-                    <p>Đang tải đơn hàng...</p>
-                </div>
-            ) : orders.length === 0 && !listLoadOk ? (
-                <div className="orders-empty">
-                    <button type="button" className="btn btn-primary" onClick={() => window.location.reload()}>
-                        Thử lại
-                    </button>
-                </div>
-            ) : orders.length === 0 ? (
-                <div className="orders-empty">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="9" cy="21" r="1"></circle>
-                        <circle cx="20" cy="21" r="1"></circle>
-                        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
-                    </svg>
-                    <h3>Chưa có đơn hàng</h3>
-                    <p>Khi bạn đặt hàng, đơn sẽ hiển thị tại đây.</p>
-                    <Link to="/shop" className="btn btn-primary" style={{ textDecoration: 'none' }}>Mua sắm</Link>
-                </div>
-            ) : (
-                <div className="orders-list">
-                    {orders.map((order) => (
-                        <div key={order.orderId} className="order-card">
-                            <div className="order-card-header">
-                                <div className="order-info-mobile">
-                                    <div className="order-id">
-                                        <span className="label">Mã đơn:</span> {order.orderId}
-                                        {order.paymentMethod && (
-                                            <span className="badge badge-payment">{order.paymentMethod}</span>
-                                        )}
-                                    </div>
-                                    <div className="order-date">
-                                        Đặt ngày {new Date(order.orderDate).toLocaleDateString('vi-VN')}
-                                    </div>
-                                </div>
-
-                                <div className="order-status-actions">
-                                    <div className={`order-status ${getStatusStyle(order.status)}`}>
-                                        {getStatusLabel(order.status)}
-                                    </div>
-                                    <div className="order-total">
-                                        Tổng: <strong>{formatVnd(order.total)}</strong>
-                                    </div>
-                                    <Link to={`/orders/${order.orderId}/tracking`} className="btn btn-outline btn-sm" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                        Theo dõi đơn
-                                    </Link>
-                                </div>
-                            </div>
-
-                            <div className="order-items">
-                                {(order.orderDetails || []).map((item, index) => (
-                                    <div key={item.id || index} className="order-item">
-                                        <div className="item-details">
-                                            <div className="item-image-placeholder">
-                                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                                                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                                                    <polyline points="21 15 16 10 5 21"></polyline>
-                                                </svg>
-                                            </div>
-                                            <div className="item-text">
-                                                <p className="item-name">Sản phẩm × {item.quantity}</p>
-                                                <p className="item-qty">{formatVnd(item.unitPrice)}/sp</p>
-                                            </div>
-                                        </div>
-                                        <div className="item-price">
-                                            {formatVnd(item.subTotal)}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
+                <div className="orders-v2-list">
+                    {Array.from({ length: 3 }).map((_, idx) => (
+                        <div key={`skeleton-${idx}`} className="orders-v2-card skeleton" />
                     ))}
                 </div>
+            ) : filteredOrders.length === 0 ? (
+                <div className="orders-v2-empty">
+                    <div className="orders-v2-empty-icon">🧾</div>
+                    <h3>Chưa có đơn hàng nào</h3>
+                    <button type="button" className="btn btn-primary" onClick={() => navigate('/products')}>
+                        Khám phá sản phẩm
+                    </button>
+                </div>
+            ) : (
+                <>
+                    <div className="orders-v2-list">
+                        {filteredOrders.map((order) => {
+                            const status = String(order.status || '').toUpperCase();
+                            const statusMeta = STATUS_META[status] || { label: status || 'Không xác định', className: '' };
+                            const orderDetails = Array.isArray(order.orderDetails) ? order.orderDetails : [];
+                            const templateDetails = Array.isArray(order.templateDetails) ? order.templateDetails : [];
+                            const allItems = [...orderDetails, ...templateDetails];
+
+                            return (
+                                <article key={order.orderId} className="orders-v2-card">
+                                    <div className="orders-v2-card-head">
+                                        <div>
+                                            <h2>{shortenOrderCode(order.orderId)}</h2>
+                                            <p>{formatDateTime(order.orderDate || order.createAt || order.createdAt)}</p>
+                                        </div>
+                                        <span className={`orders-v2-status ${statusMeta.className}`}>{statusMeta.label}</span>
+                                    </div>
+
+                                    <div className="orders-v2-items">
+                                        {allItems.map((item, idx) => (
+                                            <div key={`${order.orderId}-${idx}`} className="orders-v2-item">
+                                                <img src={getItemImage(item)} alt={item.productName || item.templateName || 'Sản phẩm'} />
+                                                <div className="orders-v2-item-info">
+                                                    <h4>{item.productName || item.templateName || 'Sản phẩm tuỳ chỉnh'}</h4>
+                                                    {item.customizations && typeof item.customizations === 'object' && (
+                                                        <div className="orders-v2-customize">
+                                                            {Object.entries(item.customizations).map(([key, value]) => (
+                                                                <span key={key}>{key}: {String(value)}</span>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                    <p>x{item.quantity || item.qty || 1} · {formatCurrency(item.unitPrice)}</p>
+                                                </div>
+                                                <strong>{formatCurrency(item.subTotal)}</strong>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div className="orders-v2-card-foot">
+                                        <div>
+                                            <p>Tổng tiền: <strong>{formatCurrency(order.total)}</strong></p>
+                                            <p>Thanh toán: {order.paymentMethod || '—'}</p>
+                                        </div>
+
+                                        <div className="orders-v2-actions">
+                                            {status === 'SHIPPING' && (
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-outline btn-sm"
+                                                    onClick={() => navigate(`/orders/${order.orderId}#tracking`)}
+                                                >
+                                                    Theo dõi đơn
+                                                </button>
+                                            )}
+                                            <button
+                                                type="button"
+                                                className="btn btn-outline btn-sm"
+                                                onClick={() => navigate(`/orders/${order.orderId}`)}
+                                            >
+                                                Xem chi tiết
+                                            </button>
+                                            {status === 'DELIVERED' && (
+                                                <button type="button" className="btn btn-sm" onClick={handleReview}>
+                                                    Đánh giá
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </article>
+                            );
+                        })}
+                    </div>
+
+                    <div className="orders-v2-pagination">
+                        <span>{paginationText}</span>
+                        <div>
+                            <button type="button" className="btn btn-outline btn-sm" disabled={page <= 0} onClick={() => setPage((prev) => prev - 1)}>
+                                Trước
+                            </button>
+                            <button
+                                type="button"
+                                className="btn btn-outline btn-sm"
+                                disabled={page + 1 >= pageInfo.totalPages}
+                                onClick={() => setPage((prev) => prev + 1)}
+                            >
+                                Sau
+                            </button>
+                        </div>
+                    </div>
+                </>
             )}
         </div>
     );

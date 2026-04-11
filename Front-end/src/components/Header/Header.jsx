@@ -24,6 +24,10 @@ const Header = () => {
         }
     };
 
+    const handleOpenCart = () => {
+        openCart();
+    };
+
     return (
         <header className="header">
             {mobileMenuOpen && (
@@ -124,7 +128,7 @@ const Header = () => {
                             <FiBell size={20} strokeWidth={2} />
                         </button>
 
-                        <button className="icon-btn" aria-label="Shopping cart" onClick={openCart} style={{ position: 'relative' }}>
+                        <button className="icon-btn" aria-label="Shopping cart" onClick={handleOpenCart} style={{ position: 'relative' }}>
                             <FiShoppingCart size={20} strokeWidth={2} />
                             {cartItemsCount > 0 && (
                                 <span className="cart-badge">{cartItemsCount}</span>

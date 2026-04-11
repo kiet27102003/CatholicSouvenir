@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { FiRefreshCw, FiCheck, FiX, FiFileText, FiEye } from 'react-icons/fi';
 import api from '../../cofig/api';
 import { appToast } from '../../lib/appToast';
-import AdminTopbar from './AdminTopbar';
 import './admin-common.css';
 import './UserManager.css';
 import './ArtisanApplications.css';
@@ -171,11 +170,10 @@ const ArtisanApplications = () => {
     };
 
     return (
-        <>
-            <AdminTopbar title="Artisan Application" />
-            <div className="admin-page artisan-applications-page">
+        <div className="admin-page artisan-applications-page">
             <div className="admin-page-header artisan-applications-header">
                 <div>
+                    <h1 className="admin-page-title">Đơn đăng ký Nghệ nhân</h1>
                     <p className="admin-page-subtitle">Duyệt đơn đăng ký trở thành thợ thủ công.</p>
                 </div>
                 <button
@@ -416,7 +414,6 @@ const ArtisanApplications = () => {
                 </div>
             )}
         </div>
-        </>
     );
 };
 

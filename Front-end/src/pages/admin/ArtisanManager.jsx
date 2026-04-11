@@ -12,7 +12,6 @@ import {
 } from 'react-icons/fi';
 import { getArtisans } from '../../services/artisanService';
 import { appToast } from '../../lib/appToast';
-import AdminTopbar from './AdminTopbar';
 import './admin-common.css';
 import './UserManager.css';
 import './AdminCustomerArtisan.css';
@@ -189,11 +188,10 @@ const ArtisanManager = () => {
         allVisibleIds.length > 0 && allVisibleIds.every((id) => selected.has(id));
 
     return (
-        <>
-            <AdminTopbar title="Quản lý Nghệ nhân" />
-            <div className="admin-page user-manager-page">
+        <div className="admin-page user-manager-page">
             <div className="admin-page-header user-manager-header">
                 <div>
+                    <h1 className="admin-page-title">Quản lý nghệ nhân</h1>
                     <p className="admin-page-subtitle">Danh sách các nghệ nhân tham gia nền tảng</p>
                 </div>
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -408,7 +406,6 @@ const ArtisanManager = () => {
                 )}
             </div>
         </div>
-        </>
     );
 };
 

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiX, FiShoppingCart, FiImage } from 'react-icons/fi';
 import { useCart } from '../../context/CartContext';
+import { useAuth } from '../../context/AuthContext';
 import { appToast } from '../../lib/appToast';
 import './CartDrawer.css';
 
@@ -14,6 +15,7 @@ const CartDrawer = () => {
         removeFromCart,
         updateQuantity,
     } = useCart();
+    const { isAuthenticated } = useAuth();
 
     const navigate = useNavigate();
     const [navigating, setNavigating] = useState(false);
@@ -44,8 +46,9 @@ const CartDrawer = () => {
 
     if (!isCartOpen) return null;
 
+    const isGuestView = !isAuthenticated;
     const isCartEmpty = cartItems.length === 0;
-    const disableActions = navigating || isCartEmpty;
+    const disableActions = navigating || isCartEmpty || isGuestView;
 
     const closeThenNavigate = (to) => {
         try {
@@ -76,7 +79,12 @@ const CartDrawer = () => {
                 </div>
 
                 <div className="cart-body">
-                    {isCartEmpty ? (
+                    {isGuestView ? (
+                        <div className="empty-cart">
+                            <FiShoppingCart size={48} strokeWidth={1.5} />
+                            <p>Vui lòng đăng nhập trước khi dùng tính năng này</p>
+                        </div>
+                    ) : isCartEmpty ? (
                         <div className="empty-cart">
                             <FiShoppingCart size={48} strokeWidth={1.5} />
                             <p>Giỏ hàng của bạn đang trống</p>
@@ -140,10 +148,14 @@ const CartDrawer = () => {
                 <div className="cart-footer">
                     <div className="cart-subtotal">
                         <span>Tạm tính</span>
-                        <span className="subtotal-amount">{cartTotalAmount.toLocaleString('vi-VN')} ₫</span>
+                        <span className="subtotal-amount">{isGuestView ? '0 ₫' : `${cartTotalAmount.toLocaleString('vi-VN')} ₫`}</span>
                     </div>
                     <p className="shipping-note">
-                        {isCartEmpty ? 'Giỏ hàng của bạn đang trống' : 'Phí vận chuyển & thuế tính khi thanh toán'}
+                        {isGuestView
+                            ? 'Vui lòng đăng nhập trước khi dùng tính năng này'
+                            : isCartEmpty
+                                ? 'Giỏ hàng của bạn đang trống'
+                                : 'Phí vận chuyển & thuế tính khi thanh toán'}
                     </p>
 
                     <div className="cart-footer-actions">

@@ -3,7 +3,7 @@
 /* Page wrapper - use class "admin-page" on root of each page */
 .admin-page {
     max-width: 1200px;
-    margin: 0 auto;
+    margin: 16px auto 0;
 }
 
 .admin-page-header {

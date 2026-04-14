@@ -42,7 +42,7 @@ export const getCart = async () => {
 
 export const addCartItem = async (body) => {
     try {
-        const response = await api.post('/cart', body);
+        const response = await api.post('/cart/items', body);
         const payload = normalizeResponse(response);
         if (payload.code !== 200 && payload.code !== 201) {
             return { success: false, error: payload.message || 'Không thể thêm vào giỏ hàng.' };
@@ -53,9 +53,9 @@ export const addCartItem = async (body) => {
     }
 };
 
-export const updateCartItem = async (productId, quantity) => {
+export const updateCartItem = async (cartItemId, quantity) => {
     try {
-        const response = await api.put('/cart', { productId, quantity });
+        const response = await api.put(`/cart/items/${cartItemId}`, { quantity });
         const payload = normalizeResponse(response);
         if (payload.code !== 200) {
             return { success: false, error: payload.message || 'Không thể cập nhật giỏ hàng.' };

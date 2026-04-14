@@ -6,6 +6,10 @@ import { CartProvider } from './context/CartContext.jsx'
 import { LanguageProvider } from './context/LanguageContext.jsx'
 import { ThemeProvider } from './context/ThemeContext.jsx'
 
+if (typeof window !== 'undefined' && typeof window.global === 'undefined') {
+  window.global = window
+}
+
 createRoot(document.getElementById('root')).render(
   <BrowserRouter>
     <ThemeProvider>

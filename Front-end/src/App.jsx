@@ -1,9 +1,10 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { AuthProvider } from './context/AuthContext'
+import { AuthProvider, useAuth } from './context/AuthContext'
 import { AppToastContainer } from './lib/appToast'
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
 import ArtisanDashboard from './pages/artisan/ArtisanDashboard'
+import ArtisanOrderDetailPage from './pages/artisan/ArtisanOrderDetailPage'
 
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import CustomerLayout from './pages/customer/CustomerLayout'
@@ -15,9 +16,10 @@ import ArtisanDirectoryPage from './pages/ArtisanDirectoryPage'
 import ArtisanProfilePage from './pages/ArtisanProfilePage'
 import ArtisanCentrePage from './pages/ArtisanCentrePage'
 import ShopPage from './pages/ShopPage'
-import CustomRequestPage from './pages/customer/CustomRequestPage'
-import MyCustomRequestsPage from './pages/customer/MyCustomRequestsPage'
-import MessageCenterPage from './pages/customer/MessageCenterPage'
+import CustomRequestsListPage from './pages/customer/CustomRequestsListPage'
+import CustomRequestCreatePage from './pages/customer/CustomRequestCreatePage'
+import CustomRequestDetailPage from './pages/customer/CustomRequestDetailPage'
+import ChatPage from './pages/customer/ChatPage'
 
 import CheckoutPage from './pages/CheckoutPage'
 import CartPage from './pages/CartPage'
@@ -40,6 +42,36 @@ import CategoryManager from './pages/admin/CategoryManager'
 import ArtisanApplications from './pages/admin/ArtisanApplications'
 import AdminComingSoon from './pages/admin/AdminComingSoon'
 
+function ArtisanOnlyRoute({ children }) {
+  const { user, loading } = useAuth()
+
+  if (loading) return null
+
+  const role = String(user?.role || '').toUpperCase()
+  if (role !== 'ARTISAN') {
+    return <Navigate to="/" replace />
+  }
+
+  return children
+}
+
+function WalletAccessRoute({ children }) {
+  const { user, loading } = useAuth()
+
+  if (loading) return null
+
+  const role = String(user?.role || '').toUpperCase()
+  if (!user) {
+    return <Navigate to="/login" replace />
+  }
+
+  if (role !== 'CUSTOMER' && role !== 'ARTISAN') {
+    return <Navigate to="/" replace />
+  }
+
+  return children
+}
+
 function App() {
   return (
     <AuthProvider>
@@ -60,10 +92,16 @@ function App() {
         <Route path="/payment/success" element={<PaymentSuccessPage />} />
         <Route path="/payment/failed" element={<PaymentFailedPage />} />
         <Route path="/cart" element={<CartPage />} />
-        <Route path="/artisan" element={<ArtisanDashboard />} />
-        <Route path="/artisan/templates" element={<ArtisanDashboard />} />
 
-        {/* Admin Routes with Layout */}
+        <Route path="/artisan" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
+        <Route path="/artisan/templates" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
+        <Route path="/artisan/requests" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
+        <Route path="/artisan/wallet" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
+        <Route path="/artisan/messages" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
+        <Route path="/artisan/requests/:id/quote" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
+        <Route path="/artisan/orders" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
+        <Route path="/artisan/orders/:id" element={<ArtisanOnlyRoute><ArtisanOrderDetailPage /></ArtisanOnlyRoute>} />
+
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<Navigate to="/admin/dashboard" replace />} />
           <Route path="dashboard" element={<AdminDashboard />} />
@@ -80,16 +118,17 @@ function App() {
           <Route path="artisan-applications" element={<ArtisanApplications />} />
         </Route>
 
-        {/* Customer Routes inside Layout */}
+        <Route path="/wallet" element={<WalletAccessRoute><WalletPage /></WalletAccessRoute>} />
+        <Route path="/messages" element={<WalletAccessRoute><ChatPage /></WalletAccessRoute>} />
+
         <Route element={<CustomerLayout />}>
           <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/wallet" element={<WalletPage />} />
           <Route path="/orders" element={<OrderHistoryPage />} />
           <Route path="/orders/:orderId" element={<OrderTrackingPage />} />
           <Route path="/orders/:orderId/tracking" element={<OrderTrackingPage />} />
-          <Route path="/custom-requests" element={<CustomRequestPage />} />
-          <Route path="/my-custom-requests" element={<MyCustomRequestsPage />} />
-          <Route path="/messages" element={<MessageCenterPage />} />
+          <Route path="/custom-requests" element={<CustomRequestsListPage />} />
+          <Route path="/custom-requests/new" element={<CustomRequestCreatePage />} />
+          <Route path="/custom-requests/:id" element={<CustomRequestDetailPage />} />
         </Route>
       </Routes>
     </AuthProvider>
@@ -97,4 +136,3 @@ function App() {
 }
 
 export default App
-

@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, Outlet, Navigate, useLocation } from 'react-router-dom';
-import { FiUser, FiShield, FiBell, FiCreditCard, FiTruck, FiLogOut, FiEdit2, FiInbox, FiDollarSign } from 'react-icons/fi';
+import { FiUser, FiShield, FiBell, FiCreditCard, FiTruck, FiLogOut, FiEdit2, FiDollarSign } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import Header from '../../components/Header/Header';
 import Footer from '../../components/Footer/Footer';
@@ -10,7 +10,8 @@ const CustomerLayout = () => {
     const { user, logout, isAuthenticated } = useAuth();
     const location = useLocation();
 
-    if (!isAuthenticated || user?.role !== 'customer') {
+    const role = String(user?.role || '').toUpperCase();
+    if (!isAuthenticated || role !== 'CUSTOMER') {
         return <Navigate to="/login" replace />;
     }
 
@@ -55,10 +56,6 @@ const CustomerLayout = () => {
                         <NavLink to="/custom-requests" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
                             <FiEdit2 size={20} strokeWidth={2} />
                             Yêu cầu đặt riêng
-                        </NavLink>
-                        <NavLink to="/my-custom-requests" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
-                            <FiInbox size={20} strokeWidth={2} />
-                            Quản lý yêu cầu
                         </NavLink>
                         <NavLink to="/messages" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
                             <FiBell size={20} strokeWidth={2} />

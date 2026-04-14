@@ -5,16 +5,29 @@ import Sidebar from './components/Sidebar';
 import Workbench from './components/Workbench';
 import PortfolioView from './components/PortfolioView';
 import TemplatesView from './components/TemplatesView';
+import ArtisanRequestsPage from './ArtisanRequestsPage';
+import ArtisanOrdersPage from './ArtisanOrdersPage';
+import ArtisanQuoteCreatePage from './ArtisanQuoteCreatePage';
+import WalletPage from '../customer/WalletPage';
+import ChatPage from '../customer/ChatPage';
 import './ArtisanDashboard.css';
 
 const getViewFromPath = (pathname) => {
     if (pathname === '/artisan/templates') return 'templates';
+    if (pathname === '/artisan/requests') return 'requests';
+    if (/^\/artisan\/requests\/[^/]+\/quote$/.test(pathname)) return 'quoteCreate';
+    if (pathname === '/artisan/orders') return 'customOrders';
+    if (pathname === '/artisan/wallet') return 'wallet';
+    if (pathname === '/artisan/messages') return 'messages';
     return 'dashboard';
 };
 
 const viewToPath = (view) => {
     if (view === 'templates') return '/artisan/templates';
-    if (view === 'wallet') return '/wallet';
+    if (view === 'requests') return '/artisan/requests';
+    if (view === 'customOrders') return '/artisan/orders';
+    if (view === 'wallet') return '/artisan/wallet';
+    if (view === 'messages') return '/artisan/messages';
     return '/artisan';
 };
 
@@ -29,8 +42,8 @@ const ArtisanDashboard = () => {
         setActiveView(getViewFromPath(location.pathname));
     }, [location.pathname]);
 
-    if (!user || user.role !== 'artisan') {
-        navigate('/login');
+    if (!user || String(user.role || '').toUpperCase() !== 'ARTISAN') {
+        navigate('/');
         return null;
     }
 
@@ -40,6 +53,8 @@ const ArtisanDashboard = () => {
         const nextPath = viewToPath(view);
         if (location.pathname !== nextPath) navigate(nextPath);
     };
+
+    const sidebarView = activeView === 'quoteCreate' ? 'requests' : activeView;
 
     return (
         <div className="artisan-dashboard">
@@ -51,18 +66,25 @@ const ArtisanDashboard = () => {
             {sidebarOpen && <div className="artisan-sidebar-overlay" onClick={() => setSidebarOpen(false)} role="presentation" />}
             <Sidebar
                 user={user}
-                activeView={activeView}
+                activeView={sidebarView}
                 setActiveView={handleChangeView}
                 onLogout={logout}
                 isOpen={sidebarOpen}
                 onClose={() => setSidebarOpen(false)}
             />
-            <main className="artisan-main">
+            <main
+                className={`artisan-main ${activeView === 'messages' ? 'artisan-main--chat' : ''}`}
+                style={activeView === 'messages' ? { padding: 0 } : undefined}
+            >
                 {activeView === 'dashboard' && <Workbench user={user} />}
                 {activeView === 'commissions' && <div className="view-placeholder">Commissions View</div>}
-                {activeView === 'messages' && <div className="view-placeholder">Messages View</div>}
+                {activeView === 'messages' && <ChatPage />}
                 {activeView === 'portfolio' && <PortfolioView user={user} />}
                 {activeView === 'templates' && <TemplatesView user={user} />}
+                {activeView === 'requests' && <ArtisanRequestsPage embedded />}
+                {activeView === 'quoteCreate' && <ArtisanQuoteCreatePage embedded />}
+                {activeView === 'customOrders' && <ArtisanOrdersPage embedded />}
+                {activeView === 'wallet' && <WalletPage embedded />}
                 {activeView === 'earnings' && <div className="view-placeholder">Earnings View</div>}
             </main>
         </div>

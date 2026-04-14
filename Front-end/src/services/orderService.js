@@ -71,11 +71,14 @@ export const createOrder = async (payload) => {
 };
 
 /**
- * Lấy danh sách đơn hàng theo accountId có phân trang.
- * GET /api/order/account/{accountId}?page=&size=&sortBy=&sortDirection=
+ * Lấy danh sách đơn hàng của người dùng hiện tại có phân trang.
+ * GET /api/order?page=&size=&sortBy=&sortDirection=
+ *
+ * Lưu ý: giữ tên hàm getOrdersByAccount để tương thích code cũ.
+ * accountId hiện không còn dùng vì BE lấy theo token đăng nhập.
  */
 export const getOrdersByAccount = async (
-    accountId,
+    _accountId,
     {
         page = 0,
         size = 10,
@@ -83,16 +86,8 @@ export const getOrdersByAccount = async (
         sortDirection = 'DESC',
     } = {},
 ) => {
-    if (!accountId) {
-        return {
-            success: false,
-            error: 'Thiếu accountId.',
-            data: { content: [], totalElements: 0, totalPages: 0, pageNumber: 0, pageSize: size },
-        };
-    }
-
     try {
-        const response = await api.get(`/order/account/${accountId}`, {
+        const response = await api.get('/order', {
             params: { page, size, sortBy, sortDirection },
         });
 

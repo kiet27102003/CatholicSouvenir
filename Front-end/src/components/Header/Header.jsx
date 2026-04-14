@@ -1,10 +1,11 @@
 import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { FiSearch, FiMenu, FiX, FiGlobe, FiSun, FiMoon, FiBell, FiShoppingCart, FiUser, FiLogOut, FiPackage } from 'react-icons/fi';
+import { FiSearch, FiMenu, FiX, FiGlobe, FiSun, FiMoon, FiBell, FiShoppingCart, FiUser, FiLogOut, FiPackage, FiMessageSquare } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { useTheme } from '../../context/ThemeContext';
+import { getMyConversations } from '../../services/chatService';
 import './Header.css';
 
 const Header = () => {
@@ -15,6 +16,21 @@ const Header = () => {
     const navigate = useNavigate();
     const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
     const [langMenuOpen, setLangMenuOpen] = React.useState(false);
+    const [unreadConversations, setUnreadConversations] = React.useState(0);
+
+    React.useEffect(() => {
+        let ignore = false;
+        const loadUnread = async () => {
+            const res = await getMyConversations();
+            if (ignore || !res.success) return;
+            const total = (res.data || []).reduce((acc, item) => acc + Number(item?.unreadCount || 0), 0);
+            setUnreadConversations(total);
+        };
+        if (isAuthenticated) loadUnread();
+        return () => {
+            ignore = true;
+        };
+    }, [isAuthenticated]);
 
     const handleAuthAction = () => {
         if (isAuthenticated) {
@@ -126,6 +142,13 @@ const Header = () => {
 
                         <button className="icon-btn" aria-label="Notifications" onClick={() => navigate('/notifications')}>
                             <FiBell size={20} strokeWidth={2} />
+                        </button>
+
+                        <button className="icon-btn" aria-label="Messages" onClick={() => navigate('/messages')} style={{ position: 'relative' }}>
+                            <FiMessageSquare size={20} strokeWidth={2} />
+                            {unreadConversations > 0 && (
+                                <span className="cart-badge">{unreadConversations}</span>
+                            )}
                         </button>
 
                         <button className="icon-btn" aria-label="Shopping cart" onClick={handleOpenCart} style={{ position: 'relative' }}>

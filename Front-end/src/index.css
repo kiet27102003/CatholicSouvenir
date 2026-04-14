@@ -194,9 +194,22 @@ p {
 
 /* Container */
 .container {
-    max-width: 1280px;
+    max-width: 1600px;
     margin: 0 auto;
-    padding: 0 var(--spacing-lg);
+    padding: 0 var(--spacing-md);
+}
+
+@media (max-width: 1440px) {
+    .container {
+        max-width: 1400px;
+        padding: 0 var(--spacing-md);
+    }
+}
+
+@media (max-width: 1024px) {
+    .container {
+        padding: 0 var(--spacing-sm);
+    }
 }
 
 .container-wide {

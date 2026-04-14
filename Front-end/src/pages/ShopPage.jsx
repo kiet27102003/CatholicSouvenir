@@ -219,25 +219,6 @@ const ShopPage = () => {
                     {/* Main content */}
                     <div className="shop-content">
                         <div className="container shop-content-inner">
-                            {/* Custom Order Banner */}
-                            <div className="shop-custom-order-banner">
-                                <div className="shop-custom-order-text">
-                                    <h2 className="shop-custom-order-title">Đặt hàng Tác phẩm Riêng</h2>
-                                    <p className="shop-custom-order-desc">
-                                        Làm việc trực tiếp với các nghệ nhân bậc thầy để tạo nên một di vật thủ công độc bản cho gia đình hoặc giáo xứ của bạn.
-                                    </p>
-                                    <button type="button" className="shop-ai-link" onClick={() => setAiModalOpen(true)}>
-                                        Thử AI gợi ý thiết kế →
-                                    </button>
-                                </div>
-                                <button
-                                    type="button"
-                                    className="shop-custom-order-cta"
-                                    onClick={() => navigate('/custom-requests')}
-                                >
-                                    Bắt đầu Đặt hàng
-                                </button>
-                            </div>
 
                             {loading ? (
                                 <div className="shop-loading">

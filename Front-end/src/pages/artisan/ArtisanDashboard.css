@@ -13,10 +13,18 @@
 }
 
 .artisan-main {
-    flex: 1;
     margin-left: 280px;
+    width: calc(100% - 280px);
     padding: 32px;
     overflow-y: auto;
+}
+
+.artisan-main--chat {
+    padding: 0;
+    margin-left: 280px;
+    margin-right: 0 !important;
+    width: calc(100% - 280px);
+    min-width: 0;
 }
 
 .view-placeholder {
@@ -60,7 +68,15 @@
 
     .artisan-main {
         margin-left: 0;
+        width: 100%;
         padding: 20px;
+        padding-top: 72px;
+    }
+
+    .artisan-main--chat {
+        width: 100%;
+        margin-right: 0 !important;
+        padding: 0;
         padding-top: 72px;
     }
 

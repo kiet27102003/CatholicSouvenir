@@ -24,16 +24,19 @@ const calcItemTotal = (item) => {
 
 const normalizeIncomingItem = (item) => {
     const productId = String(item?.productId ?? item?.id ?? '').trim();
-    const zoneInputs = formatZoneInputs(item?.zoneInputs ?? item?.customRequests ?? []);
+    const cartItemId = String(item?.cartItemId ?? '').trim();
+    const zoneInputs = formatZoneInputs(item?.zoneInputs ?? item?.customRequests ?? item?.customizationData ?? []);
     const basePrice = Number(item?.basePrice ?? item?.price ?? 0);
     const quantity = Math.max(1, Number(item?.quantity || 1));
-    const totalPrice = Number(item?.totalPrice ?? calcItemTotal({ basePrice, quantity, zoneInputs }));
+    const totalPrice = Number(item?.totalPrice ?? item?.subtotal ?? calcItemTotal({ basePrice, quantity, zoneInputs }));
 
     return {
+        cartItemId,
         productId,
+        templateId: item?.templateId ?? null,
         productName: item?.productName ?? item?.title ?? 'Sản phẩm',
         artisanName: item?.artisanName ?? item?.artisan ?? '',
-        imageUrl: item?.imageUrl ?? item?.image ?? null,
+        imageUrl: item?.imageUrl ?? item?.image ?? item?.productImage ?? null,
         basePrice,
         quantity,
         zoneInputs,
@@ -173,10 +176,18 @@ export const CartProvider = ({ children }) => {
         const normalized = normalizeIncomingItem(item);
         dispatch({ type: 'ADD_ITEM', payload: normalized });
 
+        const customizationData = (normalized.zoneInputs || []).reduce((acc, z, index) => {
+            const key = String(z?.zoneName || `field_${index + 1}`).trim() || `field_${index + 1}`;
+            acc[key] = String(z?.value || '').trim();
+            return acc;
+        }, {});
+
         const result = await cartService.addCartItem({
+            type: 'PRODUCT',
             productId: normalized.productId,
+            templateId: normalized.templateId ?? null,
+            customizationData,
             quantity: normalized.quantity,
-            zoneInputs: normalized.zoneInputs,
         });
         if (!result.success) {
             appToast.error('Lưu giỏ hàng thất bại, sẽ thử lại sau');
@@ -185,7 +196,11 @@ export const CartProvider = ({ children }) => {
 
     const updateQuantity = async (productId, quantity) => {
         dispatch({ type: 'UPDATE_QUANTITY', payload: { productId, quantity } });
-        const result = await cartService.updateCartItem(productId, quantity);
+        const targetItem = state.items.find((it) => it.productId === productId);
+        const cartItemId = targetItem?.cartItemId;
+        if (!cartItemId) return;
+
+        const result = await cartService.updateCartItem(cartItemId, quantity);
         if (!result.success) {
             appToast.error('Lưu giỏ hàng thất bại, sẽ thử lại sau');
         }

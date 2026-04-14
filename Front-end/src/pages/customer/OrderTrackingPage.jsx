@@ -44,7 +44,7 @@ const findTrackingEvent = (trackingList, keywords) => {
 
 const OrderTrackingPage = () => {
     const navigate = useNavigate();
-    const { id: orderId } = useParams();
+    const { orderId } = useParams();
 
     const [loading, setLoading] = useState(true);
     const [order, setOrder] = useState(null);

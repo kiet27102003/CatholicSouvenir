@@ -1,13 +1,25 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import './Sidebar.css';
 
 const Sidebar = ({ user, activeView, setActiveView, onLogout, isOpen = false, onClose }) => {
+    const [avatarFailed, setAvatarFailed] = useState(false);
+    const safeUserName = user?.name || user?.fullName || 'Artisan';
+    const avatarUrl = user?.avatar || user?.avatarUrl || '';
+    const initials = useMemo(() => {
+        const parts = String(safeUserName).trim().split(/\s+/).filter(Boolean);
+        if (parts.length === 0) return 'AR';
+        if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+        return `${parts[0][0] || ''}${parts[parts.length - 1][0] || ''}`.toUpperCase();
+    }, [safeUserName]);
+
     const menuItems = [
         { id: 'dashboard', icon: 'dashboard', label: 'Dashboard', badge: null },
         { id: 'commissions', icon: 'work', label: 'Commissions', badge: 3 },
         { id: 'messages', icon: 'mail', label: 'Messages', badge: 2 },
         { id: 'portfolio', icon: 'portfolio', label: 'Portfolio', badge: null },
         { id: 'templates', icon: 'templates', label: 'Mẫu thiết kế', badge: null },
+        { id: 'requests', icon: 'request', label: 'Yêu cầu từ khách', badge: null },
+        { id: 'customOrders', icon: 'orders', label: 'Đơn tùy chỉnh', badge: null },
         { id: 'wallet', icon: 'money', label: 'Ví của tôi', badge: null },
         { id: 'earnings', icon: 'money', label: 'Earnings', badge: null },
     ];
@@ -27,14 +39,7 @@ const Sidebar = ({ user, activeView, setActiveView, onLogout, isOpen = false, on
                         <span className="logo-subtitle">Catholic Marketplace</span>
                     </div>
                 </div>
-            </div>
 
-            <div className="sidebar-user">
-                <img src={user.avatar} alt={user.name} className="user-avatar" />
-                <div className="user-info">
-                    <h3 className="user-name">{user.name}</h3>
-                    <p className="user-role">Master Woodcarver</p>
-                </div>
             </div>
 
             <nav className="sidebar-nav">
@@ -54,21 +59,26 @@ const Sidebar = ({ user, activeView, setActiveView, onLogout, isOpen = false, on
                 ))}
             </nav>
 
-            <button type="button" className="sidebar-logout" onClick={onLogout}>
-                <span className="nav-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                        <polyline points="16 17 21 12 16 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                        <line x1="21" y1="12" x2="9" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                    </svg>
-                </span>
-                <span className="nav-label">Đăng xuất</span>
-            </button>
-
             <div className="sidebar-footer">
-                <div className="daily-inspiration">
-                    <span className="inspiration-label">Daily Inspiration</span>
-                    <p className="inspiration-text">"St. Joseph the Worker, pray for the work of our hands."</p>
+                <div className="sidebar-user">
+                    {avatarUrl && !avatarFailed ? (
+                        <img src={avatarUrl} alt={safeUserName} className="user-avatar" onError={() => setAvatarFailed(true)} />
+                    ) : (
+                        <div className="user-avatar user-avatar-fallback" aria-hidden="true">{initials}</div>
+                    )}
+                    <div className="user-info">
+                        <h3 className="user-name" title={safeUserName}>{safeUserName}</h3>
+                        <p className="user-role">Master Woodcarver</p>
+                    </div>
+                    <button type="button" className="sidebar-logout" onClick={onLogout} aria-label="Đăng xuất">
+                        <span className="nav-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                <polyline points="16 17 21 12 16 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                <line x1="21" y1="12" x2="9" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                            </svg>
+                        </span>
+                    </button>
                 </div>
             </div>
         </aside>
@@ -115,6 +125,18 @@ const getIcon = (iconName) => {
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" />
                 <path d="M14.5 8.5C14.5 7.67157 13.8284 7 13 7H11C10.1716 7 9.5 7.67157 9.5 8.5C9.5 9.32843 10.1716 10 11 10H13C13.8284 10 14.5 10.6716 14.5 11.5C14.5 12.3284 13.8284 13 13 13H11C10.1716 13 9.5 12.3284 9.5 11.5M12 7V5M12 15V13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+        ),
+        request: (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M4 5C4 3.89543 4.89543 3 6 3H18C19.1046 3 20 3.89543 20 5V15C20 16.1046 19.1046 17 18 17H9L4 21V5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+        ),
+        orders: (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 7L12 3L21 7L12 11L3 7Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M3 12L12 16L21 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M3 17L12 21L21 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
         ),
     };

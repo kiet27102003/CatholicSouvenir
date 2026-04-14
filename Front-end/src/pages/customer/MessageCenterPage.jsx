@@ -1,272 +1,472 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Client } from '@stomp/stompjs';
+import SockJS from 'sockjs-client';
 import { useAuth } from '../../context/AuthContext';
+import { appToast } from '../../lib/appToast';
+import {
+    getConversationDetail,
+    getConversationsByRequest,
+    getMessages,
+    getMyConversations,
+    markMessagesRead,
+} from '../../services/chatService';
+import { selectCustomRequestArtisan } from '../../services/customRequestService';
 import './MessageCenterPage.css';
+
+const QUOTE_TEMPLATE = `📋 Báo giá của tôi:\n• Tổng giá: ___ đ\n• Thời gian: ___ ngày\n• Giai đoạn 1: [tên] - ___ đ - ___ ngày\n• Giai đoạn 2: [tên] - ___ đ - ___ ngày\n• Giai đoạn 3: [tên] - ___ đ - ___ ngày\nVui lòng xác nhận để tôi bắt đầu.`;
+
+const fmt = (value) => {
+    if (!value) return '';
+    const d = new Date(value);
+    const now = new Date();
+    const sameDay = d.toDateString() === now.toDateString();
+    if (sameDay) return d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+};
+
+const truncate = (txt, n = 30) => {
+    const t = String(txt || '').trim();
+    if (!t) return 'Chưa có tin nhắn';
+    return t.length > n ? `${t.slice(0, n)}...` : t;
+};
+
+const initials = (name) => String(name || '?').split(' ').filter(Boolean).slice(0, 2).map((s) => s[0]?.toUpperCase()).join('');
+
+const resolveRole = (user) => String(user?.role || '').toUpperCase();
 
 const MessageCenterPage = () => {
     const { user } = useAuth();
+    const role = resolveRole(user);
     const navigate = useNavigate();
+    const location = useLocation();
+
+    const [loadingConversations, setLoadingConversations] = useState(true);
+    const [loadingMessages, setLoadingMessages] = useState(false);
     const [conversations, setConversations] = useState([]);
-    const [activeChatId, setActiveChatId] = useState(null);
-    const [newMessage, setNewMessage] = useState('');
+    const [search, setSearch] = useState('');
+    const [activeConversationId, setActiveConversationId] = useState(null);
+    const [messages, setMessages] = useState([]);
+    const [composer, setComposer] = useState('');
+    const [isConnected, setIsConnected] = useState(false);
+    const [typingByConversation, setTypingByConversation] = useState({});
+    const [interestedArtisans, setInterestedArtisans] = useState([]);
 
-    const activeConversation = conversations.find(c => c.id === activeChatId);
+    const stompRef = useRef(null);
+    const typingTimeoutRef = useRef(null);
+    const bottomRef = useRef(null);
 
-    const handleSendMessage = (e) => {
-        e.preventDefault();
-        if (!newMessage.trim() || !activeConversation) return;
+    const activeConversation = useMemo(
+        () => conversations.find((c) => String(c.id) === String(activeConversationId)) || null,
+        [conversations, activeConversationId],
+    );
 
-        const newMsg = {
-            id: `msg-${Date.now()}`,
-            sender: 'customer',
-            text: newMessage,
-            timestamp: new Date().toISOString()
+    const filteredConversations = useMemo(() => {
+        const q = search.trim().toLowerCase();
+        if (!q) return conversations;
+        return conversations.filter((c) => String(c.counterpartName || '').toLowerCase().includes(q));
+    }, [conversations, search]);
+
+    const syncFromResponse = (list) => {
+        const normalized = (Array.isArray(list) ? list : []).map((c) => {
+            const customerName = c?.customerName || c?.customer?.name;
+            const artisanName = c?.artisanName || c?.artisan?.name;
+            const counterpartName = role === 'ARTISAN' ? customerName : artisanName;
+            return {
+                ...c,
+                id: c?.id ?? c?.conversationId,
+                requestId: c?.requestId ?? c?.customRequestId,
+                artisanId: c?.artisanId ?? c?.artisan?.id,
+                counterpartName: counterpartName || 'Người dùng',
+                requestTitle: c?.requestTitle || c?.customRequestTitle || 'Yêu cầu đặt riêng',
+                unreadCount: Number(c?.unreadCount || 0),
+                lastMessage: c?.lastMessage || '',
+                lastMessageTime: c?.lastMessageTime || c?.updatedAt || c?.lastUpdatedAt,
+                requestDescription: c?.requestDescription || c?.description || '',
+                minBudget: c?.minBudget,
+                maxBudget: c?.maxBudget,
+                requestStatus: c?.requestStatus || c?.status,
+                selectedArtisanId: c?.selectedArtisanId,
+            };
+        });
+        setConversations(normalized);
+    };
+
+    useEffect(() => {
+        let ignore = false;
+        const load = async () => {
+            setLoadingConversations(true);
+            const res = await getMyConversations();
+            if (ignore) return;
+            setLoadingConversations(false);
+            if (!res.success) {
+                appToast.error('Không tải được tin nhắn', res.error || 'Vui lòng thử lại');
+                return;
+            }
+            syncFromResponse(res.data);
+        };
+        load();
+        return () => {
+            ignore = true;
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!conversations.length) return;
+        const params = new URLSearchParams(location.search);
+        const qConv = params.get('conversationId');
+        const fallback = conversations[0]?.id;
+        const next = qConv && conversations.some((c) => String(c.id) === String(qConv)) ? qConv : fallback;
+        setActiveConversationId((prev) => prev || next || null);
+    }, [conversations, location.search]);
+
+    useEffect(() => {
+        if (!activeConversation?.requestId) return;
+        let ignore = false;
+
+        const loadMessages = async () => {
+            setLoadingMessages(true);
+            const res = await getMessages({ requestId: activeConversation.requestId, artisanId: activeConversation.artisanId });
+            if (!ignore) {
+                setLoadingMessages(false);
+                if (!res.success) {
+                    appToast.error('Không tải được lịch sử chat', res.error || 'Vui lòng thử lại');
+                    return;
+                }
+                const sorted = [...res.data].sort((a, b) => new Date(a?.sentAt || a?.createdAt || 0) - new Date(b?.sentAt || b?.createdAt || 0));
+                setMessages(sorted);
+            }
+
+            const markRes = await markMessagesRead(activeConversation.requestId);
+            if (!ignore && !markRes.success) {
+                appToast.warning('Không thể đánh dấu đã đọc', markRes.error || 'Vui lòng thử lại');
+            }
+            if (!ignore) {
+                setConversations((prev) => prev.map((c) => String(c.id) === String(activeConversation.id) ? { ...c, unreadCount: 0 } : c));
+            }
         };
 
-        setConversations(prev => prev.map(conv => {
-            if (conv.id === activeChatId) {
-                return {
-                    ...conv,
-                    messages: [...conv.messages, newMsg],
-                    lastMessage: newMessage,
-                    updatedAt: new Date().toISOString()
-                };
-            }
-            return conv;
-        }));
+        loadMessages();
 
-        setNewMessage('');
-    };
+        return () => {
+            ignore = true;
+        };
+    }, [activeConversation?.id, activeConversation?.requestId, activeConversation?.artisanId]);
 
-    const handleAcceptQuotation = (conversationId, messageId) => {
-        setConversations(prev => prev.map(conv => {
-            if (conv.id === conversationId) {
-                const updatedMessages = conv.messages.map(msg => {
-                    if (msg.id === messageId && msg.isQuotation) {
-                        return {
-                            ...msg,
-                            quotation: { ...msg.quotation, status: 'accepted' }
-                        };
+    useEffect(() => {
+        if (!activeConversationId) return;
+
+        const storedUser = localStorage.getItem('sanctus_user') || sessionStorage.getItem('sanctus_user');
+        let token = '';
+        try {
+            token = JSON.parse(storedUser || '{}')?.token || '';
+        } catch {
+            token = '';
+        }
+
+        const client = new Client({
+            webSocketFactory: () => new SockJS('/ws'),
+            connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
+            reconnectDelay: 5000,
+            onConnect: () => {
+                setIsConnected(true);
+                client.subscribe(`/topic/chat/${activeConversationId}`, (frame) => {
+                    const payload = JSON.parse(frame.body || '{}');
+                    if (String(payload?.messageType || '').toUpperCase() === 'TYPING') {
+                        setTypingByConversation((prev) => ({ ...prev, [activeConversationId]: true }));
+                        window.clearTimeout(typingTimeoutRef.current);
+                        typingTimeoutRef.current = window.setTimeout(() => {
+                            setTypingByConversation((prev) => ({ ...prev, [activeConversationId]: false }));
+                        }, 1200);
+                        return;
                     }
-                    return msg;
-                });
 
-                // Add auto-reply from system/customer
-                const systemMsg = {
-                    id: `msg-${Date.now()}`,
-                    sender: 'customer',
-                    text: 'I have accepted the quotation. Looking forward to it!',
-                    timestamp: new Date().toISOString(),
-                    isSystem: true
-                };
-
-                return {
-                    ...conv,
-                    messages: [...updatedMessages, systemMsg],
-                    lastMessage: 'Quotation Accepted',
-                    updatedAt: new Date().toISOString()
-                };
-            }
-            return conv;
-        }));
-    };
-
-    const handleRejectQuotation = (conversationId, messageId) => {
-        setConversations(prev => prev.map(conv => {
-            if (conv.id === conversationId) {
-                const updatedMessages = conv.messages.map(msg => {
-                    if (msg.id === messageId && msg.isQuotation) {
+                    setMessages((prev) => [...prev, payload]);
+                    setConversations((prev) => prev.map((c) => {
+                        if (String(c.id) !== String(activeConversationId)) return c;
                         return {
-                            ...msg,
-                            quotation: { ...msg.quotation, status: 'rejected' }
+                            ...c,
+                            lastMessage: payload?.content || c.lastMessage,
+                            lastMessageTime: payload?.sentAt || new Date().toISOString(),
                         };
-                    }
-                    return msg;
+                    }));
                 });
-                return {
-                    ...conv,
-                    messages: updatedMessages
-                };
-            }
-            return conv;
-        }));
+            },
+            onDisconnect: () => {
+                setIsConnected(false);
+                appToast.warning('Mất kết nối', 'Đang thử kết nối lại...');
+            },
+            onStompError: () => {
+                setIsConnected(false);
+            },
+        });
+
+        stompRef.current = client;
+        client.activate();
+
+        return () => {
+            window.clearTimeout(typingTimeoutRef.current);
+            setIsConnected(false);
+            client.deactivate();
+        };
+    }, [activeConversationId]);
+
+    useEffect(() => {
+        bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages, typingByConversation, activeConversationId]);
+
+    useEffect(() => {
+        if (role !== 'CUSTOMER' || !activeConversation?.requestId) {
+            setInterestedArtisans([]);
+            return;
+        }
+
+        let ignore = false;
+        const loadInterested = async () => {
+            const res = await getConversationsByRequest(activeConversation.requestId);
+            if (ignore) return;
+            if (!res.success) return;
+            setInterestedArtisans(res.data);
+        };
+        loadInterested();
+
+        return () => {
+            ignore = true;
+        };
+    }, [role, activeConversation?.requestId]);
+
+    const sendTypingEvent = () => {
+        const client = stompRef.current;
+        if (!client?.connected || !activeConversationId) return;
+        client.publish({
+            destination: `/app/chat/${activeConversationId}`,
+            body: JSON.stringify({
+                conversationId: activeConversationId,
+                content: 'typing',
+                messageType: 'TYPING',
+            }),
+        });
     };
 
-    const formatTime = (isoString) => {
-        const date = new Date(isoString);
-        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const handleChangeComposer = (e) => {
+        setComposer(e.target.value);
+        window.clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = window.setTimeout(() => {
+            sendTypingEvent();
+        }, 1000);
     };
 
-    const formatDate = (isoString) => {
-        const date = new Date(isoString);
-        return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    const handleSend = () => {
+        const content = String(composer || '').trim();
+        if (!content || !activeConversationId) return;
+
+        const optimistic = {
+            id: `local-${Date.now()}`,
+            conversationId: activeConversationId,
+            content,
+            messageType: 'TEXT',
+            senderId: user?.id,
+            isRead: false,
+            sentAt: new Date().toISOString(),
+        };
+
+        setMessages((prev) => [...prev, optimistic]);
+        setConversations((prev) => prev.map((c) => String(c.id) === String(activeConversationId)
+            ? { ...c, lastMessage: content, lastMessageTime: new Date().toISOString() }
+            : c));
+
+        const client = stompRef.current;
+        if (client?.connected) {
+            client.publish({
+                destination: `/app/chat/${activeConversationId}`,
+                body: JSON.stringify({
+                    conversationId: activeConversationId,
+                    content,
+                    messageType: 'TEXT',
+                }),
+            });
+        } else {
+            appToast.warning('Chưa kết nối realtime', 'Tin nhắn sẽ được gửi khi kết nối lại');
+        }
+
+        setComposer('');
+    };
+
+    const isMine = (msg) => String(msg?.senderId) === String(user?.id) || String(msg?.senderRole || '').toUpperCase() === role;
+
+    const handleSelectArtisan = async (artisan) => {
+        if (!activeConversation?.requestId) return;
+        const ok = window.confirm(`Chọn ${artisan?.artisanName || 'nghệ nhân'}? Các cuộc trò chuyện khác sẽ bị đóng`);
+        if (!ok) return;
+
+        const artisanId = artisan?.artisanId || artisan?.artisan?.id;
+        const res = await selectCustomRequestArtisan(activeConversation.requestId, artisanId);
+        if (!res.success) {
+            appToast.error('Chọn nghệ nhân thất bại', res.error || 'Vui lòng thử lại');
+            return;
+        }
+
+        appToast.success('Đã chọn nghệ nhân');
+        navigate(`/custom-requests/${activeConversation.requestId}`);
     };
 
     return (
-        <div className="message-center-page">
-            <div className="messages-container">
-
-                {/* Conversations List */}
-                <div className="conversations-sidebar">
-                    <div className="sidebar-header">
-                        <h2>Messages</h2>
+        <div className="message-page">
+            <div className="message-layout">
+                <aside className="col-left">
+                    <div className="left-header">
+                        <h2>Tin nhắn</h2>
+                        <input
+                            className="search-input"
+                            placeholder="Tìm theo tên..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                        />
                     </div>
-                    <div className="conversations-list">
-                        {conversations.length === 0 ? (
-                            <div className="conversations-empty">
-                                <p>No conversations yet.</p>
-                                <p className="text-small">When you contact an artisan or submit a custom request, your messages will appear here.</p>
-                            </div>
-                        ) : conversations.map(conv => (
-                            <div
-                                key={conv.id}
-                                className={`conversation-item ${activeChatId === conv.id ? 'active' : ''} ${conv.unread > 0 ? 'unread' : ''}`}
+
+                    <div className="conversation-list">
+                        {loadingConversations ? <div className="empty">Đang tải cuộc trò chuyện...</div> : null}
+                        {!loadingConversations && filteredConversations.length === 0 ? <div className="empty">Chưa có tin nhắn nào</div> : null}
+
+                        {filteredConversations.map((c) => (
+                            <button
+                                key={c.id}
+                                type="button"
+                                className={`conversation-item ${String(activeConversationId) === String(c.id) ? 'active' : ''}`}
                                 onClick={() => {
-                                    setActiveChatId(conv.id);
-                                    if (conv.unread > 0) {
-                                        setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, unread: 0 } : c));
-                                    }
+                                    setActiveConversationId(c.id);
+                                    navigate(`/messages?conversationId=${c.id}`);
                                 }}
                             >
-                                <div className="conv-avatar">
-                                    <img src={conv.artisanAvatar} alt={conv.artisanName} />
-                                    {conv.unread > 0 && <span className="unread-badge">{conv.unread}</span>}
-                                </div>
-                                <div className="conv-info">
-                                    <div className="conv-title-row">
-                                        <h4>{conv.artisanName}</h4>
-                                        <span className="conv-date">{formatDate(conv.updatedAt)}</span>
+                                <span className="avatar">{initials(c.counterpartName)}</span>
+                                <div className="meta">
+                                    <div className="row-top">
+                                        <strong>{c.counterpartName}</strong>
+                                        <span>{fmt(c.lastMessageTime)}</span>
                                     </div>
-                                    <p className="conv-preview">{conv.lastMessage}</p>
+                                    <p>{truncate(c.lastMessage, 30)}</p>
+                                    <small>{c.requestTitle}</small>
                                 </div>
-                            </div>
+                                {c.unreadCount > 0 ? <span className="badge">{c.unreadCount}</span> : null}
+                            </button>
                         ))}
                     </div>
-                </div>
+                </aside>
 
-                {/* Active Chat Area */}
-                <div className="chat-area">
+                <section className="col-center">
+                    {!activeConversation ? (
+                        <div className="empty-chat">Chọn một cuộc trò chuyện để bắt đầu</div>
+                    ) : (
+                        <>
+                            <header className="chat-header">
+                                <div>
+                                    <h3>{activeConversation.counterpartName}</h3>
+                                    <span className={isConnected ? 'online' : 'offline'}>{isConnected ? '● Đang online' : '○ Offline'}</span>
+                                </div>
+                                <span className="pill">{activeConversation.requestTitle}</span>
+                            </header>
+
+                            <div className="chat-body">
+                                {loadingMessages ? (
+                                    <div className="skeleton-wrap">
+                                        <div className="skeleton" />
+                                        <div className="skeleton" />
+                                        <div className="skeleton short" />
+                                    </div>
+                                ) : messages.map((m) => {
+                                    const mine = isMine(m);
+                                    const type = String(m?.messageType || '').toUpperCase();
+                                    if (type === 'SYSTEM') {
+                                        return <div key={m.id || `${m.sentAt}-system`} className="system-message">{m.content} · {fmt(m.sentAt || m.createdAt)}</div>;
+                                    }
+                                    return (
+                                        <div key={m.id || `${m.sentAt}-${m.content}`} className={`bubble-row ${mine ? 'mine' : 'theirs'}`}>
+                                            <div className="bubble">{m.content}</div>
+                                            <div className="time">{fmt(m.sentAt || m.createdAt)} {mine && m.isRead ? <span>✓✓</span> : null}</div>
+                                        </div>
+                                    );
+                                })}
+
+                                {typingByConversation[activeConversationId] ? (
+                                    <div className="typing">
+                                        <span />
+                                        <span />
+                                        <span />
+                                    </div>
+                                ) : null}
+                                <div ref={bottomRef} />
+                            </div>
+
+                            {role === 'ARTISAN' ? (
+                                <div className="template-row">
+                                    <button type="button" className="btn btn-outline btn-sm" onClick={() => setComposer(QUOTE_TEMPLATE)}>
+                                        Dùng template báo giá
+                                    </button>
+                                </div>
+                            ) : null}
+
+                            <div className="composer-wrap">
+                                <textarea
+                                    value={composer}
+                                    onChange={handleChangeComposer}
+                                    placeholder="Nhập tin nhắn..."
+                                    rows={3}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && !e.shiftKey) {
+                                            e.preventDefault();
+                                            handleSend();
+                                        }
+                                    }}
+                                />
+                                <button type="button" className="btn btn-primary" onClick={handleSend} disabled={!composer.trim()}>
+                                    Gửi
+                                </button>
+                            </div>
+                        </>
+                    )}
+                </section>
+
+                <aside className="col-right">
                     {activeConversation ? (
                         <>
-                            <div className="chat-header">
-                                <div className="chat-artisan-info">
-                                    <img src={activeConversation.artisanAvatar} alt={activeConversation.artisanName} className="chat-avatar" />
-                                    <div>
-                                        <h3>{activeConversation.artisanName}</h3>
-                                        <span className="artisan-status">Typical reply time: a few hours</span>
-                                    </div>
-                                </div>
-                                <button className="btn btn-outline btn-sm">View Shop</button>
-                            </div>
+                            <section className="info-card">
+                                <h4>Thông tin yêu cầu</h4>
+                                <p className="title">{activeConversation.requestTitle}</p>
+                                <p>{truncate(activeConversation.requestDescription, 120)}</p>
+                                <p>Ngân sách: {new Intl.NumberFormat('vi-VN').format(activeConversation.minBudget || 0)} - {new Intl.NumberFormat('vi-VN').format(activeConversation.maxBudget || 0)} đ</p>
+                            </section>
 
-                            <div className="chat-messages">
-                                {activeConversation.messages.map(msg => (
-                                    <div key={msg.id} className={`message-wrapper ${msg.sender === 'customer' ? 'message-outgoing' : 'message-incoming'}`}>
+                            {role === 'CUSTOMER' ? (
+                                <section className="info-card">
+                                    <h4>Nghệ nhân quan tâm</h4>
+                                    {interestedArtisans.map((a) => {
+                                        const artisanId = a?.artisanId || a?.artisan?.id;
+                                        const selected = String(activeConversation.selectedArtisanId || '') === String(artisanId);
+                                        return (
+                                            <div key={`${artisanId}`} className="artisan-row">
+                                                <span className="avatar sm">{initials(a?.artisanName || a?.artisan?.name)}</span>
+                                                <span>{a?.artisanName || a?.artisan?.name || 'Nghệ nhân'}</span>
+                                                {selected ? (
+                                                    <span className="status-chip">Đã chọn</span>
+                                                ) : (
+                                                    <button type="button" className="btn btn-outline btn-sm" onClick={() => handleSelectArtisan(a)}>
+                                                        Chọn
+                                                    </button>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </section>
+                            ) : null}
 
-                                        {!msg.isSystem && msg.sender === 'artisan' && (
-                                            <img src={activeConversation.artisanAvatar} alt="Artisan" className="message-avatar" />
-                                        )}
-
-                                        <div className="message-content-box">
-                                            {msg.isSystem ? (
-                                                <div className="system-message">
-                                                    <p>{msg.text}</p>
-                                                    <span className="message-time">{formatTime(msg.timestamp)}</span>
-                                                </div>
-                                            ) : (
-                                                <div className={`message-bubble ${msg.isQuotation ? 'quotation-bubble' : ''}`}>
-                                                    <p>{msg.text}</p>
-
-                                                    {msg.isQuotation && (
-                                                        <div className="quotation-card">
-                                                            <div className="quotation-header">
-                                                                <h4>Quotation</h4>
-                                                                <span className={`status-badge status-${msg.quotation.status}`}>
-                                                                    {msg.quotation.status}
-                                                                </span>
-                                                            </div>
-                                                            <div className="quotation-body">
-                                                                <p className="quote-title">{msg.quotation.title}</p>
-                                                                <p className="quote-details">{msg.quotation.details}</p>
-                                                                <div className="quote-meta">
-                                                                    <span>Est. Delivery: {msg.quotation.estimatedDelivery}</span>
-                                                                    <span className="quote-price">${msg.quotation.amount.toFixed(2)}</span>
-                                                                </div>
-                                                            </div>
-
-                                                            {msg.quotation.status === 'pending' && (
-                                                                <div className="quotation-actions">
-                                                                    <button
-                                                                        className="btn btn-outline btn-sm"
-                                                                        onClick={() => handleRejectQuotation(activeConversation.id, msg.id)}
-                                                                    >
-                                                                        Decline
-                                                                    </button>
-                                                                    <button
-                                                                        className="btn btn-primary btn-sm"
-                                                                        onClick={() => handleAcceptQuotation(activeConversation.id, msg.id)}
-                                                                    >
-                                                                        Accept & Continue to Payment
-                                                                    </button>
-                                                                </div>
-                                                            )}
-                                                            {msg.quotation.status === 'accepted' && (
-                                                                <div className="quotation-actions">
-                                                                    <button
-                                                                        className="btn btn-primary btn-sm btn-full"
-                                                                        onClick={() => navigate('/checkout', {
-                                                                            state: {
-                                                                                amount: msg.quotation.amount,
-                                                                                isCustom: true,
-                                                                                title: msg.quotation.title
-                                                                            }
-                                                                        })}
-                                                                    >
-                                                                        Proceed to Checkout
-                                                                    </button>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    )}
-
-                                                    <span className="message-time">{formatTime(msg.timestamp)}</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-
-                            <form className="chat-input-area" onSubmit={handleSendMessage}>
-                                <button type="button" className="btn-icon">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                                        <polyline points="21 15 16 10 5 21"></polyline>
-                                    </svg>
-                                </button>
-                                <input
-                                    type="text"
-                                    placeholder="Type your message..."
-                                    className="chat-input"
-                                    value={newMessage}
-                                    onChange={(e) => setNewMessage(e.target.value)}
-                                />
-                                <button type="submit" className="btn btn-primary btn-send" disabled={!newMessage.trim()}>
-                                    Send
-                                </button>
-                            </form>
+                            <section className="info-card">
+                                <h4>Trạng thái</h4>
+                                <p>Yêu cầu: <span className="status-chip">{activeConversation.requestStatus || 'Đang xử lý'}</span></p>
+                                <p className={isConnected ? 'online' : 'offline'}>{isConnected ? '● Đã kết nối' : '○ Mất kết nối'}</p>
+                            </section>
                         </>
-                    ) : (
-                        <div className="chat-empty">
-                            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                            </svg>
-                            <h3>Your Messages</h3>
-                            <p>Select a conversation to start chatting.</p>
-                        </div>
-                    )}
-                </div>
+                    ) : null}
+                </aside>
             </div>
         </div>
     );

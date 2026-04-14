@@ -1,11 +1,10 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FiImage, FiArrowLeft } from 'react-icons/fi';
 import { useParams, useNavigate } from 'react-router-dom';
 import Header from '../components/Header/Header';
 import Footer from '../components/Footer/Footer';
 import { useCart } from '../context/CartContext';
 import productService from '../services/productService';
-import templateService from '../services/templateService';
 import { appToast } from '../lib/appToast';
 import './ProductDetailsPage.css';
 
@@ -24,28 +23,6 @@ const getInitials = (name) => {
     return `${parts[0][0] || ''}${parts[parts.length - 1][0] || ''}`.toUpperCase();
 };
 
-const normalizeZone = (zone) => ({
-    zoneId: zone?.zoneId || zone?.id || zone?.uuid || '',
-    zoneName: zone?.zoneName || zone?.name || 'Yêu cầu thêm',
-    zoneDescription: zone?.zoneDescription || zone?.description || '',
-    inputType: zone?.inputType || 'TEXT',
-    isRequired: Boolean(zone?.isRequired),
-    extraPrice: Number(zone?.extraPrice || 0),
-    sortOrder: Number(zone?.sortOrder || 0),
-    inputConstraints: typeof zone?.inputConstraints === 'object' && zone?.inputConstraints != null
-        ? zone.inputConstraints
-        : {},
-});
-
-const getTemplateZones = (template) => {
-    const raw = Array.isArray(template?.customZones)
-        ? template.customZones
-        : Array.isArray(template?.zones)
-            ? template.zones
-            : [];
-    return raw.map(normalizeZone).sort((a, b) => a.sortOrder - b.sortOrder);
-};
-
 const ProductDetailsPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -57,10 +34,6 @@ const ProductDetailsPage = () => {
     const [imageBroken, setImageBroken] = useState(false);
     const [selectedImageUrl, setSelectedImageUrl] = useState('');
 
-    const [zoneLoading, setZoneLoading] = useState(false);
-    const [templateZones, setTemplateZones] = useState([]);
-    const [zoneInputs, setZoneInputs] = useState({});
-
     useEffect(() => {
         window.scrollTo(0, 0);
     }, [id]);
@@ -68,8 +41,6 @@ const ProductDetailsPage = () => {
     useEffect(() => {
         if (!id) {
             setProduct(null);
-            setTemplateZones([]);
-            setZoneInputs({});
             setLoading(false);
             return;
         }
@@ -103,76 +74,8 @@ const ProductDetailsPage = () => {
         setSelectedImageUrl(firstImage || '');
     }, [product]);
 
-    useEffect(() => {
-        if (!product) {
-            setTemplateZones([]);
-            setZoneInputs({});
-            return;
-        }
-
-        const fetchZonesByCategory = async () => {
-            const productCategoryId = String(product?.categoryId || product?.category?.id || '').trim();
-            if (!productCategoryId) {
-                setTemplateZones([]);
-                setZoneInputs({});
-                return;
-            }
-
-            setZoneLoading(true);
-            try {
-                const templatesResult = await templateService.getTemplates({ categoryId: productCategoryId, size: 100, page: 0 });
-                if (!templatesResult.success) {
-                    setTemplateZones([]);
-                    return;
-                }
-
-                const templates = templatesResult?.data?.content || [];
-                const selectedTemplate = templates.find((item) => item?.isActive !== false) || templates[0];
-                if (!selectedTemplate) {
-                    setTemplateZones([]);
-                    setZoneInputs({});
-                    return;
-                }
-
-                const detailResult = await templateService.getTemplateById(selectedTemplate.templateId || selectedTemplate.id);
-                if (!detailResult.success) {
-                    setTemplateZones([]);
-                    return;
-                }
-
-                const zones = getTemplateZones(detailResult.data || selectedTemplate);
-                setTemplateZones(zones);
-                setZoneInputs((prev) => {
-                    const next = {};
-                    zones.forEach((zone) => {
-                        const key = zone.zoneId || zone.zoneName;
-                        next[key] = prev[key] ?? '';
-                    });
-                    return next;
-                });
-            } catch {
-                setTemplateZones([]);
-            } finally {
-                setZoneLoading(false);
-            }
-        };
-
-        fetchZonesByCategory();
-    }, [product]);
-
     const handleAddToCart = () => {
         if (!product) return;
-
-        const missingRequired = templateZones.find((zone) => {
-            if (!zone.isRequired) return false;
-            const key = zone.zoneId || zone.zoneName;
-            return String(zoneInputs[key] || '').trim() === '';
-        });
-
-        if (missingRequired) {
-            appToast.warning(`Vui lòng điền ${missingRequired.zoneName}`);
-            return;
-        }
 
         const productId = product.productId ?? product.id;
         const price = product.productPrice ?? product.price;
@@ -185,12 +88,12 @@ const ProductDetailsPage = () => {
             productId,
             title,
             price,
-            basePrice: productPrice,
-            finalUnitPrice: totalPrice,
-            zonePriceBreakdown: zoneChargeRows,
+            basePrice: price,
+            finalUnitPrice: price,
+            zonePriceBreakdown: [],
             image,
             artisan,
-            customRequests: zoneInputs,
+            customRequests: {},
         }, quantity);
 
         appToast.success('Đã thêm vào giỏ hàng');
@@ -204,20 +107,7 @@ const ProductDetailsPage = () => {
     const artisanId = product?.artisanId ?? product?.artisan_id ?? null;
     const productDescription = product?.productDescription ?? product?.description ?? '';
     const categoryName = product?.categoryName ?? product?.category?.name ?? 'Danh mục';
-
-    const zoneChargeRows = useMemo(() => {
-        return templateZones
-            .filter((zone) => Number(zone.extraPrice || 0) > 0 && String(zoneInputs[zone.zoneId || zone.zoneName] || '').trim() !== '')
-            .map((zone) => ({
-                key: zone.zoneId || zone.zoneName,
-                label: zone.zoneName,
-                amount: Number(zone.extraPrice || 0),
-            }));
-    }, [templateZones, zoneInputs]);
-
-    const totalPrice = useMemo(() => {
-        return Number(productPrice || 0) + zoneChargeRows.reduce((sum, item) => sum + item.amount, 0);
-    }, [productPrice, zoneChargeRows]);
+    const productReviews = Array.isArray(product?.reviews) ? product.reviews : [];
 
     if (loading) {
         return (
@@ -297,120 +187,12 @@ const ProductDetailsPage = () => {
                     </div>
 
                     <div className="info-column">
-                        <div className="artisan-tag">
-                            <span className="artisan-avatar">{getInitials(artisanName)}</span>
-                            {artisanId ? (
-                                <button
-                                    type="button"
-                                    className="artisan-name-link"
-                                    onClick={() => navigate(`/artisans/${artisanId}`)}
-                                >
-                                    {artisanName}
-                                </button>
-                            ) : (
-                                <span className="artisan-name-text">{artisanName}</span>
-                            )}
-                        </div>
-
                         <h1 className="product-title-large">{productName}</h1>
 
                         <div className="product-price-row">
                             <span className="product-price-main">{formatCurrency(productPrice)}</span>
-                            <span className="price-label">Giá cơ bản</span>
+                            <span className="price-label">Giá sản phẩm</span>
                         </div>
-
-                        <hr className="section-divider" />
-
-                        {productDescription && (
-                            <section className="description-block">
-                                <p>{productDescription}</p>
-                            </section>
-                        )}
-
-                        <section className="spec-grid">
-                            {product.size && (
-                                <article className="spec-card">
-                                    <span className="spec-label">Kích thước</span>
-                                    <strong className="spec-value">{product.size}</strong>
-                                </article>
-                            )}
-                            {product.quantity != null && (
-                                <article className="spec-card">
-                                    <span className="spec-label">Số lượng có sẵn</span>
-                                    <strong className="spec-value">{product.quantity}</strong>
-                                </article>
-                            )}
-                        </section>
-
-                        <hr className="section-divider" />
-
-                        <section className="zones-section">
-                            <h3 className="section-title">Yêu cầu thêm</h3>
-
-                            {zoneLoading ? (
-                                <p className="empty-zone-text">Đang tải yêu cầu thêm...</p>
-                            ) : templateZones.length === 0 ? (
-                                <p className="empty-zone-text">Sản phẩm này hiện chưa có yêu cầu thêm.</p>
-                            ) : (
-                                <div className="zone-list">
-                                    {templateZones.map((zone) => {
-                                        const key = zone.zoneId || zone.zoneName;
-                                        const type = String(zone.inputType || 'TEXT').toUpperCase();
-                                        const currentValue = zoneInputs[key] ?? '';
-
-                                        const inputProps = {
-                                            value: currentValue,
-                                            onChange: (e) => setZoneInputs((prev) => ({ ...prev, [key]: e.target.value })),
-                                        };
-
-                                        return (
-                                            <article key={key} className="zone-card">
-                                                <div className="zone-card-head">
-                                                    <div className="zone-title-wrap">
-                                                        <strong>{zone.zoneName}</strong>
-                                                        <span className={`zone-badge ${zone.isRequired ? 'required' : 'optional'}`}>
-                                                            {zone.isRequired ? 'Bắt buộc' : 'Tuỳ chọn'}
-                                                        </span>
-                                                    </div>
-                                                    {Number(zone.extraPrice || 0) > 0 && (
-                                                        <span className="zone-price">+{formatCurrency(zone.extraPrice)}</span>
-                                                    )}
-                                                </div>
-
-                                                {zone.zoneDescription && <p className="zone-description">{zone.zoneDescription}</p>}
-
-                                                {type === 'NUMBER' ? (
-                                                    <input type="number" className="zone-input" {...inputProps} />
-                                                ) : type === 'COLOR' ? (
-                                                    <input type="color" className="zone-input zone-input-color" {...inputProps} />
-                                                ) : type === 'IMAGE' ? (
-                                                    <input type="url" className="zone-input" placeholder="Nhập URL hình ảnh" {...inputProps} />
-                                                ) : (
-                                                    <input type="text" className="zone-input" placeholder="Nhập yêu cầu" {...inputProps} />
-                                                )}
-                                            </article>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </section>
-
-                        <section className="price-summary">
-                            <div className="price-row">
-                                <span>Giá cơ bản</span>
-                                <span>{formatCurrency(productPrice)}</span>
-                            </div>
-                            {zoneChargeRows.map((row) => (
-                                <div key={row.key} className="price-row">
-                                    <span>{row.label}</span>
-                                    <span>+{formatCurrency(row.amount)}</span>
-                                </div>
-                            ))}
-                            <div className="price-row total">
-                                <span>Tổng</span>
-                                <span>{formatCurrency(totalPrice)}</span>
-                            </div>
-                        </section>
 
                         <div className="purchase-row">
                             <div className="quantity-row">
@@ -439,10 +221,98 @@ const ProductDetailsPage = () => {
                             <button className="btn btn-primary btn-add-cart" onClick={handleAddToCart}>
                                 Thêm vào giỏ hàng
                             </button>
+
+                            <button
+                                type="button"
+                                className="btn custom-request-link"
+                                onClick={() => navigate(`/custom-requests?productId=${product.productId ?? product.id}`)}
+                            >
+                                Không đúng ý? Đặt làm riêng
+                            </button>
                         </div>
 
-
                     </div>
+                </div>
+
+                <div className="product-details-lower">
+                    <section className="product-section">
+                        <h3 className="section-title">Thông tin nghệ nhân</h3>
+                        <div className="artisan-tag">
+                            <span className="artisan-avatar">{getInitials(artisanName)}</span>
+                            {artisanId ? (
+                                <button
+                                    type="button"
+                                    className="artisan-name-link"
+                                    onClick={() => navigate(`/artisans/${artisanId}`)}
+                                >
+                                    {artisanName}
+                                </button>
+                            ) : (
+                                <span className="artisan-name-text">{artisanName}</span>
+                            )}
+                        </div>
+                    </section>
+
+                    <hr className="section-divider" />
+
+                    <section className="product-section">
+                        <h3 className="section-title">Chi tiết sản phẩm</h3>
+                        <div className="spec-grid">
+                            {product.size && (
+                                <article className="spec-card">
+                                    <span className="spec-label">Kích thước</span>
+                                    <strong className="spec-value">{product.size}</strong>
+                                </article>
+                            )}
+                            {product.material && (
+                                <article className="spec-card">
+                                    <span className="spec-label">Chất liệu</span>
+                                    <strong className="spec-value">{product.material}</strong>
+                                </article>
+                            )}
+                            {product.quantity != null && (
+                                <article className="spec-card">
+                                    <span className="spec-label">Số lượng có sẵn</span>
+                                    <strong className="spec-value">{product.quantity}</strong>
+                                </article>
+                            )}
+                            <article className="spec-card">
+                                <span className="spec-label">Danh mục</span>
+                                <strong className="spec-value">{categoryName}</strong>
+                            </article>
+                        </div>
+                    </section>
+
+                    <hr className="section-divider" />
+
+                    <section className="product-section description-block">
+                        <h3 className="section-title">Mô tả sản phẩm</h3>
+                        <p>{productDescription || 'Chưa có mô tả cho sản phẩm này.'}</p>
+                    </section>
+
+                    <hr className="section-divider" />
+
+                    <section className="product-section">
+                        <h3 className="section-title">Đánh giá sản phẩm</h3>
+                        {productReviews.length === 0 ? (
+                            <p className="empty-review-text">Sản phẩm này chưa có đánh giá nào.</p>
+                        ) : (
+                            <div className="review-list">
+                                {productReviews.map((review, index) => (
+                                    <article
+                                        key={review.reviewId || review.id || `${review.userName || 'review'}-${index}`}
+                                        className="review-card"
+                                    >
+                                        <div className="review-head">
+                                            <strong>{review.userName || review.customerName || 'Khách hàng'}</strong>
+                                            {review.rating != null && <span>{`★ ${review.rating}/5`}</span>}
+                                        </div>
+                                        <p>{review.comment || review.content || 'Không có nội dung đánh giá.'}</p>
+                                    </article>
+                                ))}
+                            </div>
+                        )}
+                    </section>
                 </div>
             </main>
             <Footer />

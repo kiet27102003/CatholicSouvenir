@@ -6,6 +6,7 @@ import { useCart } from '../../context/CartContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { useTheme } from '../../context/ThemeContext';
 import { getMyConversations } from '../../services/chatService';
+import { getNotifications } from '../../services/notificationService';
 import './Header.css';
 
 const Header = () => {
@@ -16,7 +17,11 @@ const Header = () => {
     const navigate = useNavigate();
     const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
     const [langMenuOpen, setLangMenuOpen] = React.useState(false);
+    const [notificationsOpen, setNotificationsOpen] = React.useState(false);
     const [unreadConversations, setUnreadConversations] = React.useState(0);
+    const [notifications, setNotifications] = React.useState([]);
+    const [notificationsLoading, setNotificationsLoading] = React.useState(false);
+    const [notificationsError, setNotificationsError] = React.useState('');
 
     React.useEffect(() => {
         let ignore = false;
@@ -32,6 +37,33 @@ const Header = () => {
         };
     }, [isAuthenticated]);
 
+    React.useEffect(() => {
+        if (!notificationsOpen || !isAuthenticated) return;
+
+        let ignore = false;
+        const loadNotifications = async () => {
+            setNotificationsLoading(true);
+            setNotificationsError('');
+            const response = await getNotifications({ page: 0, size: 20 });
+
+            if (ignore) return;
+
+            if (response.success) {
+                setNotifications(response.data?.content || []);
+            } else {
+                setNotifications([]);
+                setNotificationsError(response.error || 'Không tải được thông báo.');
+            }
+            setNotificationsLoading(false);
+        };
+
+        loadNotifications();
+
+        return () => {
+            ignore = true;
+        };
+    }, [notificationsOpen, isAuthenticated]);
+
     const handleAuthAction = () => {
         if (isAuthenticated) {
             logout();
@@ -42,6 +74,58 @@ const Header = () => {
 
     const handleOpenCart = () => {
         openCart();
+    };
+
+    const formatNotificationTime = (value) => {
+        if (!value) return '';
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return '';
+        return date.toLocaleString('vi-VN', {
+            dateStyle: 'short',
+            timeStyle: 'short',
+        });
+    };
+
+    const handleNotificationClick = (item) => {
+        setNotificationsOpen(false);
+
+        const actionType = String(item?.actionType || '').toUpperCase();
+        const relatedEntityType = String(item?.relatedEntityType || '').toUpperCase();
+        const relatedEntityId = item?.relatedEntityId;
+
+        if (actionType === 'VIEW_CONVERSATION' && relatedEntityId) {
+            navigate(`/messages?conversationId=${relatedEntityId}`);
+            return;
+        }
+
+        if (actionType === 'VIEW_ORDER' && relatedEntityId) {
+            navigate(`/orders/${relatedEntityId}`);
+            return;
+        }
+
+        if (actionType === 'VIEW_CUSTOM_REQUEST' && relatedEntityId) {
+            navigate(`/custom-requests/${relatedEntityId}`);
+            return;
+        }
+
+        if (actionType === 'VIEW_PRODUCT' && relatedEntityId) {
+            navigate(`/product/${relatedEntityId}`);
+            return;
+        }
+
+        if (relatedEntityType === 'CONVERSATION' && relatedEntityId) {
+            navigate(`/messages?conversationId=${relatedEntityId}`);
+            return;
+        }
+
+        if (relatedEntityType === 'ORDER' && relatedEntityId) {
+            navigate(`/orders/${relatedEntityId}`);
+            return;
+        }
+
+        if (relatedEntityType === 'CUSTOM_REQUEST' && relatedEntityId) {
+            navigate(`/custom-requests/${relatedEntityId}`);
+        }
     };
 
     return (
@@ -140,9 +224,57 @@ const Header = () => {
                             {theme === 'dark' ? <FiSun size={20} strokeWidth={2} /> : <FiMoon size={20} strokeWidth={2} />}
                         </button>
 
-                        <button className="icon-btn" aria-label="Notifications" onClick={() => navigate('/notifications')}>
-                            <FiBell size={20} strokeWidth={2} />
-                        </button>
+                        <div className="notifications-dropdown-wrapper">
+                            <button
+                                type="button"
+                                className="icon-btn"
+                                aria-label="Notifications"
+                                aria-haspopup="dialog"
+                                aria-expanded={notificationsOpen}
+                                onClick={() => setNotificationsOpen((prev) => !prev)}
+                            >
+                                <FiBell size={20} strokeWidth={2} />
+                            </button>
+                            {notificationsOpen && (
+                                <>
+                                    <div className="notifications-dropdown-overlay" onClick={() => setNotificationsOpen(false)} aria-hidden="true" />
+                                    <div className="notifications-dropdown" role="dialog" aria-label="Danh sách thông báo">
+                                        <div className="notifications-dropdown-header">
+                                            <div>
+                                                <p className="notifications-dropdown-title">Thông báo</p>
+                                                <p className="notifications-dropdown-subtitle">Các cập nhật mới nhất của bạn</p>
+                                            </div>
+                                            <button type="button" className="notifications-dropdown-close" onClick={() => setNotificationsOpen(false)} aria-label="Đóng thông báo">
+                                                <FiX size={18} strokeWidth={2} />
+                                            </button>
+                                        </div>
+                                        <div className="notifications-dropdown-body">
+                                            {notificationsLoading && <p className="notifications-state">Đang tải thông báo...</p>}
+                                            {!notificationsLoading && notificationsError && <p className="notifications-state notifications-state-error">{notificationsError}</p>}
+                                            {!notificationsLoading && !notificationsError && notifications.length === 0 && <p className="notifications-state">Chưa có thông báo nào.</p>}
+                                            {!notificationsLoading && !notificationsError && notifications.length > 0 && (
+                                                <div className="notifications-list">
+                                                    {notifications.map((item) => (
+                                                        <button
+                                                            key={item.notificationId}
+                                                            type="button"
+                                                            className={`notification-item ${item.isRead ? 'read' : 'unread'}`}
+                                                            onClick={() => handleNotificationClick(item)}
+                                                        >
+                                                            <div className="notification-item-header">
+                                                                <strong>{item.title}</strong>
+                                                                <span>{formatNotificationTime(item.createdAt)}</span>
+                                                            </div>
+                                                            <p>{item.message}</p>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </div>
 
                         <button className="icon-btn" aria-label="Messages" onClick={() => navigate('/messages')} style={{ position: 'relative' }}>
                             <FiMessageSquare size={20} strokeWidth={2} />

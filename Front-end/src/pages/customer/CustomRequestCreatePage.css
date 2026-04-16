@@ -39,6 +39,10 @@
     gap: var(--spacing-md);
 }
 
+.custom-request-create-select {
+    min-height: 48px;
+}
+
 .custom-request-create-file-count {
     margin-top: 0.5rem;
     color: var(--color-text-light);

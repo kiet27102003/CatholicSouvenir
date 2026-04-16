@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { FiArrowRight, FiStar, FiGrid, FiLayers, FiFeather, FiHeart, FiChevronRight, FiShoppingCart, FiPackage } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
+import api from '../cofig/api';
 import Header from '../components/Header/Header';
 import Footer from '../components/Footer/Footer';
 import './HomePage.css';
@@ -81,26 +82,31 @@ const HomePage = () => {
     useEffect(() => {
         let ignore = false;
 
+        const toList = (data) => {
+            if (Array.isArray(data)) return data;
+            return data?.content || data?.data || data?.items || [];
+        };
+
         const loadData = async () => {
             setLoading(true);
             try {
-                const [categoriesRes, productsRes, artisansRes] = await Promise.all([
-                    fetch('/api/categories/root'),
-                    fetch('/api/products?page=0&size=8'),
-                    fetch('/api/users?role=ARTISAN&page=0&size=3'),
-                ]);
-
                 const [categoriesData, productsData, artisansData] = await Promise.all([
-                    categoriesRes.ok ? categoriesRes.json() : Promise.resolve([]),
-                    productsRes.ok ? productsRes.json() : Promise.resolve({ content: [] }),
-                    artisansRes.ok ? artisansRes.json() : Promise.resolve({ content: [] }),
+                    api.get('/api/categories/root').then((res) => res.data),
+                    api.get('/api/products?page=0&size=8').then((res) => res.data),
+                    api.get('/api/users?role=ARTISAN&page=0&size=3').then((res) => res.data),
                 ]);
 
                 if (ignore) return;
 
-                setCategories(Array.isArray(categoriesData) ? categoriesData : (categoriesData?.content || categoriesData?.data || []));
-                setProducts(Array.isArray(productsData) ? productsData : (productsData?.content || productsData?.data || []));
-                setArtisans(Array.isArray(artisansData) ? artisansData : (artisansData?.content || artisansData?.data || []));
+                setCategories(toList(categoriesData));
+                setProducts(toList(productsData));
+                setArtisans(toList(artisansData));
+            } catch {
+                if (!ignore) {
+                    setCategories([]);
+                    setProducts([]);
+                    setArtisans([]);
+                }
             } finally {
                 if (!ignore) setLoading(false);
             }
@@ -113,6 +119,7 @@ const HomePage = () => {
     }, []);
 
     const featuredProducts = useMemo(() => products.slice(0, 8), [products]);
+    const marqueeProducts = useMemo(() => [...featuredProducts, ...featuredProducts], [featuredProducts]);
     const imageFor = (index) => fallbackImages[index % fallbackImages.length];
 
     return (
@@ -188,34 +195,38 @@ const HomePage = () => {
                                 Xem tất cả <FiChevronRight />
                             </button>
                         </div>
-                        <div className="products-grid">
-                            {(loading ? Array.from({ length: 8 }) : featuredProducts).map((product, index) => {
-                                const image = product?.images?.[0]?.image_url || product?.image || imageFor(index);
-                                const artisanName = product?.artisanName || product?.artisan?.name || product?.artisan?.fullName || 'Nghệ nhân';
-                                const categoryName = product?.categoryName || product?.category?.name || 'Thủ công';
-                                return (
-                                    <article key={product?.productId || product?.id || index} className={`product-card fade-up animate-in ${index === 0 ? 'featured' : ''}`}>
-                                        {loading ? (
-                                            <div className="skeleton skeleton-product-image" />
-                                        ) : (
-                                            <div className="product-media">
-                                                <img src={image} alt={product?.name || product?.title || 'Sản phẩm'} loading="lazy" />
-                                                {index === 0 && <span className="badge">Nổi bật</span>}
+                        <div className={`marquee-track ${loading ? 'is-loading' : ''}`}>
+                            <div className="products-grid marquee-row">
+                                {(loading ? Array.from({ length: 8 }) : marqueeProducts).map((product, index) => {
+                                    const baseIndex = loading ? index : index % featuredProducts.length;
+                                    const realProduct = loading ? null : product;
+                                    const image = realProduct?.images?.[0]?.image_url || realProduct?.image || imageFor(baseIndex);
+                                    const artisanName = realProduct?.artisanName || realProduct?.artisan?.name || realProduct?.artisan?.fullName || 'Nghệ nhân';
+                                    const categoryName = realProduct?.categoryName || realProduct?.category?.name || 'Thủ công';
+                                    return (
+                                        <article key={realProduct?.productId || realProduct?.id || `product-${index}`} className="product-card">
+                                            {loading ? (
+                                                <div className="skeleton skeleton-product-image" />
+                                            ) : (
+                                                <div className="product-media">
+                                                    <img src={image} alt={realProduct?.name || realProduct?.title || 'Sản phẩm'} loading="lazy" />
+                                                    {baseIndex === 0 && index < featuredProducts.length && <span className="badge">Nổi bật</span>}
+                                                </div>
+                                            )}
+                                            <div className="product-body">
+                                                <span className="product-category">{loading ? ' ' : String(categoryName).toUpperCase()}</span>
+                                                <h3>{loading ? ' ' : (realProduct?.name || realProduct?.title || 'Sản phẩm thủ công')}</h3>
+                                                <p className="product-artisan">{loading ? ' ' : artisanName}</p>
+                                                <div className="product-meta">
+                                                    <strong>{loading ? ' ' : formatCurrency(realProduct?.price || realProduct?.salePrice || realProduct?.basePrice)}</strong>
+                                                    <span><FiStar />{loading ? '4.9' : (realProduct?.rating || realProduct?.averageRating || 4.9)}</span>
+                                                    <button type="button" className="cart-btn" aria-label="Thêm vào giỏ hàng"><FiShoppingCart /></button>
+                                                </div>
                                             </div>
-                                        )}
-                                        <div className="product-body">
-                                            <span className="product-category">{loading ? ' ' : String(categoryName).toUpperCase()}</span>
-                                            <h3>{loading ? ' ' : (product?.name || product?.title || 'Sản phẩm thủ công')}</h3>
-                                            <p className="product-artisan">{loading ? ' ' : artisanName}</p>
-                                            <div className="product-meta">
-                                                <strong>{loading ? ' ' : formatCurrency(product?.price || product?.salePrice || product?.basePrice)}</strong>
-                                                <span><FiStar />{loading ? '4.9' : (product?.rating || product?.averageRating || 4.9)}</span>
-                                                <button type="button" className="cart-btn" aria-label="Thêm vào giỏ hàng"><FiShoppingCart /></button>
-                                            </div>
-                                        </div>
-                                    </article>
-                                );
-                            })}
+                                        </article>
+                                    );
+                                })}
+                            </div>
                         </div>
                     </div>
                 </section>

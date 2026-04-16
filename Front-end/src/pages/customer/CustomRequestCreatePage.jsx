@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import api from '../../cofig/api';
 import { appToast } from '../../lib/appToast';
 import { createCustomRequestV2, uploadReferenceImage } from '../../services/customRequestService';
 import './CustomRequestCreatePage.css';
@@ -12,12 +13,40 @@ const CustomRequestCreatePage = () => {
     const [description, setDescription] = useState('');
     const [minBudget, setMinBudget] = useState('');
     const [maxBudget, setMaxBudget] = useState('');
+    const [selectedArtisanId, setSelectedArtisanId] = useState('');
+    const [artisans, setArtisans] = useState([]);
+    const [loadingArtisans, setLoadingArtisans] = useState(true);
     const [generateAiImage, setGenerateAiImage] = useState(true);
     const [files, setFiles] = useState([]);
     const [submitting, setSubmitting] = useState(false);
     const [uploading, setUploading] = useState(false);
 
     const descriptionCount = description.length;
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const loadArtisans = async () => {
+            setLoadingArtisans(true);
+            try {
+                const response = await api.get('/api/artisans?page=0&size=20');
+                if (cancelled) return;
+
+                const raw = response?.data?.data ?? response?.data?.content ?? response?.data?.items ?? response?.data;
+                const list = Array.isArray(raw) ? raw : raw?.content || raw?.items || raw || [];
+                setArtisans(Array.isArray(list) ? list : []);
+            } catch {
+                if (!cancelled) setArtisans([]);
+            } finally {
+                if (!cancelled) setLoadingArtisans(false);
+            }
+        };
+
+        loadArtisans();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     const isFormValid = useMemo(() => {
         const min = Number(minBudget);
@@ -28,8 +57,9 @@ const CustomRequestCreatePage = () => {
             && Number.isFinite(max)
             && min > 0
             && max > min
+            && !!selectedArtisanId
         );
-    }, [description, minBudget, maxBudget]);
+    }, [description, minBudget, maxBudget, selectedArtisanId]);
 
     const handleFiles = (event) => {
         const selected = Array.from(event.target.files || []);
@@ -39,7 +69,7 @@ const CustomRequestCreatePage = () => {
     const handleSubmit = async (event) => {
         event.preventDefault();
         if (!isFormValid || submitting) {
-            appToast.warning('Dữ liệu chưa hợp lệ', 'Vui lòng kiểm tra mô tả và khoảng ngân sách');
+            appToast.warning('Dữ liệu chưa hợp lệ', 'Vui lòng kiểm tra mô tả, khoảng ngân sách và nghệ nhân đã chọn');
             return;
         }
 
@@ -67,6 +97,7 @@ const CustomRequestCreatePage = () => {
             maxBudget: Number(maxBudget),
             referenceImages: uploadedUrls,
             generateAiImage,
+            artisanId: selectedArtisanId,
         };
 
         const res = await createCustomRequestV2(payload);
@@ -143,6 +174,30 @@ const CustomRequestCreatePage = () => {
                             onChange={(event) => setMaxBudget(event.target.value)}
                         />
                     </div>
+                </div>
+
+                <div className="form-group">
+                    <label className="form-label" htmlFor="artisanId">
+                        Chọn nghệ nhân <span className="required">*</span>
+                    </label>
+                    <select
+                        id="artisanId"
+                        className="form-input custom-request-create-select"
+                        value={selectedArtisanId}
+                        onChange={(event) => setSelectedArtisanId(event.target.value)}
+                        disabled={loadingArtisans}
+                    >
+                        <option value="">{loadingArtisans ? 'Đang tải nghệ nhân...' : 'Chọn nghệ nhân phù hợp'}</option>
+                        {artisans.map((artisan) => {
+                            const artisanId = String(artisan?.userId ?? artisan?.id ?? artisan?.artisanId ?? '');
+                            const artisanName = artisan?.shopName || artisan?.name || artisan?.fullName || 'Nghệ nhân';
+                            return (
+                                <option key={artisanId || artisanName} value={artisanId}>
+                                    {artisanName}
+                                </option>
+                            );
+                        })}
+                    </select>
                 </div>
 
                 <div className="form-group">

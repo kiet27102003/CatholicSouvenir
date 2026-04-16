@@ -69,13 +69,19 @@ export const getCustomRequestDetail = async (requestId) => {
 
 export const createCustomRequestV2 = async (payload) => {
     try {
-        const response = await api.post('/custom-requests', {
+        const body = {
             description: String(payload?.description || '').trim(),
             minBudget: Number(payload?.minBudget || 0),
             maxBudget: Number(payload?.maxBudget || 0),
             referenceImages: Array.isArray(payload?.referenceImages) ? payload.referenceImages.filter(Boolean) : [],
             generateAiImage: payload?.generateAiImage !== false,
-        });
+        };
+
+        if (payload?.artisanId) {
+            body.artisanId = payload.artisanId;
+        }
+
+        const response = await api.post('/custom-requests', body);
 
         const normalized = normalizeResponse(response);
         if (!isSuccessCode(normalized.code)) {

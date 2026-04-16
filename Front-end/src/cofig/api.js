@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: import.meta.env.VITE_APP_BASE_API || 'http://172.188.10.241/api',
+    baseURL: import.meta.env.VITE_APP_BASE_API || 'https://catholic-souvenir-api.southeastasia.cloudapp.azure.com',
     headers: {
         'Content-Type': 'application/json',
     },
@@ -17,7 +17,7 @@ api.interceptors.request.use(
                 if (user && user.token) {
                     config.headers.Authorization = `Bearer ${user.token}`;
                 }
-            } catch (error) {
+            } catch {
                 // Ignore parse errors
             }
         }
@@ -27,9 +27,7 @@ api.interceptors.request.use(
         }
         return config;
     },
-    (error) => {
-        return Promise.reject(error);
-    }
+    (error) => Promise.reject(error)
 );
 
 export default api;

@@ -202,7 +202,7 @@ export const initiateStagePayment = async (stageId, body) => {
     if (!stageId) return { success: false, error: 'Thiếu mã stage.' };
 
     try {
-        const response = await api.post(`/stages/${stageId}/payment/initiate`, body);
+        const response = await api.post(`/stage-payments/${stageId}/initiate`, body);
         const normalized = normalizeResponse(response);
 
         if (!isSuccessCode(normalized.code)) {
@@ -254,15 +254,23 @@ export const uploadReferenceImage = async (file) => {
     }
 };
 
-export const getOpenCustomRequests = async ({ page = 0, size = 10 } = {}) => {
+export const getArtisanCustomRequests = async ({ status = 'ARTISAN_SELECTED', page = 0, size = 10 } = {}) => {
     try {
-        const response = await api.get('/custom-requests/open', { params: { page, size } });
+        const normalizedStatus = String(status || '').trim().toUpperCase();
+        const endpoint = normalizedStatus === 'OPEN' ? '/custom-requests/open' : '/custom-requests/artisan';
+        const params = { page, size };
+
+        if (normalizedStatus && normalizedStatus !== 'OPEN' && normalizedStatus !== 'ALL') {
+            params.status = normalizedStatus;
+        }
+
+        const response = await api.get(endpoint, { params });
         const normalized = normalizeResponse(response);
 
         if (!isSuccessCode(normalized.code)) {
             return {
                 success: false,
-                error: normalized.message || 'Không tải được danh sách yêu cầu mở.',
+                error: normalized.message || 'Không tải được danh sách yêu cầu.',
                 data: { content: [], totalPages: 0, number: page, size },
             };
         }
@@ -283,15 +291,19 @@ export const getOpenCustomRequests = async ({ page = 0, size = 10 } = {}) => {
     } catch (error) {
         return {
             success: false,
-            error: mapError(error, 'Không tải được danh sách yêu cầu mở.'),
+            error: mapError(error, 'Không tải được danh sách yêu cầu.'),
             data: { content: [], totalPages: 0, number: page, size },
         };
     }
 };
 
-export const createQuotation = async (payload) => {
+export const getOpenCustomRequests = async ({ page = 0, size = 10 } = {}) => {
+    return getArtisanCustomRequests({ status: 'OPEN', page, size });
+};
+
+export const createCustomOrder = async (payload) => {
     try {
-        const response = await api.post('/quotations', {
+        const response = await api.post('/custom-orders', {
             requestId: payload?.requestId,
             totalPrice: Number(payload?.totalPrice || 0),
             stages: Array.isArray(payload?.stages)
@@ -307,12 +319,53 @@ export const createQuotation = async (payload) => {
         const normalized = normalizeResponse(response);
 
         if (!isSuccessCode(normalized.code)) {
-            return { success: false, error: normalized.message || 'Gửi báo giá thất bại.' };
+            return { success: false, error: normalized.message || 'Tạo custom order thất bại.' };
         }
 
         return { success: true, data: normalized.data || {} };
     } catch (error) {
-        return { success: false, error: mapError(error, 'Gửi báo giá thất bại.') };
+        return { success: false, error: mapError(error, 'Tạo custom order thất bại.') };
+    }
+};
+
+export const getCustomerCustomOrders = async ({ status = '', page = 0, size = 10 } = {}) => {
+    try {
+        const params = { page, size };
+
+        if (String(status || '').trim()) {
+            params.status = String(status).trim().toUpperCase();
+        }
+
+        const response = await api.get('/custom-orders', { params });
+        const normalized = normalizeResponse(response);
+
+        if (!isSuccessCode(normalized.code)) {
+            return {
+                success: false,
+                error: normalized.message || 'Không tải được đơn tùy chỉnh.',
+                data: { content: [], totalPages: 0, number: page, size },
+            };
+        }
+
+        const raw = normalized.data ?? {};
+        const content = toArray(raw);
+
+        return {
+            success: true,
+            data: {
+                ...raw,
+                content,
+                totalPages: Number(raw?.totalPages ?? 0),
+                number: Number(raw?.number ?? page),
+                size: Number(raw?.size ?? size),
+            },
+        };
+    } catch (error) {
+        return {
+            success: false,
+            error: mapError(error, 'Không tải được đơn tùy chỉnh.'),
+            data: { content: [], totalPages: 0, number: page, size },
+        };
     }
 };
 
@@ -428,8 +481,8 @@ export default {
     getStageCanPay,
     initiateStagePayment,
     uploadReferenceImage,
-    getOpenCustomRequests,
-    createQuotation,
+    getArtisanCustomRequests,
+    createCustomOrder,
     getArtisanCustomOrders,
     getCustomOrderDetail,
     updateCustomOrderStatus,

@@ -109,7 +109,7 @@ const ArtisanOrdersPage = () => {
             ) : (
                 <div className="list-grid">
                     {filtered.map((order) => {
-                        const id = order?.orderId ?? order?.id;
+                        const id = order?.customOrderId ?? order?.orderId ?? order?.id;
                         const stages = Array.isArray(order?.stages) ? order.stages : [];
                         const progress = getProgress(order);
                         const currentStage = stages.find((stage) => String(stage?.status || '').toUpperCase() === 'PAID' && stage?.canComplete);
@@ -146,7 +146,14 @@ const ArtisanOrdersPage = () => {
                                         >
                                             {cancellingId === String(id) ? 'Đang huỷ...' : 'Huỷ đơn'}
                                         </button>
-                                        <button type="button" className="btn btn-primary btn-sm" onClick={() => navigate(`/artisan/orders/${id}`)}>Quản lý</button>
+                                        <button
+                                            type="button"
+                                            className="btn btn-primary btn-sm"
+                                            disabled={!id}
+                                            onClick={() => navigate(`/artisan/orders/${id}`)}
+                                        >
+                                            Quản lý
+                                        </button>
                                     </div>
                                 </footer>
                             </article>

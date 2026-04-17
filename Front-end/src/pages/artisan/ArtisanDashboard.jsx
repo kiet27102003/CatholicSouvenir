@@ -15,7 +15,7 @@ import './ArtisanDashboard.css';
 const getViewFromPath = (pathname) => {
     if (pathname === '/artisan/templates') return 'templates';
     if (pathname === '/artisan/requests') return 'requests';
-    if (/^\/artisan\/requests\/[^/]+\/quote$/.test(pathname)) return 'quoteCreate';
+    if (/^\/artisan\/requests\/[^/]+\/custom-order$/.test(pathname)) return 'customOrderCreate';
     if (pathname === '/artisan/orders') return 'customOrders';
     if (pathname === '/artisan/wallet') return 'wallet';
     if (pathname === '/artisan/messages') return 'messages';
@@ -54,7 +54,7 @@ const ArtisanDashboard = () => {
         if (location.pathname !== nextPath) navigate(nextPath);
     };
 
-    const sidebarView = activeView === 'quoteCreate' ? 'requests' : activeView;
+    const sidebarView = activeView === 'customOrderCreate' ? 'requests' : activeView;
 
     return (
         <div className="artisan-dashboard">
@@ -76,16 +76,18 @@ const ArtisanDashboard = () => {
                 className={`artisan-main ${activeView === 'messages' ? 'artisan-main--chat' : ''}`}
                 style={activeView === 'messages' ? { padding: 0 } : undefined}
             >
-                {activeView === 'dashboard' && <Workbench user={user} />}
-                {activeView === 'commissions' && <div className="view-placeholder">Commissions View</div>}
-                {activeView === 'messages' && <ChatPage />}
-                {activeView === 'portfolio' && <PortfolioView user={user} />}
-                {activeView === 'templates' && <TemplatesView user={user} />}
-                {activeView === 'requests' && <ArtisanRequestsPage embedded />}
-                {activeView === 'quoteCreate' && <ArtisanQuoteCreatePage embedded />}
-                {activeView === 'customOrders' && <ArtisanOrdersPage embedded />}
-                {activeView === 'wallet' && <WalletPage embedded />}
-                {activeView === 'earnings' && <div className="view-placeholder">Earnings View</div>}
+                <div className="artisan-main-inner">
+                    {activeView === 'dashboard' && <Workbench user={user} />}
+                    {activeView === 'commissions' && <div className="view-placeholder">Commissions View</div>}
+                    {activeView === 'messages' && <ChatPage />}
+                    {activeView === 'portfolio' && <PortfolioView user={user} />}
+                    {activeView === 'templates' && <TemplatesView user={user} />}
+                    {activeView === 'requests' && <ArtisanRequestsPage embedded />}
+                    {activeView === 'customOrderCreate' && <ArtisanQuoteCreatePage embedded />}
+                    {activeView === 'customOrders' && <ArtisanOrdersPage embedded />}
+                    {activeView === 'wallet' && <WalletPage embedded />}
+                    {activeView === 'earnings' && <div className="view-placeholder">Earnings View</div>}
+                </div>
             </main>
         </div>
     );

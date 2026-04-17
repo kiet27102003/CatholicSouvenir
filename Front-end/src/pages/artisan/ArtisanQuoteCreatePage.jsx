@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { appToast } from '../../lib/appToast';
-import { createQuotation, getCustomRequestDetail } from '../../services/customRequestService';
+import { createCustomOrder, getCustomRequestDetail } from '../../services/customRequestService';
 import './ArtisanQuoteCreatePage.css';
 
 const formatCurrency = (value) => `${new Intl.NumberFormat('vi-VN').format(Number(value || 0))} đ`;
@@ -65,13 +65,13 @@ const ArtisanQuoteCreatePage = () => {
         const total = Number(totalPrice);
         const days = Number(estimatedDays);
 
-        if (!total || total <= 0) return appToast.warning('Giá báo phải lớn hơn 0');
+        if (!total || total <= 0) return appToast.warning('Tổng giá phải lớn hơn 0');
         if (!Number.isInteger(days) || days <= 0) return appToast.warning('Số ngày dự kiến phải là số nguyên > 0');
         if (!Array.isArray(stages) || stages.length === 0) return appToast.warning('Cần ít nhất 1 giai đoạn');
 
         const hasInvalid = stages.some((stage) => !stage.stageName.trim() || Number(stage.price) <= 0 || !Number.isInteger(Number(stage.estimatedDays)) || Number(stage.estimatedDays) <= 0);
         if (hasInvalid) return appToast.warning('Vui lòng nhập đầy đủ và hợp lệ cho từng giai đoạn');
-        if (!isMatch) return appToast.warning('Tổng giá các giai đoạn chưa khớp tổng báo giá');
+        if (!isMatch) return appToast.warning('Tổng giá các giai đoạn chưa khớp tổng đơn');
 
         setSubmitting(true);
         const stageAmounts = stages.map((stage) => Number(stage.price));
@@ -94,16 +94,16 @@ const ArtisanQuoteCreatePage = () => {
             })),
         };
 
-        const res = await createQuotation(payload);
+        const res = await createCustomOrder(payload);
         setSubmitting(false);
 
         if (!res.success) {
-            appToast.error('Gửi báo giá thất bại', res.error || 'Vui lòng thử lại');
+            appToast.error('Tạo custom order thất bại', res.error || 'Vui lòng thử lại');
             return;
         }
 
-        appToast.success('Đã gửi báo giá thành công');
-        navigate('/artisan/requests');
+        appToast.success('Đã tạo custom order thành công');
+        navigate('/artisan/orders');
     };
 
     if (loading) {
@@ -114,15 +114,15 @@ const ArtisanQuoteCreatePage = () => {
         <div className="artisan-quote-page">
             <header className="artisan-quote-header">
                 <button type="button" className="btn btn-outline" onClick={() => navigate('/artisan/requests')}>← Quay lại</button>
-                <h1>Báo giá: {String(request?.description || 'Yêu cầu').slice(0, 60)}</h1>
+                <h1>Tạo custom order: {String(request?.description || 'Yêu cầu').slice(0, 60)}</h1>
             </header>
 
             <div className="artisan-quote-grid">
                 <section className="left-col">
                     <article className="card-box">
-                        <h3>Thông tin báo giá</h3>
+                        <h3>Thông tin custom order</h3>
                         <label>
-                            Tổng giá báo
+                            Tổng giá
                             <input type="number" min="1" value={totalPrice} onChange={(e) => setTotalPrice(e.target.value)} />
                         </label>
                         <label>
@@ -181,7 +181,7 @@ const ArtisanQuoteCreatePage = () => {
                         <h3>Tổng stages</h3>
                         <p>{formatCurrency(stageTotal)}</p>
                         <button type="button" className="btn btn-primary" disabled={submitting} onClick={handleSubmit}>
-                            {submitting ? 'Đang gửi...' : 'Gửi báo giá'}
+                            {submitting ? 'Đang tạo...' : 'Tạo custom order'}
                         </button>
                     </article>
                 </aside>

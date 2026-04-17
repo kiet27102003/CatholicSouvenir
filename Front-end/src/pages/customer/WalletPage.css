@@ -15,6 +15,17 @@
     color: var(--color-text-light);
 }
 
+.wallet-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.wallet-withdraw-btn {
+    white-space: nowrap;
+}
+
 .wallet-top-grid {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 280px;
@@ -24,8 +35,9 @@
 .wallet-hero-card {
     border-radius: var(--radius-lg);
     padding: var(--spacing-xl);
-    background: linear-gradient(135deg, var(--color-primary), #4c6bc2);
-    color: white;
+    background: white;
+    color: var(--color-text);
+    border: 1px solid var(--color-border-light);
     box-shadow: var(--shadow-sm);
 }
 
@@ -186,6 +198,38 @@
     color: var(--color-text-light);
 }
 
+.wallet-withdrawal-section {
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-lg);
+    background: white;
+    padding: var(--spacing-md);
+}
+
+.wallet-withdrawal-header h2 {
+    margin: 0;
+}
+
+.wallet-withdrawal-header p {
+    margin: 0.25rem 0 0;
+    color: var(--color-text-light);
+}
+
+.wallet-status-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    padding: 0.22rem 0.6rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.wallet-status-pending { background: #fef3c7; color: #92400e; }
+.wallet-status-approved { background: #dcfce7; color: #166534; }
+.wallet-status-rejected { background: #fee2e2; color: #b91c1c; }
+.wallet-status-processed { background: #dbeafe; color: #1d4ed8; }
+
 .wallet-meta-foot {
     display: flex;
     justify-content: space-between;
@@ -193,6 +237,125 @@
     gap: var(--spacing-sm);
     font-size: 0.875rem;
     color: var(--color-text-light);
+}
+
+.wallet-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-md);
+    z-index: 1000;
+}
+
+.wallet-modal {
+    width: min(100%, 520px);
+    background: white;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--color-border-light);
+    overflow: hidden;
+}
+
+.wallet-modal-header {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--spacing-md);
+    align-items: flex-start;
+    padding: var(--spacing-lg);
+    border-bottom: 1px solid var(--color-border-light);
+}
+
+.wallet-modal-header h2 {
+    margin: 0;
+}
+
+.wallet-modal-header p {
+    margin: 0.25rem 0 0;
+    color: var(--color-text-light);
+}
+
+.wallet-modal-close {
+    border: 0;
+    background: transparent;
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+    color: var(--color-text-light);
+}
+
+.wallet-modal-body {
+    padding: var(--spacing-lg);
+    display: grid;
+    gap: var(--spacing-md);
+}
+
+.wallet-modal-body label {
+    display: grid;
+    gap: 0.4rem;
+}
+
+.wallet-modal-body span {
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.wallet-modal-body input {
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-md);
+    padding: 0.65rem 0.75rem;
+}
+
+.wallet-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--spacing-sm);
+    padding: 0 var(--spacing-lg) var(--spacing-lg);
+}
+
+.wallet-confirm-summary {
+    padding: var(--spacing-lg);
+    display: grid;
+    gap: 0.5rem;
+}
+
+.wallet-confirm-summary p {
+    margin: 0;
+    display: flex;
+    justify-content: space-between;
+    gap: var(--spacing-md);
+}
+
+.wallet-confirm-summary span {
+    color: var(--color-text-light);
+}
+
+@media (max-width: 768px) {
+    .wallet-top-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .wallet-filter-bar {
+        grid-template-columns: 1fr;
+    }
+
+    .wallet-pagination {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-sm);
+    }
+
+    .wallet-header-row,
+    .wallet-modal-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .wallet-confirm-summary p {
+        flex-direction: column;
+    }
 }
 
 .wallet-skeleton {

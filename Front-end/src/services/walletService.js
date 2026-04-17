@@ -100,9 +100,48 @@ export const getWalletByAccountId = async (accountId) => {
     }
 };
 
+export const createWithdrawalRequest = async (payload) => {
+    try {
+        const body = {
+            amount: Number(payload?.amount || 0),
+            bankName: String(payload?.bankName || '').trim(),
+            bankAccountNumber: String(payload?.bankAccountNumber || '').trim(),
+            bankAccountName: String(payload?.bankAccountName || '').trim(),
+        };
+
+        const response = await api.post('/withdrawals', body);
+        const normalized = normalizeResponse(response);
+
+        if (!isSuccessCode(normalized.code)) {
+            return { success: false, error: normalized.message || 'Tạo yêu cầu rút tiền thất bại.' };
+        }
+
+        return { success: true, data: normalized.data || {} };
+    } catch (error) {
+        return { success: false, error: mapError(error, 'Tạo yêu cầu rút tiền thất bại.') };
+    }
+};
+
+export const getMyWithdrawals = async () => {
+    try {
+        const response = await api.get('/withdrawals/my');
+        const normalized = normalizeResponse(response);
+
+        if (!isSuccessCode(normalized.code)) {
+            return { success: false, error: normalized.message || 'Không thể tải danh sách rút tiền.', data: [] };
+        }
+
+        return { success: true, data: toArray(normalized.data) };
+    } catch (error) {
+        return { success: false, error: mapError(error, 'Không thể tải danh sách rút tiền.'), data: [] };
+    }
+};
+
 export default {
     getMyWallet,
     getWalletBalance,
     getWalletTransactions,
     getWalletByAccountId,
+    createWithdrawalRequest,
+    getMyWithdrawals,
 };

@@ -59,6 +59,23 @@ export const createCheckout = async (body) => {
     }
 };
 
+export const getOrderGroupDetail = async (orderGroupId) => {
+    if (!orderGroupId) {
+        return { success: false, error: 'Thiếu orderGroupId.' };
+    }
+
+    try {
+        const response = await api.get(`/checkout/order-group/${orderGroupId}`);
+        const payload = unwrap(response);
+        if (!payload.ok) {
+            return { success: false, error: payload.message || 'Không thể tải thông tin nhóm đơn hàng.' };
+        }
+        return { success: true, data: payload.data ?? null };
+    } catch (error) {
+        return { success: false, error: mapError(error, 'Không thể tải thông tin nhóm đơn hàng.') };
+    }
+};
+
 export const getProvinces = async () => {
     try {
         const response = await api.get('/shipments/address/provinces');

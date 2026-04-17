@@ -212,7 +212,7 @@
 .customer-content-wrapper {
     flex: 1;
     background: transparent;
-    padding: var(--spacing-xl);
+    padding: 0;
     min-width: 0;
     /* Prevents flex flex-child from overflowing container */
 }
@@ -248,7 +248,7 @@
     }
 
     .customer-content-wrapper {
-        padding: var(--spacing-lg);
+        padding: 0;
     }
 }
 
@@ -258,7 +258,7 @@
     }
 
     .customer-content-wrapper {
-        padding: var(--spacing-md);
+        padding: 0;
     }
 
     .sidebar-profile {

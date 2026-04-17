@@ -1,6 +1,9 @@
+.artisan-layout,
 .artisan-dashboard {
-    display: flex;
+    display: block;
+    width: 100%;
     min-height: 100vh;
+    overflow: hidden;
     background: #f8f9fa;
 }
 
@@ -12,19 +15,40 @@
     display: none;
 }
 
+.artisan-sidebar {
+    width: 280px;
+    flex: 0 0 280px;
+}
+
 .artisan-main {
-    margin-left: 280px;
     width: calc(100% - 280px);
-    padding: 32px;
+    margin-left: 280px;
+    min-height: 100vh;
+    overflow-x: hidden;
+    padding: 0;
     overflow-y: auto;
+    box-sizing: border-box;
+    display: flex;
+    justify-content: stretch;
+}
+
+.artisan-main-inner {
+    width: 100%;
+    min-width: 0;
+    padding: 24px 32px 32px;
+    box-sizing: border-box;
 }
 
 .artisan-main--chat {
     padding: 0;
-    margin-left: 280px;
     margin-right: 0 !important;
     width: calc(100% - 280px);
-    min-width: 0;
+    margin-left: 280px;
+    min-height: 100vh;
+    overflow-x: hidden;
+    box-sizing: border-box;
+    display: flex;
+    justify-content: stretch;
 }
 
 .view-placeholder {
@@ -67,17 +91,25 @@
     }
 
     .artisan-main {
-        margin-left: 0;
         width: 100%;
-        padding: 20px;
-        padding-top: 72px;
+        margin-left: 0;
+        padding: 72px 0 0;
+    }
+
+    .artisan-main-inner {
+        max-width: 100%;
+        padding: 0 20px 20px;
+    }
+
+    .artisan-main--chat .artisan-main-inner {
+        padding: 0;
     }
 
     .artisan-main--chat {
         width: 100%;
+        margin-left: 0;
         margin-right: 0 !important;
-        padding: 0;
-        padding-top: 72px;
+        padding: 72px 0 0;
     }
 
     .view-placeholder {
@@ -88,7 +120,14 @@
 
 @media (max-width: 768px) {
     .artisan-main {
-        padding: 16px;
-        padding-top: 64px;
+        width: 100%;
+        margin-left: 0;
+        padding: 64px 0 16px;
+    }
+
+    .artisan-main--chat {
+        width: 100%;
+        margin-left: 0;
+        padding: 64px 0 16px;
     }
 }

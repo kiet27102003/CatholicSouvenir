@@ -18,7 +18,7 @@ import ArtisanCentrePage from './pages/ArtisanCentrePage'
 import ShopPage from './pages/ShopPage'
 import CustomRequestsListPage from './pages/customer/CustomRequestsListPage'
 import CustomRequestCreatePage from './pages/customer/CustomRequestCreatePage'
-import CustomRequestDetailPage from './pages/customer/CustomRequestDetailPage'
+import CustomRequestDetailPage from './pages/customer/CustomRequestDetail'
 import ChatPage from './pages/customer/ChatPage'
 
 import CheckoutPage from './pages/CheckoutPage'
@@ -98,7 +98,7 @@ function App() {
         <Route path="/artisan/requests" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
         <Route path="/artisan/wallet" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
         <Route path="/artisan/messages" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
-        <Route path="/artisan/requests/:id/quote" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
+        <Route path="/artisan/requests/:id/custom-order" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
         <Route path="/artisan/orders" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
         <Route path="/artisan/orders/:id" element={<ArtisanOnlyRoute><ArtisanOrderDetailPage /></ArtisanOnlyRoute>} />
 

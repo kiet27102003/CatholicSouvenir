@@ -320,26 +320,24 @@ const CheckoutPage = () => {
             const checkoutResult = await checkoutService.createCheckout({
                 shippingAddress,
                 phoneNumber: shipping.phone.trim(),
-                notes: shipping.note?.trim() || '',
-                paymentMethod: 'VNPAY',
+                note: shipping.note?.trim() || '',
             });
 
             if (!checkoutResult.success) {
-                appToast.error('Tạo đơn hàng thất bại', checkoutResult.error || 'Vui lòng thử lại');
+                appToast.error('Tạo nhóm đơn hàng thất bại', checkoutResult.error || 'Vui lòng thử lại');
                 return;
             }
 
-            const orderId = checkoutResult.data?.orderId;
-            if (!orderId) {
-                appToast.error('Không nhận được mã đơn hàng để thanh toán');
+            const orderGroupId = checkoutResult.data?.orderGroupId || checkoutResult.data?.groupId;
+            if (!orderGroupId) {
+                appToast.error('Không nhận được mã nhóm đơn hàng để thanh toán');
                 return;
             }
 
-            const paymentResult = await paymentService.initiatePayment({
-                orderId,
+            const paymentResult = await paymentService.initiateOrderGroupPayment({
+                orderGroupId,
                 method: 'VNPAY',
                 returnUrl: `${window.location.origin}/payment/success`,
-                cancelUrl: `${window.location.origin}/payment/failed`,
             });
 
             if (!paymentResult.success) {

@@ -28,6 +28,27 @@ export const initiatePayment = async (body) => {
     }
 };
 
+export const initiateOrderGroupPayment = async ({ orderGroupId, method = 'VNPAY', returnUrl }) => {
+    if (!orderGroupId) {
+        return { success: false, error: 'Thiếu orderGroupId.' };
+    }
+
+    try {
+        const response = await api.post('/payments/initiate', {
+            orderGroupId,
+            method,
+            returnUrl,
+        });
+        const payload = normalizeResponse(response);
+        if (payload.code !== 200 && payload.code !== 201) {
+            return { success: false, error: payload.message || 'Không thể khởi tạo thanh toán.' };
+        }
+        return { success: true, data: payload.data ?? {} };
+    } catch (error) {
+        return { success: false, error: mapError(error, 'Không thể khởi tạo thanh toán.') };
+    }
+};
+
 export const callbackPayment = async (gateway, queryObject) => {
     try {
         const response = await api.post(`/payments/callback?gateway=${encodeURIComponent(gateway || 'VNPAY')}`, queryObject || {});

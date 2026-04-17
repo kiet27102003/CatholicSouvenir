@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { memo, useEffect, useMemo, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { appToast } from '../../lib/appToast';
-import { getOpenCustomRequests } from '../../services/customRequestService';
+import { getArtisanCustomRequests } from '../../services/customRequestService';
 import { getMyConversations, startConversation } from '../../services/chatService';
 import './ArtisanRequestsPage.css';
 
@@ -31,23 +31,157 @@ const budgetOptions = [
     { key: 'ABOVE_5M', label: 'Trên 5.000.000 đ' },
 ];
 
+const statusOptions = [
+    { key: 'ALL', label: 'Tất cả trạng thái' },
+    { key: 'ARTISAN_SELECTED', label: 'Đã chọn nghệ nhân' },
+    { key: 'OPEN', label: 'Đang mở' },
+    { key: 'IN_PROGRESS', label: 'Đang thực hiện' },
+    { key: 'COMPLETED', label: 'Hoàn thành' },
+    { key: 'CANCELLED', label: 'Đã huỷ' },
+    { key: 'CLOSED', label: 'Đã đóng' },
+];
+
+const RequestFilters = memo(({ search, onSearchChange, statusFilter, onStatusChange, budgetFilter, onBudgetChange }) => (
+    <header className="artisan-page-header">
+        <div>
+            <h1>Yêu cầu đặt làm riêng</h1>
+            <p>Các yêu cầu từ khách hàng đang tìm nghệ nhân</p>
+        </div>
+        <div className="artisan-requests-filters">
+            <input type="search" placeholder="Tìm theo mô tả yêu cầu..." value={search} onChange={(e) => onSearchChange(e.target.value)} />
+            <select value={statusFilter} onChange={(e) => onStatusChange(e.target.value)}>
+                {statusOptions.map((option) => (
+                    <option key={option.key} value={option.key}>{option.label}</option>
+                ))}
+            </select>
+            <select value={budgetFilter} onChange={(e) => onBudgetChange(e.target.value)}>
+                {budgetOptions.map((option) => (
+                    <option key={option.key} value={option.key}>{option.label}</option>
+                ))}
+            </select>
+        </div>
+    </header>
+));
+
+const RequestList = memo(({ loading, filtered, page, totalPages, onPrev, onNext, navigate, conversationByRequest, startConversationHandler }) => {
+    if (loading) {
+        return (
+            <div className="artisan-requests-grid">
+                {[1, 2, 3].map((item) => <div key={item} className="artisan-skeleton-card" />)}
+            </div>
+        );
+    }
+
+    if (filtered.length === 0) {
+        return <div className="artisan-empty">Không có yêu cầu phù hợp với bộ lọc hiện tại</div>;
+    }
+
+    return (
+        <>
+            <div className="artisan-requests-grid">
+                {filtered.map((item) => {
+                    const id = getRequestId(item);
+                    const refs = Array.isArray(item?.referenceImages) ? item.referenceImages : [];
+                    const quoteCount = Number(item?.quotationCount ?? item?.quotesCount ?? item?.totalQuotations ?? 0);
+                    const customerName = item?.customerName || item?.customer?.fullName || item?.customer?.name || 'Khách hàng';
+                    const status = String(item?.status || '').toUpperCase();
+                    const canCreateCustomOrder = status === 'ARTISAN_SELECTED';
+                    const statusLabel = status === 'OPEN' ? 'Đang mở' : status === 'ARTISAN_SELECTED' ? 'Đã chọn nghệ nhân' : status === 'IN_PROGRESS' ? 'Đang thực hiện' : status === 'COMPLETED' ? 'Hoàn thành' : status === 'CANCELLED' ? 'Đã huỷ' : status === 'CLOSED' ? 'Đã đóng' : status || 'Không xác định';
+
+                    return (
+                        <article key={String(id)} className="artisan-request-card">
+                            <header>
+                                <h3>{truncate(item?.description, 70)}</h3>
+                                <p>{formatDate(item?.createdAt)} · {formatCurrency(item?.minBudget)} – {formatCurrency(item?.maxBudget)}</p>
+                                <span className="status-open">{statusLabel}</span>
+                            </header>
+                            <div className="body">
+                                <p>{truncate(item?.description, 140)}</p>
+                                <div className="thumbs">
+                                    {item?.aiGeneratedImageUrl && <img src={item.aiGeneratedImageUrl} alt="AI" />}
+                                    {refs.slice(0, 3).map((url) => <img key={url} src={url} alt="ref" />)}
+                                </div>
+                                <small>{quoteCount} báo giá đã nhận</small>
+                            </div>
+                            <footer>
+                                <span>{customerName}</span>
+                                <div className="artisan-request-actions">
+                                    {canCreateCustomOrder ? (
+                                        <button type="button" className="btn btn-outline btn-sm" onClick={() => navigate(`/artisan/requests/${id}/custom-order`)}>
+                                            Tạo custom order
+                                        </button>
+                                    ) : (
+                                        <button type="button" className="btn btn-outline btn-sm" disabled title="Chỉ tạo custom order khi khách đã chọn nghệ nhân">
+                                            Chưa được chọn
+                                        </button>
+                                    )}
+                                    <button type="button" className="btn btn-primary btn-sm" onClick={async () => {
+                                        const existingConversationId = conversationByRequest[String(id)];
+                                        if (existingConversationId) {
+                                            navigate(`/artisan/messages?conversationId=${existingConversationId}`);
+                                            return;
+                                        }
+
+                                        await startConversationHandler(id);
+                                    }}>
+                                        {conversationByRequest[String(id)] ? 'Tiếp tục trò chuyện' : 'Bắt đầu trò chuyện'}
+                                    </button>
+                                </div>
+                            </footer>
+                        </article>
+                    );
+                })}
+            </div>
+
+            <div className="artisan-pagination">
+                <button type="button" className="btn btn-outline btn-sm" disabled={page <= 0} onClick={onPrev}>Trang trước</button>
+                <span>Trang {page + 1} / {Math.max(1, totalPages || 1)}</span>
+                <button type="button" className="btn btn-outline btn-sm" disabled={totalPages > 0 && page + 1 >= totalPages} onClick={onNext}>Trang sau</button>
+            </div>
+        </>
+    );
+});
+
 const ArtisanRequestsPage = () => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
     const [requests, setRequests] = useState([]);
     const [search, setSearch] = useState('');
     const [budgetFilter, setBudgetFilter] = useState('ALL');
+    const [statusFilter, setStatusFilter] = useState('ALL');
     const [page, setPage] = useState(0);
     const [size] = useState(10);
     const [totalPages, setTotalPages] = useState(0);
     const [conversationByRequest, setConversationByRequest] = useState({});
+
+    const handleSearchChange = useCallback((value) => setSearch(value), []);
+    const handleStatusChange = useCallback((value) => {
+        setStatusFilter(value);
+        setPage(0);
+    }, []);
+    const handleBudgetChange = useCallback((value) => setBudgetFilter(value), []);
+    const handlePrevPage = useCallback(() => setPage((current) => Math.max(0, current - 1)), []);
+    const handleNextPage = useCallback(() => setPage((current) => current + 1), []);
+
+    const startConversationHandler = useCallback(async (requestId) => {
+        const startRes = await startConversation(requestId);
+        if (!startRes.success) {
+            appToast.error('Không thể bắt đầu trò chuyện', startRes.error || 'Vui lòng thử lại');
+            return;
+        }
+
+        appToast.success('Đã bắt đầu cuộc trò chuyện');
+        const conversationId = startRes?.data?.id ?? startRes?.data?.conversationId;
+        if (conversationId) navigate(`/artisan/messages?conversationId=${conversationId}`);
+        else navigate('/artisan/messages');
+    }, [navigate]);
 
     useEffect(() => {
         let ignore = false;
         const fetchOpenRequests = async () => {
             setLoading(true);
             const [res, convRes] = await Promise.all([
-                getOpenCustomRequests({ page, size }),
+                getArtisanCustomRequests({ status: statusFilter, page, size }),
                 getMyConversations(),
             ]);
             if (ignore) return;
@@ -77,7 +211,7 @@ const ArtisanRequestsPage = () => {
         return () => {
             ignore = true;
         };
-    }, [page, size]);
+    }, [page, size, statusFilter]);
 
     const filtered = useMemo(() => {
         const q = search.trim().toLowerCase();
@@ -88,7 +222,6 @@ const ArtisanRequestsPage = () => {
 
             const min = Number(item?.minBudget || 0);
             const max = Number(item?.maxBudget || 0);
-
             if (budgetFilter === 'UNDER_2M') return max > 0 && max < 2000000;
             if (budgetFilter === '2M_5M') return min >= 2000000 && max <= 5000000;
             if (budgetFilter === 'ABOVE_5M') return max >= 5000000;
@@ -98,97 +231,26 @@ const ArtisanRequestsPage = () => {
 
     return (
         <div className="artisan-requests-page">
-            <header className="artisan-page-header">
-                <div>
-                    <h1>Yêu cầu đặt làm riêng</h1>
-                    <p>Các yêu cầu từ khách hàng đang tìm nghệ nhân</p>
-                </div>
-                <div className="artisan-requests-filters">
-                    <input
-                        type="search"
-                        placeholder="Tìm theo mô tả yêu cầu..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                    />
-                    <select value={budgetFilter} onChange={(e) => setBudgetFilter(e.target.value)}>
-                        {budgetOptions.map((option) => (
-                            <option key={option.key} value={option.key}>{option.label}</option>
-                        ))}
-                    </select>
-                </div>
-            </header>
+            <RequestFilters
+                search={search}
+                onSearchChange={handleSearchChange}
+                statusFilter={statusFilter}
+                onStatusChange={handleStatusChange}
+                budgetFilter={budgetFilter}
+                onBudgetChange={handleBudgetChange}
+            />
 
-            {loading ? (
-                <div className="artisan-requests-grid">
-                    {[1, 2, 3].map((item) => <div key={item} className="artisan-skeleton-card" />)}
-                </div>
-            ) : filtered.length === 0 ? (
-                <div className="artisan-empty">Chưa có yêu cầu nào đang mở</div>
-            ) : (
-                <div className="artisan-requests-grid">
-                    {filtered.map((item) => {
-                        const id = getRequestId(item);
-                        const refs = Array.isArray(item?.referenceImages) ? item.referenceImages : [];
-                        const quoteCount = Number(item?.quotationCount ?? item?.quotesCount ?? item?.totalQuotations ?? 0);
-                        const customerName = item?.customerName || item?.customer?.fullName || item?.customer?.name || 'Khách hàng';
-
-                        return (
-                            <article key={String(id)} className="artisan-request-card">
-                                <header>
-                                    <h3>{truncate(item?.description, 70)}</h3>
-                                    <p>{formatDate(item?.createdAt)} · {formatCurrency(item?.minBudget)} – {formatCurrency(item?.maxBudget)}</p>
-                                    <span className="status-open">Đang mở</span>
-                                </header>
-                                <div className="body">
-                                    <p>{truncate(item?.description, 140)}</p>
-                                    <div className="thumbs">
-                                        {item?.aiGeneratedImageUrl && <img src={item.aiGeneratedImageUrl} alt="AI" />}
-                                        {refs.slice(0, 3).map((url) => <img key={url} src={url} alt="ref" />)}
-                                    </div>
-                                    <small>{quoteCount} báo giá đã nhận</small>
-                                </div>
-                                <footer>
-                                    <span>{customerName}</span>
-                                    <button
-                                        type="button"
-                                        className="btn btn-primary btn-sm"
-                                        onClick={async () => {
-                                            const existingConversationId = conversationByRequest[String(id)];
-                                            if (existingConversationId) {
-                                                navigate(`/artisan/messages?conversationId=${existingConversationId}`);
-                                                return;
-                                            }
-
-                                            const startRes = await startConversation(id);
-                                            if (!startRes.success) {
-                                                appToast.error('Không thể bắt đầu trò chuyện', startRes.error || 'Vui lòng thử lại');
-                                                return;
-                                            }
-
-                                            appToast.success('Đã bắt đầu cuộc trò chuyện');
-                                            const conversationId = startRes?.data?.id ?? startRes?.data?.conversationId;
-                                            if (conversationId) navigate(`/artisan/messages?conversationId=${conversationId}`);
-                                            else navigate('/artisan/messages');
-                                        }}
-                                    >
-                                        {conversationByRequest[String(id)] ? 'Tiếp tục trò chuyện' : 'Bắt đầu trò chuyện'}
-                                    </button>
-                                </footer>
-                            </article>
-                        );
-                    })}
-                </div>
-            )}
-
-            <div className="artisan-pagination">
-                <button type="button" className="btn btn-outline btn-sm" disabled={page <= 0} onClick={() => setPage((p) => Math.max(0, p - 1))}>
-                    Trang trước
-                </button>
-                <span>Trang {page + 1} / {Math.max(1, totalPages || 1)}</span>
-                <button type="button" className="btn btn-outline btn-sm" disabled={totalPages > 0 && page + 1 >= totalPages} onClick={() => setPage((p) => p + 1)}>
-                    Trang sau
-                </button>
-            </div>
+            <RequestList
+                loading={loading}
+                filtered={filtered}
+                page={page}
+                totalPages={totalPages}
+                onPrev={handlePrevPage}
+                onNext={handleNextPage}
+                navigate={navigate}
+                conversationByRequest={conversationByRequest}
+                startConversationHandler={startConversationHandler}
+            />
         </div>
     );
 };

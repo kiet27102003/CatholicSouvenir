@@ -26,7 +26,7 @@ const formatCurrency = (value) => `${new Intl.NumberFormat('vi-VN').format(Numbe
 const formatDateTime = (value) => (value ? dayjs(value).format('DD/MM/YYYY HH:mm') : '—');
 const formatShortDateTime = (value) => (value ? dayjs(value).format('DD/MM HH:mm') : '—');
 
-const WalletPage = () => {
+const WalletPage = ({ embedded = false }) => {
     const location = useLocation();
     const { user, isAuthenticated } = useAuth();
 
@@ -34,8 +34,16 @@ const WalletPage = () => {
     const canView = role === 'customer' || role === 'artisan';
 
     const [loading, setLoading] = useState(true);
+    const [submitting, setSubmitting] = useState(false);
     const [wallet, setWallet] = useState(null);
     const [transactions, setTransactions] = useState([]);
+    const [withdrawals, setWithdrawals] = useState([]);
+    const [withdrawOpen, setWithdrawOpen] = useState(false);
+    const [withdrawConfirmOpen, setWithdrawConfirmOpen] = useState(false);
+    const [withdrawAmount, setWithdrawAmount] = useState('');
+    const [bankName, setBankName] = useState('');
+    const [bankAccountNumber, setBankAccountNumber] = useState('');
+    const [bankAccountName, setBankAccountName] = useState('');
 
     const [searchKeyword, setSearchKeyword] = useState('');
     const [typeFilter, setTypeFilter] = useState('ALL');
@@ -50,9 +58,10 @@ const WalletPage = () => {
         const fetchData = async () => {
             setLoading(true);
 
-            const [walletRes, transactionsRes] = await Promise.all([
+            const [walletRes, transactionsRes, withdrawalsRes] = await Promise.all([
                 walletService.getMyWallet(),
                 walletService.getWalletTransactions(),
+                walletService.getMyWithdrawals(),
             ]);
 
             if (cancelled) return;
@@ -65,8 +74,13 @@ const WalletPage = () => {
                 appToast.error('Không tải được giao dịch ví', transactionsRes.error || 'Vui lòng thử lại sau');
             }
 
+            if (!withdrawalsRes.success) {
+                appToast.error('Không tải được danh sách rút tiền', withdrawalsRes.error || 'Vui lòng thử lại sau');
+            }
+
             setWallet(walletRes.success ? walletRes.data : null);
             setTransactions(transactionsRes.success ? (transactionsRes.data || []) : []);
+            setWithdrawals(withdrawalsRes.success ? (withdrawalsRes.data || []) : []);
 
             setLoading(false);
         };
@@ -125,6 +139,56 @@ const WalletPage = () => {
         return `${id.slice(0, 6)}...${id.slice(-4)}`;
     }, [wallet?.walletId]);
 
+    const openWithdraw = () => {
+        setWithdrawAmount('');
+        setBankName('');
+        setBankAccountNumber('');
+        setBankAccountName('');
+        setWithdrawOpen(true);
+    };
+
+    const submitWithdraw = async () => {
+        const amount = Number(withdrawAmount || 0);
+        if (!amount || amount <= 0) {
+            appToast.error('Số tiền không hợp lệ', 'Vui lòng nhập số tiền lớn hơn 0');
+            return;
+        }
+        if (amount > Number(wallet?.balance || 0)) {
+            appToast.error('Số dư không đủ', 'Số tiền rút không được vượt quá số dư hiện tại');
+            return;
+        }
+        if (!bankName.trim() || !bankAccountNumber.trim() || !bankAccountName.trim()) {
+            appToast.error('Thiếu thông tin ngân hàng', 'Vui lòng nhập đầy đủ tên ngân hàng, số tài khoản và tên chủ tài khoản');
+            return;
+        }
+
+        setSubmitting(true);
+        const res = await walletService.createWithdrawalRequest({
+            amount,
+            bankName,
+            bankAccountNumber,
+            bankAccountName,
+        });
+        setSubmitting(false);
+
+        if (!res.success) {
+            appToast.error('Rút tiền thất bại', res.error || 'Vui lòng thử lại sau');
+            return;
+        }
+
+        appToast.success('Đã tạo yêu cầu rút tiền', 'Yêu cầu của bạn đã được gửi và đang chờ xử lý');
+        setWithdrawConfirmOpen(false);
+        setWithdrawOpen(false);
+        const [walletRes, transactionsRes, withdrawalsRes] = await Promise.all([
+            walletService.getMyWallet(),
+            walletService.getWalletTransactions(),
+            walletService.getMyWithdrawals(),
+        ]);
+        if (walletRes.success) setWallet(walletRes.data);
+        if (transactionsRes.success) setTransactions(transactionsRes.data || []);
+        if (withdrawalsRes.success) setWithdrawals(withdrawalsRes.data || []);
+    };
+
     if (!isAuthenticated) {
         return <Navigate to="/login" replace />;
     }
@@ -135,9 +199,14 @@ const WalletPage = () => {
 
     return (
         <div className="wallet-page">
-            <header className="wallet-header">
-                <h1>Ví của tôi</h1>
-                <p>Quản lý số dư và lịch sử giao dịch</p>
+            <header className="wallet-header wallet-header-row">
+                <div>
+                    <h1>Ví của tôi</h1>
+                    <p>Quản lý số dư và lịch sử giao dịch</p>
+                </div>
+                <button type="button" className="btn btn-primary wallet-withdraw-btn" onClick={openWithdraw} disabled={loading || Number(wallet?.balance || 0) <= 0}>
+                    Rút số dư
+                </button>
             </header>
 
             {loading ? (
@@ -152,9 +221,7 @@ const WalletPage = () => {
                         <article className="wallet-hero-card">
                             <p className="wallet-hero-label">Số dư hiện tại</p>
                             <h2>{formatCurrency(wallet?.balance || 0)}</h2>
-                            <p className="wallet-hero-meta">
-                                <code>{walletIdShort}</code>
-                            </p>
+                            <p className="wallet-hero-meta"><code>{walletIdShort}</code></p>
                             <p className="wallet-hero-meta">Cập nhật: {wallet?.updatedAt ? dayjs(wallet.updatedAt).format('DD/MM/YYYY') : '—'}</p>
                         </article>
 
@@ -172,12 +239,7 @@ const WalletPage = () => {
 
                     <section className="wallet-table-section">
                         <div className="wallet-filter-bar">
-                            <input
-                                type="text"
-                                placeholder="Tìm theo mô tả giao dịch"
-                                value={searchKeyword}
-                                onChange={(event) => setSearchKeyword(event.target.value)}
-                            />
+                            <input type="text" placeholder="Tìm theo mô tả giao dịch" value={searchKeyword} onChange={(event) => setSearchKeyword(event.target.value)} />
                             <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}>
                                 <option value="ALL">Tất cả loại</option>
                                 <option value="DEPOSIT">Nhận tiền</option>
@@ -189,12 +251,7 @@ const WalletPage = () => {
 
                         <div className="wallet-quick-tabs">
                             {quickTabs.map((tab) => (
-                                <button
-                                    key={tab.id}
-                                    type="button"
-                                    className={`wallet-quick-tab ${quickType === tab.id ? 'active' : ''}`}
-                                    onClick={() => setQuickType(tab.id)}
-                                >
+                                <button key={tab.id} type="button" className={`wallet-quick-tab ${quickType === tab.id ? 'active' : ''}`} onClick={() => setQuickType(tab.id)}>
                                     {tab.label}
                                 </button>
                             ))}
@@ -226,17 +283,9 @@ const WalletPage = () => {
                                                             <p className="wallet-main-cell">{transaction.description || 'Giao dịch ví'}</p>
                                                             <span className="wallet-sub-cell">#{String(transaction.transactionId || '').slice(0, 8)}</span>
                                                         </td>
-                                                        <td>
-                                                            <span className={`wallet-type-badge ${meta.badgeClass}`}>{meta.label}</span>
-                                                        </td>
-                                                        <td>
-                                                            <strong className={meta.amountClass}>
-                                                                {meta.sign} {formatCurrency(transaction.amount)}
-                                                            </strong>
-                                                        </td>
-                                                        <td>
-                                                            <span className="wallet-balance-after">{formatCurrency(transaction.balanceAfter)}</span>
-                                                        </td>
+                                                        <td><span className={`wallet-type-badge ${meta.badgeClass}`}>{meta.label}</span></td>
+                                                        <td><strong className={meta.amountClass}>{meta.sign} {formatCurrency(transaction.amount)}</strong></td>
+                                                        <td><span className="wallet-balance-after">{formatCurrency(transaction.balanceAfter)}</span></td>
                                                         <td>{formatShortDateTime(transaction.createdAt)}</td>
                                                     </tr>
                                                 );
@@ -246,19 +295,59 @@ const WalletPage = () => {
                                 </div>
 
                                 <div className="wallet-pagination">
-                                    <span>
-                                        Trang {page}/{totalPages}
-                                    </span>
+                                    <span>Trang {page}/{totalPages}</span>
                                     <div>
-                                        <button type="button" className="btn btn-outline btn-sm" disabled={page <= 1} onClick={() => setPage((prev) => prev - 1)}>
-                                            Trước
-                                        </button>
-                                        <button type="button" className="btn btn-outline btn-sm" disabled={page >= totalPages} onClick={() => setPage((prev) => prev + 1)}>
-                                            Sau
-                                        </button>
+                                        <button type="button" className="btn btn-outline btn-sm" disabled={page <= 1} onClick={() => setPage((prev) => prev - 1)}>Trước</button>
+                                        <button type="button" className="btn btn-outline btn-sm" disabled={page >= totalPages} onClick={() => setPage((prev) => prev + 1)}>Sau</button>
                                     </div>
                                 </div>
                             </>
+                        )}
+                    </section>
+
+                    <section className="wallet-withdrawal-section">
+                        <div className="wallet-withdrawal-header">
+                            <h2>Quản lí rút tiền</h2>
+                            <p>Theo dõi các yêu cầu rút tiền của bạn.</p>
+                        </div>
+
+                        {withdrawals.length === 0 ? (
+                            <div className="wallet-empty">Chưa có yêu cầu rút tiền nào</div>
+                        ) : (
+                            <div className="wallet-table-wrapper">
+                                <table className="wallet-table">
+                                    <thead>
+                                        <tr>
+                                            <th>MÃ YÊU CẦU</th>
+                                            <th>SỐ TIỀN</th>
+                                            <th>NGÂN HÀNG</th>
+                                            <th>TRẠNG THÁI</th>
+                                            <th>THỜI GIAN</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {withdrawals.map((withdrawal) => (
+                                            <tr key={withdrawal.withdrawalId}>
+                                                <td>
+                                                    <p className="wallet-main-cell">#{String(withdrawal.withdrawalId || '').slice(0, 8)}</p>
+                                                    <span className="wallet-sub-cell">{withdrawal.bankAccountName || '—'}</span>
+                                                </td>
+                                                <td><strong className="wallet-amount-minus">- {formatCurrency(withdrawal.amount)}</strong></td>
+                                                <td>
+                                                    <p className="wallet-main-cell">{withdrawal.bankName || '—'}</p>
+                                                    <span className="wallet-sub-cell">{withdrawal.bankAccountNumber || '—'}</span>
+                                                </td>
+                                                <td>
+                                                    <span className={`wallet-status-badge wallet-status-${String(withdrawal.status || 'PENDING').toLowerCase()}`}>
+                                                        {withdrawal.status || 'PENDING'}
+                                                    </span>
+                                                </td>
+                                                <td>{formatShortDateTime(withdrawal.createdAt)}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         )}
                     </section>
 
@@ -267,6 +356,71 @@ const WalletPage = () => {
                         <span>Cập nhật gần nhất: {formatDateTime(wallet?.updatedAt)}</span>
                     </section>
                 </>
+            )}
+
+            {withdrawOpen && (
+                <div className="wallet-modal-backdrop" onClick={() => setWithdrawOpen(false)} role="presentation">
+                    <div className="wallet-modal" onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="withdraw-modal-title">
+                        <div className="wallet-modal-header">
+                            <div>
+                                <h2 id="withdraw-modal-title">Rút số dư</h2>
+                                <p>Nhập thông tin tài khoản ngân hàng để tạo yêu cầu rút tiền.</p>
+                            </div>
+                            <button type="button" className="wallet-modal-close" onClick={() => setWithdrawOpen(false)} aria-label="Đóng">×</button>
+                        </div>
+
+                        <div className="wallet-modal-body">
+                            <label>
+                                <span>Số tiền rút</span>
+                                <input type="number" min="1" step="1" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} placeholder="VD: 50000" />
+                            </label>
+                            <label>
+                                <span>Tên ngân hàng</span>
+                                <input type="text" value={bankName} onChange={(e) => setBankName(e.target.value)} placeholder="VD: Vietcombank" />
+                            </label>
+                            <label>
+                                <span>Số tài khoản</span>
+                                <input type="text" value={bankAccountNumber} onChange={(e) => setBankAccountNumber(e.target.value)} placeholder="VD: 76507964620482" />
+                            </label>
+                            <label>
+                                <span>Tên chủ tài khoản</span>
+                                <input type="text" value={bankAccountName} onChange={(e) => setBankAccountName(e.target.value)} placeholder="VD: Nguyễn Văn A" />
+                            </label>
+                        </div>
+
+                        <div className="wallet-modal-actions">
+                            <button type="button" className="btn btn-outline" onClick={() => setWithdrawOpen(false)} disabled={submitting}>Huỷ</button>
+                            <button type="button" className="btn btn-primary" onClick={() => setWithdrawConfirmOpen(true)} disabled={submitting}>Tiếp tục</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {withdrawConfirmOpen && (
+                <div className="wallet-modal-backdrop" onClick={() => setWithdrawConfirmOpen(false)} role="presentation">
+                    <div className="wallet-modal wallet-confirm-modal" onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="withdraw-confirm-title">
+                        <div className="wallet-modal-header">
+                            <div>
+                                <h2 id="withdraw-confirm-title">Xác nhận rút tiền</h2>
+                                <p>Vui lòng kiểm tra lại thông tin trước khi gửi yêu cầu.</p>
+                            </div>
+                        </div>
+
+                        <div className="wallet-confirm-summary">
+                            <p><span>Số tiền:</span> <strong>{formatCurrency(withdrawAmount)}</strong></p>
+                            <p><span>Ngân hàng:</span> <strong>{bankName || '—'}</strong></p>
+                            <p><span>Số tài khoản:</span> <strong>{bankAccountNumber || '—'}</strong></p>
+                            <p><span>Chủ tài khoản:</span> <strong>{bankAccountName || '—'}</strong></p>
+                        </div>
+
+                        <div className="wallet-modal-actions">
+                            <button type="button" className="btn btn-outline" onClick={() => setWithdrawConfirmOpen(false)} disabled={submitting}>Quay lại</button>
+                            <button type="button" className="btn btn-primary" onClick={submitWithdraw} disabled={submitting}>
+                                {submitting ? 'Đang gửi...' : 'Xác nhận rút tiền'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

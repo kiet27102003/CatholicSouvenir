@@ -13,15 +13,7 @@
     }
 }
 
-.templates-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 16px;
-    margin-bottom: 20px;
-}
-
-.templates-title {
+undefined.templates-title {
     margin: 0;
     font-size: 30px;
     color: #1a1a1a;

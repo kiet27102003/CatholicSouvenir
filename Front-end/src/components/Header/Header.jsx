@@ -1,10 +1,9 @@
 import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { FiSearch, FiMenu, FiX, FiGlobe, FiSun, FiMoon, FiBell, FiShoppingCart, FiUser, FiLogOut, FiPackage, FiMessageSquare } from 'react-icons/fi';
+import { FiSearch, FiMenu, FiX, FiGlobe, FiBell, FiShoppingCart, FiUser, FiLogOut, FiPackage, FiMessageSquare } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { useLanguage } from '../../context/LanguageContext';
-import { useTheme } from '../../context/ThemeContext';
 import { getMyConversations } from '../../services/chatService';
 import { getNotifications } from '../../services/notificationService';
 import './Header.css';
@@ -13,7 +12,6 @@ const Header = () => {
     const { user, logout, isAuthenticated } = useAuth();
     const { cartItemsCount, openCart } = useCart();
     const { language, setLanguage, t } = useLanguage();
-    const { theme, toggleTheme } = useTheme();
     const navigate = useNavigate();
     const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
     const [langMenuOpen, setLangMenuOpen] = React.useState(false);
@@ -157,7 +155,12 @@ const Header = () => {
                                 <path d="M16 4L26 14L16 24L6 14L16 4Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                                 <path d="M18 6L26 14L18 22L10 14L18 6Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                             </svg>
-                            <span className="logo-text">Sanctus</span>
+                            <div className="logo-copy">
+                                <span className="logo-brand">Sanctus</span>
+                                <span className="logo-name">Artifex</span>
+                                <span className="logo-tagline">Thủ công</span>
+                                <span className="logo-tagline">truyền thống</span>
+                            </div>
                         </div>
                     </div>
 
@@ -215,14 +218,6 @@ const Header = () => {
                             )}
                         </div>
 
-                        <button
-                            type="button"
-                            className="icon-btn"
-                            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-                            onClick={toggleTheme}
-                        >
-                            {theme === 'dark' ? <FiSun size={20} strokeWidth={2} /> : <FiMoon size={20} strokeWidth={2} />}
-                        </button>
 
                         <div className="notifications-dropdown-wrapper">
                             <button

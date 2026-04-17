@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 
@@ -7,10 +7,35 @@ let subscriberCount = 0;
 
 const DEFAULT_WS_URL = import.meta.env.VITE_WEBSOCKET_URL || 'https://catholic-souvenir-api.southeastasia.cloudapp.azure.com/ws';
 
+function normalizeWebSocketUrl(rawUrl) {
+  if (!rawUrl || typeof window === 'undefined') {
+    return rawUrl;
+  }
+
+  try {
+    const url = new URL(rawUrl, window.location.origin);
+    const isPageSecure = window.location.protocol === 'https:';
+
+    if (isPageSecure && url.protocol === 'http:') {
+      url.protocol = 'https:';
+    }
+
+    return url.toString();
+  } catch {
+    if (window.location.protocol === 'https:' && rawUrl.startsWith('http://')) {
+      return rawUrl.replace(/^http:\/\//, 'https://');
+    }
+
+    return rawUrl;
+  }
+}
+
 export default function useWebSocket({ wsUrl = DEFAULT_WS_URL, jwtToken = '', onMessageReceived }) {
   const [isConnected, setIsConnected] = useState(false);
   const callbackRef = useRef(onMessageReceived);
   const subscriptionRef = useRef(null);
+
+  const safeWsUrl = useMemo(() => normalizeWebSocketUrl(wsUrl), [wsUrl]);
 
   useEffect(() => {
     callbackRef.current = onMessageReceived;
@@ -35,11 +60,11 @@ export default function useWebSocket({ wsUrl = DEFAULT_WS_URL, jwtToken = '', on
   }, []);
 
   const ensureConnected = useCallback(() => {
-    if (!jwtToken) return;
+    if (!jwtToken || typeof window === 'undefined') return;
 
     if (!sharedClient) {
       sharedClient = new Client({
-        webSocketFactory: () => new SockJS(wsUrl),
+        webSocketFactory: () => new SockJS(safeWsUrl),
         connectHeaders: {
           Authorization: `Bearer ${jwtToken}`,
         },
@@ -101,7 +126,7 @@ export default function useWebSocket({ wsUrl = DEFAULT_WS_URL, jwtToken = '', on
     }
 
     subscriberCount += 1;
-  }, [jwtToken, wsUrl]);
+  }, [jwtToken, safeWsUrl]);
 
   const sendMessage = useCallback((payload) => {
     if (!sharedClient?.connected) {
@@ -117,9 +142,12 @@ export default function useWebSocket({ wsUrl = DEFAULT_WS_URL, jwtToken = '', on
   }, []);
 
   useEffect(() => {
-    ensureConnected();
+    const connectTimer = window.setTimeout(() => {
+      ensureConnected();
+    }, 0);
 
     return () => {
+      window.clearTimeout(connectTimer);
       disconnect();
     };
   }, [ensureConnected, disconnect]);

@@ -4,7 +4,6 @@ import './index.css'
 import App from './App.jsx'
 import { CartProvider } from './context/CartContext.jsx'
 import { LanguageProvider } from './context/LanguageContext.jsx'
-import { ThemeProvider } from './context/ThemeContext.jsx'
 
 if (typeof window !== 'undefined' && typeof window.global === 'undefined') {
   window.global = window
@@ -12,12 +11,10 @@ if (typeof window !== 'undefined' && typeof window.global === 'undefined') {
 
 createRoot(document.getElementById('root')).render(
   <BrowserRouter>
-    <ThemeProvider>
-      <LanguageProvider>
-        <CartProvider>
-          <App />
-        </CartProvider>
-      </LanguageProvider>
-    </ThemeProvider>
+    <LanguageProvider>
+      <CartProvider>
+        <App />
+      </CartProvider>
+    </LanguageProvider>
   </BrowserRouter>,
 )

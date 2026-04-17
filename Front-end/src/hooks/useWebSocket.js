@@ -5,7 +5,7 @@ import SockJS from 'sockjs-client';
 let sharedClient = null;
 let subscriberCount = 0;
 
-const DEFAULT_WS_URL = import.meta.env.VITE_WEBSOCKET_URL || 'http://catholic-souvenir-api.southeastasia.cloudapp.azure.com/ws';
+const DEFAULT_WS_URL = import.meta.env.VITE_WEBSOCKET_URL || 'https://catholic-souvenir-api.southeastasia.cloudapp.azure.com/ws';
 
 export default function useWebSocket({ wsUrl = DEFAULT_WS_URL, jwtToken = '', onMessageReceived }) {
   const [isConnected, setIsConnected] = useState(false);

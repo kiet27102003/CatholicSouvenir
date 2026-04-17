@@ -137,6 +137,40 @@ export const getMyWithdrawals = async () => {
     }
 };
 
+export const getWithdrawalDetail = async (id) => {
+    if (!id) return { success: false, error: 'Thiếu mã yêu cầu rút tiền.' };
+
+    try {
+        const response = await api.get(`/withdrawals/${id}`);
+        const normalized = normalizeResponse(response);
+
+        if (!isSuccessCode(normalized.code)) {
+            return { success: false, error: normalized.message || 'Không thể tải chi tiết rút tiền.' };
+        }
+
+        return { success: true, data: normalized.data || null };
+    } catch (error) {
+        return { success: false, error: mapError(error, 'Không thể tải chi tiết rút tiền.') };
+    }
+};
+
+export const cancelWithdrawalRequest = async (id) => {
+    if (!id) return { success: false, error: 'Thiếu mã yêu cầu rút tiền.' };
+
+    try {
+        const response = await api.delete(`/withdrawals/${id}/cancel`);
+        const normalized = normalizeResponse(response);
+
+        if (!isSuccessCode(normalized.code)) {
+            return { success: false, error: normalized.message || 'Huỷ rút tiền thất bại.' };
+        }
+
+        return { success: true, data: normalized.data || '' };
+    } catch (error) {
+        return { success: false, error: mapError(error, 'Huỷ rút tiền thất bại.') };
+    }
+};
+
 export default {
     getMyWallet,
     getWalletBalance,
@@ -144,4 +178,6 @@ export default {
     getWalletByAccountId,
     createWithdrawalRequest,
     getMyWithdrawals,
+    getWithdrawalDetail,
+    cancelWithdrawalRequest,
 };

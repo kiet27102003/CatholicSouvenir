@@ -40,6 +40,9 @@ const WalletPage = ({ embedded = false }) => {
     const [withdrawals, setWithdrawals] = useState([]);
     const [withdrawOpen, setWithdrawOpen] = useState(false);
     const [withdrawConfirmOpen, setWithdrawConfirmOpen] = useState(false);
+    const [withdrawDetailOpen, setWithdrawDetailOpen] = useState(false);
+    const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
+    const [selectedWithdrawal, setSelectedWithdrawal] = useState(null);
     const [withdrawAmount, setWithdrawAmount] = useState('');
     const [bankName, setBankName] = useState('');
     const [bankAccountNumber, setBankAccountNumber] = useState('');
@@ -147,6 +150,52 @@ const WalletPage = ({ embedded = false }) => {
         setWithdrawOpen(true);
     };
 
+    const refreshWithdrawals = async () => {
+        const withdrawalsRes = await walletService.getMyWithdrawals();
+        if (withdrawalsRes.success) setWithdrawals(withdrawalsRes.data || []);
+    };
+
+    const openWithdrawalDetail = async (withdrawal) => {
+        const id = withdrawal?.withdrawalId;
+        if (!id) return;
+
+        setSelectedWithdrawal(null);
+        setWithdrawDetailOpen(true);
+
+        const res = await walletService.getWithdrawalDetail(id);
+        if (!res.success) {
+            appToast.error('Không tải được chi tiết', res.error || 'Vui lòng thử lại sau');
+            setWithdrawDetailOpen(false);
+            return;
+        }
+
+        setSelectedWithdrawal(res.data || withdrawal);
+    };
+
+    const openCancelWithdrawal = (withdrawal) => {
+        setSelectedWithdrawal(withdrawal || null);
+        setCancelConfirmOpen(true);
+    };
+
+    const confirmCancelWithdrawal = async () => {
+        const id = selectedWithdrawal?.withdrawalId;
+        if (!id) return;
+
+        setSubmitting(true);
+        const res = await walletService.cancelWithdrawalRequest(id);
+        setSubmitting(false);
+
+        if (!res.success) {
+            appToast.error('Huỷ rút tiền thất bại', res.error || 'Vui lòng thử lại sau');
+            return;
+        }
+
+        appToast.success('Đã huỷ yêu cầu rút tiền', 'Yêu cầu rút tiền đã được huỷ');
+        setCancelConfirmOpen(false);
+        setSelectedWithdrawal(null);
+        await refreshWithdrawals();
+    };
+
     const submitWithdraw = async () => {
         const amount = Number(withdrawAmount || 0);
         if (!amount || amount <= 0) {
@@ -179,14 +228,13 @@ const WalletPage = ({ embedded = false }) => {
         appToast.success('Đã tạo yêu cầu rút tiền', 'Yêu cầu của bạn đã được gửi và đang chờ xử lý');
         setWithdrawConfirmOpen(false);
         setWithdrawOpen(false);
-        const [walletRes, transactionsRes, withdrawalsRes] = await Promise.all([
+        const [walletRes, transactionsRes] = await Promise.all([
             walletService.getMyWallet(),
             walletService.getWalletTransactions(),
-            walletService.getMyWithdrawals(),
         ]);
         if (walletRes.success) setWallet(walletRes.data);
         if (transactionsRes.success) setTransactions(transactionsRes.data || []);
-        if (withdrawalsRes.success) setWithdrawals(withdrawalsRes.data || []);
+        await refreshWithdrawals();
     };
 
     if (!isAuthenticated) {
@@ -323,28 +371,44 @@ const WalletPage = ({ embedded = false }) => {
                                             <th>NGÂN HÀNG</th>
                                             <th>TRẠNG THÁI</th>
                                             <th>THỜI GIAN</th>
+                                            <th>HÀNH ĐỘNG</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {withdrawals.map((withdrawal) => (
-                                            <tr key={withdrawal.withdrawalId}>
-                                                <td>
-                                                    <p className="wallet-main-cell">#{String(withdrawal.withdrawalId || '').slice(0, 8)}</p>
-                                                    <span className="wallet-sub-cell">{withdrawal.bankAccountName || '—'}</span>
-                                                </td>
-                                                <td><strong className="wallet-amount-minus">- {formatCurrency(withdrawal.amount)}</strong></td>
-                                                <td>
-                                                    <p className="wallet-main-cell">{withdrawal.bankName || '—'}</p>
-                                                    <span className="wallet-sub-cell">{withdrawal.bankAccountNumber || '—'}</span>
-                                                </td>
-                                                <td>
-                                                    <span className={`wallet-status-badge wallet-status-${String(withdrawal.status || 'PENDING').toLowerCase()}`}>
-                                                        {withdrawal.status || 'PENDING'}
-                                                    </span>
-                                                </td>
-                                                <td>{formatShortDateTime(withdrawal.createdAt)}</td>
-                                            </tr>
-                                        ))}
+                                        {withdrawals.map((withdrawal) => {
+                                            const status = String(withdrawal.status || 'PENDING').toLowerCase();
+                                            const canCancel = String(withdrawal.status || '').toUpperCase() === 'PENDING';
+
+                                            return (
+                                                <tr key={withdrawal.withdrawalId}>
+                                                    <td>
+                                                        <p className="wallet-main-cell">#{String(withdrawal.withdrawalId || '').slice(0, 8)}</p>
+                                                        <span className="wallet-sub-cell">{withdrawal.bankAccountName || '—'}</span>
+                                                    </td>
+                                                    <td><strong className="wallet-amount-minus">- {formatCurrency(withdrawal.amount)}</strong></td>
+                                                    <td>
+                                                        <p className="wallet-main-cell">{withdrawal.bankName || '—'}</p>
+                                                        <span className="wallet-sub-cell">{withdrawal.bankAccountNumber || '—'}</span>
+                                                    </td>
+                                                    <td>
+                                                        <span className={`wallet-status-badge wallet-status-${status}`}>
+                                                            {withdrawal.status || 'PENDING'}
+                                                        </span>
+                                                    </td>
+                                                    <td>{formatShortDateTime(withdrawal.createdAt)}</td>
+                                                    <td>
+                                                        <div className="wallet-actions-inline">
+                                                            <button type="button" className="btn btn-outline btn-sm" onClick={() => openWithdrawalDetail(withdrawal)}>
+                                                                Xem chi tiết
+                                                            </button>
+                                                            <button type="button" className="btn btn-outline btn-sm" disabled={!canCancel} onClick={() => openCancelWithdrawal(withdrawal)}>
+                                                                Huỷ rút
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                             </div>
@@ -417,6 +481,72 @@ const WalletPage = ({ embedded = false }) => {
                             <button type="button" className="btn btn-outline" onClick={() => setWithdrawConfirmOpen(false)} disabled={submitting}>Quay lại</button>
                             <button type="button" className="btn btn-primary" onClick={submitWithdraw} disabled={submitting}>
                                 {submitting ? 'Đang gửi...' : 'Xác nhận rút tiền'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {withdrawDetailOpen && (
+                <div className="wallet-modal-backdrop" onClick={() => setWithdrawDetailOpen(false)} role="presentation">
+                    <div className="wallet-modal" onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="withdraw-detail-title">
+                        <div className="wallet-modal-header">
+                            <div>
+                                <h2 id="withdraw-detail-title">Chi tiết rút tiền</h2>
+                                <p>Thông tin yêu cầu rút tiền.</p>
+                            </div>
+                            <button type="button" className="wallet-modal-close" onClick={() => setWithdrawDetailOpen(false)} aria-label="Đóng">×</button>
+                        </div>
+
+                        <div className="wallet-confirm-summary">
+                            <p><span>Mã yêu cầu:</span> <strong>{selectedWithdrawal?.withdrawalId || '—'}</strong></p>
+                            <p><span>Số tiền:</span> <strong>{formatCurrency(selectedWithdrawal?.amount)}</strong></p>
+                            <p><span>Trạng thái:</span> <strong>{selectedWithdrawal?.status || '—'}</strong></p>
+                            <p><span>Ngân hàng:</span> <strong>{selectedWithdrawal?.bankName || '—'}</strong></p>
+                            <p><span>Số tài khoản:</span> <strong>{selectedWithdrawal?.fullBankAccountNumber || selectedWithdrawal?.bankAccountNumber || '—'}</strong></p>
+                            <p><span>Chủ tài khoản:</span> <strong>{selectedWithdrawal?.bankAccountName || '—'}</strong></p>
+                            <p><span>Tạo lúc:</span> <strong>{formatDateTime(selectedWithdrawal?.createdAt)}</strong></p>
+                            <p><span>Xử lý lúc:</span> <strong>{formatDateTime(selectedWithdrawal?.processedAt)}</strong></p>
+                            <p><span>Huỷ lúc:</span> <strong>{formatDateTime(selectedWithdrawal?.cancelledAt)}</strong></p>
+                            <p><span>Người xử lý:</span> <strong>{selectedWithdrawal?.processedByName || '—'}</strong></p>
+                            <p><span>Lý do từ chối:</span> <strong>{selectedWithdrawal?.rejectionReason || '—'}</strong></p>
+                        </div>
+
+                        <div className="wallet-modal-actions">
+                            <button type="button" className="btn btn-outline" onClick={() => setWithdrawDetailOpen(false)}>Đóng</button>
+                            {String(selectedWithdrawal?.status || '').toUpperCase() === 'PENDING' && (
+                                <button type="button" className="btn btn-outline" onClick={() => {
+                                    setWithdrawDetailOpen(false);
+                                    openCancelWithdrawal(selectedWithdrawal);
+                                }}>
+                                    Huỷ rút
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {cancelConfirmOpen && (
+                <div className="wallet-modal-backdrop" onClick={() => setCancelConfirmOpen(false)} role="presentation">
+                    <div className="wallet-modal wallet-confirm-modal" onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="cancel-withdraw-title">
+                        <div className="wallet-modal-header">
+                            <div>
+                                <h2 id="cancel-withdraw-title">Xác nhận huỷ rút tiền</h2>
+                                <p>Bạn chỉ có thể huỷ yêu cầu đang ở trạng thái chờ xử lý.</p>
+                            </div>
+                        </div>
+
+                        <div className="wallet-confirm-summary">
+                            <p><span>Mã yêu cầu:</span> <strong>{selectedWithdrawal?.withdrawalId || '—'}</strong></p>
+                            <p><span>Số tiền:</span> <strong>{formatCurrency(selectedWithdrawal?.amount)}</strong></p>
+                            <p><span>Ngân hàng:</span> <strong>{selectedWithdrawal?.bankName || '—'}</strong></p>
+                        </div>
+
+                        <div className="wallet-modal-actions">
+                            <button type="button" className="btn btn-outline" onClick={() => setCancelConfirmOpen(false)} disabled={submitting}>Không</button>
+                            <button type="button" className="btn btn-primary" onClick={confirmCancelWithdrawal} disabled={submitting}>
+                                {submitting ? 'Đang huỷ...' : 'Xác nhận huỷ'}
                             </button>
                         </div>
                     </div>

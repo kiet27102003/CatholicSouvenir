@@ -2,6 +2,15 @@
     width: 100%;
     max-width: 1400px;
     margin: 0 auto;
+    padding: 0 24px 32px;
+    box-sizing: border-box;
+    align-self: flex-start;
+}
+
+@media (max-width: 768px) {
+    .templates-view {
+        padding: 0 16px 24px;
+    }
 }
 
 .templates-header {

@@ -320,7 +320,8 @@ const CheckoutPage = () => {
             const checkoutResult = await checkoutService.createCheckout({
                 shippingAddress,
                 phoneNumber: shipping.phone.trim(),
-                note: shipping.note?.trim() || '',
+                notes: shipping.note?.trim() || '',
+                paymentMethod: 'VNPAY',
             });
 
             if (!checkoutResult.success) {

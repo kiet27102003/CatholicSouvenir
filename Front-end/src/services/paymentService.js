@@ -51,7 +51,12 @@ export const initiateOrderGroupPayment = async ({ orderGroupId, method = 'VNPAY'
 
 export const callbackPayment = async (gateway, queryObject) => {
     try {
-        const response = await api.post(`/payments/callback?gateway=${encodeURIComponent(gateway || 'VNPAY')}`, queryObject || {});
+        const normalizedGateway = String(gateway || 'VNPAY').toLowerCase();
+        const endpoint = normalizedGateway === 'vnpay'
+            ? '/stage-payments/vnpay/callback'
+            : `/stage-payments/${encodeURIComponent(normalizedGateway)}/callback`;
+
+        const response = await api.get(endpoint, { params: queryObject || {} });
         const payload = normalizeResponse(response);
         if (payload.code !== 200 && payload.code !== 201) {
             return { success: false, error: payload.message || 'Xử lý callback thanh toán thất bại.' };
@@ -135,6 +140,7 @@ export const getPaymentsByCustomOrder = async (customOrderId) => {
 
 export default {
     initiatePayment,
+    initiateOrderGroupPayment,
     callbackPayment,
     refundPayment,
     getPayments,

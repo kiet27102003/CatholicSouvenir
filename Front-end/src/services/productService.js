@@ -326,16 +326,23 @@ export const deleteProduct = async (productId) => {
  * @param {string} [options.status] - PENDING | APPROVED | REJECTED (optional)
  * @param {number} [options.page=0] - Trang (0-based)
  * @param {number} [options.size=10] - Số phần tử mỗi trang
- * @param {string} [options.sort='createdAt,DESC'] - Sort (axios encode thành createdAt%2CDESC)
+ * @param {string} [options.sortBy='createdAt'] - Trường sắp xếp
+ * @param {string} [options.sortDirection='DESC'] - Hướng sắp xếp
  * @returns {Promise<{ success: boolean, data?: { content, totalElements, totalPages, number, size }, error?: string }>}
  */
 export const getProductsByArtisan = async (artisanId, options = {}) => {
     try {
-        const { status, page = 0, size = 10, sort = 'createdAt,DESC' } = options;
-        const params = { page, size, sort };
+        const {
+            status,
+            page = 0,
+            size = 10,
+            sortBy = 'createdAt',
+            sortDirection = 'DESC',
+        } = options;
+        const params = { artisanId, page, size, sortBy, sortDirection };
         if (status != null && status !== '') params.status = status;
 
-        const response = await api.get(`/product/artisan/${artisanId}`, { params });
+        const response = await api.get('/product/artisan/%7BartisanId%7D', { params });
         const res = response.data;
 
         if (res?.code !== 200) {

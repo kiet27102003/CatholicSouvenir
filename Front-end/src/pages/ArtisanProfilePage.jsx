@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Header from '../components/Header/Header';
 import Footer from '../components/Footer/Footer';
@@ -8,6 +8,17 @@ import { getProductsByArtisan } from '../services/productService';
 import './ArtisanProfilePage.css';
 
 const PLACEHOLDER_AVATAR = 'https://ui-avatars.com/api/?name=Artisan&background=6b7280&color=fff';
+
+const truncate = (value, max) => {
+    const text = String(value || '').trim();
+    if (!text) return '';
+    return text.length > max ? `${text.slice(0, max).trim()}...` : text;
+};
+
+const formatText = (value, fallback = '—') => {
+    const text = String(value || '').trim();
+    return text || fallback;
+};
 
 const ArtisanProfilePage = () => {
     const { id } = useParams();
@@ -24,24 +35,22 @@ const ArtisanProfilePage = () => {
             setLoading(false);
             return;
         }
+
         let cancelled = false;
         setLoading(true);
         getArtisanById(id).then((result) => {
             if (cancelled) return;
-            if (result.success && result.data) {
-                setArtisan(result.data);
-            } else {
-                setArtisan(null);
-            }
+            setArtisan(result.success && result.data ? result.data : null);
             setLoading(false);
         });
+
         return () => { cancelled = true; };
     }, [id]);
 
-    // GET /api/product/artisan/{artisanId}?status=APPROVED&page=0&size=10&sort=createdAt,DESC
     useEffect(() => {
         const artisanId = artisan?.artisanId ?? id;
         if (!artisanId) return;
+
         let cancelled = false;
         setProductsLoading(true);
         getProductsByArtisan(artisanId, {
@@ -57,6 +66,7 @@ const ArtisanProfilePage = () => {
             setProducts(list);
             setProductsLoading(false);
         });
+
         return () => { cancelled = true; };
     }, [id, artisan?.artisanId]);
 
@@ -65,13 +75,27 @@ const ArtisanProfilePage = () => {
         navigate('/custom-requests', { state: { artisanId: artisan.artisanId, artisanName: artisan.artisanName } });
     };
 
+    const profileImage = artisan?.profileImageUrl || PLACEHOLDER_AVATAR;
+    const coverImage = artisan?.portfolioUrl || null;
+
+    const artisanName = formatText(artisan?.artisanName, 'Nghệ nhân');
+    const specialty = formatText(artisan?.specialization, '');
+    const experienceYears = Number(artisan?.experienceYears || 0);
+    const bio = truncate(artisan?.bio, 420);
+
+    const infoCards = useMemo(() => ([
+        { label: 'Chuyên môn', value: specialty },
+        { label: 'Kinh nghiệm', value: experienceYears > 0 ? `${experienceYears} năm` : 'Chưa có' },
+        { label: 'Liên hệ', value: formatText(artisan?.phoneNumber, '—') },
+    ]), [specialty, experienceYears, artisan?.phoneNumber]);
+
     if (loading) {
         return (
             <div className="artisan-profile-page">
                 <Header />
                 <div className="artisan-loading">
-                    <div className="spinner"></div>
-                    <p>Loading artisan profile...</p>
+                    <div className="spinner" />
+                    <p>Đang tải hồ sơ nghệ nhân...</p>
                 </div>
                 <Footer />
             </div>
@@ -83,12 +107,11 @@ const ArtisanProfilePage = () => {
             <div className="artisan-profile-page">
                 <Header />
                 <main className="artisan-main">
-                    <div className="container artisan-content-wrapper">
-                        <button className="back-link" onClick={() => navigate('/artisans')}>&larr; Back to Directory</button>
-                        <div className="artisan-loading">
+                    <div className="artisan-content-wrapper">
+                        <div className="artisan-loading artisan-empty-state">
                             <h2>Artisan not found</h2>
-                            <p>We couldn't find this artisan profile.</p>
-                            <button className="btn btn-primary" onClick={() => navigate('/artisans')}>Back to Directory</button>
+                            <p>Không tìm thấy hồ sơ nghệ nhân này.</p>
+                            <button className="btn btn-primary" onClick={() => navigate('/artisans')}>Quay lại danh sách</button>
                         </div>
                     </div>
                 </main>
@@ -108,113 +131,121 @@ const ArtisanProfilePage = () => {
         return product.imageUrl || product.image_url;
     };
 
-    const profileImage = artisan.profileImageUrl || PLACEHOLDER_AVATAR;
-    const coverImage = artisan.portfolioUrl || null;
-
     return (
         <div className="artisan-profile-page">
             <Header />
 
             <main className="artisan-main">
-                <div
-                    className="artisan-cover"
-                    style={{
-                        backgroundImage: coverImage ? `url(${coverImage})` : 'linear-gradient(135deg, var(--color-primary-dark) 0%, var(--color-primary) 100%)'
-                    }}
-                ></div>
-
-                <div className="container artisan-content-wrapper">
+                <div className="artisan-content-wrapper">
                     <button className="back-link" onClick={() => navigate('/artisans')}>
-                        &larr; Back to Directory
+                        &larr; Quay lại
                     </button>
 
-                    <div className="artisan-profile-header">
-                        <div className="profile-image-container">
-                            <img src={profileImage} alt={artisan.artisanName} />
-                        </div>
-
-                        <div className="profile-info">
-                            <div className="profile-title-row">
-                                <h1>{artisan.artisanName || 'Nghệ nhân'}</h1>
-                                <button className="btn btn-primary btn-custom-order" onClick={handleCustomRequest}>
-                                    Request Custom Order
-                                </button>
+                    <section className="artisan-profile-shell">
+                        <header className="artisan-profile-header">
+                            <div className="profile-image-container">
+                                <img src={profileImage} alt={artisanName} />
                             </div>
 
-                            <div className="profile-meta">
-                                {artisan.specialization && (
-                                    <span className="meta-location">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" stroke="currentColor" strokeWidth="2" />
-                                            <circle cx="12" cy="10" r="3" stroke="currentColor" strokeWidth="2" />
-                                        </svg>
-                                        {artisan.specialization}
-                                    </span>
-                                )}
-                                {artisan.experienceYears != null && artisan.experienceYears > 0 && (
-                                    <span className="meta-rating">
-                                        {artisan.experienceYears} năm kinh nghiệm
-                                    </span>
-                                )}
-                                {artisan.phoneNumber && (
-                                    <span className="meta-phone">{artisan.phoneNumber}</span>
-                                )}
-                            </div>
+                            <div className="profile-info">
+                                <div className="profile-title-row">
+                                    <div>
+                                        <p className="profile-kicker">Nghệ nhân</p>
+                                        <h1 title={artisanName}>{artisanName}</h1>
+                                        {specialty ? <p className="profile-subtitle" title={specialty}>{specialty}</p> : null}
+                                    </div>
 
-                            {(artisan.specialization || artisan.portfolioUrl) && (
+                                    <button className="btn btn-primary btn-custom-order" onClick={handleCustomRequest}>
+                                        Đặt làm riêng
+                                    </button>
+                                </div>
+
+                                <div className="profile-meta-grid">
+                                    {infoCards.map((item) => (
+                                        <div key={item.label} className="profile-meta-card">
+                                            <span>{item.label}</span>
+                                            <strong title={item.value}>{item.value}</strong>
+                                        </div>
+                                    ))}
+                                </div>
+
                                 <div className="profile-specialties">
-                                    {artisan.specialization && (
-                                        <span className="badge badge-outline">{artisan.specialization}</span>
-                                    )}
-                                    {artisan.portfolioUrl && (
+                                    {specialty && <span className="badge badge-outline">{specialty}</span>}
+                                    {artisan?.portfolioUrl && (
                                         <a href={artisan.portfolioUrl} target="_blank" rel="noopener noreferrer" className="badge badge-outline">Portfolio</a>
                                     )}
                                 </div>
-                            )}
+                            </div>
+                        </header>
+
+                        <div className="artisan-profile-layout">
+                            <aside className="artisan-profile-sidebar">
+                                <article className="artisan-side-card">
+                                    <h2>Giới thiệu</h2>
+                                    <p title={artisan?.bio || '—'}>{bio || 'Chưa có mô tả.'}</p>
+                                </article>
+
+                                <article className="artisan-side-card artisan-side-card--accent">
+                                    <h2>Thông tin nhanh</h2>
+                                    <div className="quick-info-list">
+                                        <div>
+                                            <span>Tên hiển thị</span>
+                                            <strong>{artisanName}</strong>
+                                        </div>
+                                        {specialty && (
+                                            <div>
+                                                <span>Chuyên môn</span>
+                                                <strong>{specialty}</strong>
+                                            </div>
+                                        )}
+                                        <div>
+                                            <span>Kinh nghiệm</span>
+                                            <strong>{experienceYears > 0 ? `${experienceYears} năm` : '—'}</strong>
+                                        </div>
+                                    </div>
+                                </article>
+                            </aside>
+
+                            <section className="artisan-profile-main-panel">
+                                <div className="artisan-products-section-header">
+                                    <div>
+                                        <p className="section-kicker">Hồ sơ</p>
+                                        <h2>Sản phẩm của {artisanName}</h2>
+                                    </div>
+                                    <span className="section-count">{products.length} sản phẩm</span>
+                                </div>
+
+                                {productsLoading ? (
+                                    <div className="artisan-products-loading">
+                                        <div className="spinner" />
+                                        <p>Đang tải sản phẩm...</p>
+                                    </div>
+                                ) : products.length > 0 ? (
+                                    <div className="artisan-products-grid">
+                                        {products.map((product) => (
+                                            <ProductCard
+                                                key={product.productId}
+                                                id={product.productId}
+                                                image={getProductImage(product)}
+                                                title={truncate(product.productName, 48)}
+                                                artisan={artisanName}
+                                                price={product.productPrice}
+                                                salePrice={product.salePrice}
+                                                onSale={product.onSale || false}
+                                            />
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="no-products-message">
+                                        <p>This artisan doesn't have any ready-made products available right now.</p>
+                                        <button className="btn btn-outline" onClick={handleCustomRequest}>
+                                            Request a Custom Piece
+                                        </button>
+                                    </div>
+                                )}
+                            </section>
                         </div>
-                    </div>
-
-                    <div className="artisan-profile-body">
-                        {artisan.bio && (
-                            <div className="artisan-about-section">
-                                <h2>About the Artisan</h2>
-                                <p>{artisan.bio}</p>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="artisan-products-section">
-                        <h2>Crafted by {artisan.artisanName || 'Nghệ nhân'}</h2>
-
-                        {productsLoading ? (
-                            <div className="artisan-products-loading">
-                                <div className="spinner"></div>
-                                <p>Đang tải sản phẩm...</p>
-                            </div>
-                        ) : products.length > 0 ? (
-                            <div className="artisan-products-grid">
-                                {products.map(product => (
-                                    <ProductCard
-                                        key={product.productId}
-                                        id={product.productId}
-                                        image={getProductImage(product)}
-                                        title={product.productName}
-                                        artisan={artisan.artisanName || 'Nghệ nhân'}
-                                        price={product.productPrice}
-                                        salePrice={product.salePrice}
-                                        onSale={product.onSale || false}
-                                    />
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="no-products-message">
-                                <p>This artisan doesn't have any ready-made products available right now.</p>
-                                <button className="btn btn-outline" onClick={handleCustomRequest}>
-                                    Request a Custom Piece
-                                </button>
-                            </div>
-                        )}
-                    </div>
+                    </section>
                 </div>
             </main>
 

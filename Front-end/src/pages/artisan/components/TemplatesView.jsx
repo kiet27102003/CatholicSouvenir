@@ -904,37 +904,50 @@ const TemplatesView = ({ user }) => {
                 <div className="template-modal-overlay" onClick={closeZoneModal}>
                     <div className="template-modal zone-modal" onClick={(e) => e.stopPropagation()}>
                         <div className="template-modal-header">
-                            <h3>{zoneModalMode === 'create' ? 'Thêm zone' : 'Chỉnh sửa zone'}</h3>
+                            <h3>{zoneModalMode === 'create' ? 'Thêm hạng mục zone' : 'Chỉnh sửa hạng mục zone'}</h3>
                             <button type="button" className="modal-close" onClick={closeZoneModal}>×</button>
                         </div>
                         <form className="template-modal-body" onSubmit={submitZone}>
-                            <div className="template-form-grid">
-                                <label>Tên zone *<input value={zoneForm.zoneName} onChange={(e) => setZoneForm((p) => ({ ...p, zoneName: e.target.value }))} /></label>
-                                <label>Input type *
+                            <div className="zone-form-grid">
+                                <div className="form-field wide-field">
+                                    <label>Tên zone <span className="required-mark">*</span></label>
+                                    <input value={zoneForm.zoneName} onChange={(e) => setZoneForm((p) => ({ ...p, zoneName: e.target.value }))} />
+                                </div>
+                                <div className="form-field">
+                                    <label>Loại đầu vào <span className="required-mark">*</span></label>
                                     <select value={zoneForm.inputType} onChange={(e) => setZoneForm((p) => ({ ...p, inputType: e.target.value }))}>
                                         {INPUT_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}
                                     </select>
-                                </label>
-                                <label>Extra price<input type="number" value={zoneForm.extraPrice} onChange={(e) => setZoneForm((p) => ({ ...p, extraPrice: e.target.value }))} /></label>
-                                <label>Sort order<input type="number" value={zoneForm.sortOrder} onChange={(e) => setZoneForm((p) => ({ ...p, sortOrder: e.target.value }))} /></label>
-                                <label className="wide">Mô tả zone<input value={zoneForm.zoneDescription} onChange={(e) => setZoneForm((p) => ({ ...p, zoneDescription: e.target.value }))} /></label>
-                                <label className="checkbox-label"><input type="checkbox" checked={zoneForm.isRequired} onChange={(e) => setZoneForm((p) => ({ ...p, isRequired: e.target.checked }))} /> Bắt buộc</label>
+                                </div>
+                                <div className="form-field">
+                                    <label>Phụ thu</label>
+                                    <input type="number" value={zoneForm.extraPrice} onChange={(e) => setZoneForm((p) => ({ ...p, extraPrice: e.target.value }))} />
+                                </div>
+                                <div className="form-field">
+                                    <label>Thứ tự hiển thị</label>
+                                    <input type="number" value={zoneForm.sortOrder} onChange={(e) => setZoneForm((p) => ({ ...p, sortOrder: e.target.value }))} />
+                                </div>
+                                <div className="form-field wide-field">
+                                    <label>Mô tả zone</label>
+                                    <input value={zoneForm.zoneDescription} onChange={(e) => setZoneForm((p) => ({ ...p, zoneDescription: e.target.value }))} />
+                                </div>
+                                <label className="checkbox-label wide-field"><input type="checkbox" checked={zoneForm.isRequired} onChange={(e) => setZoneForm((p) => ({ ...p, isRequired: e.target.checked }))} /> Bắt buộc</label>
                             </div>
 
                             <div className="constraints-wrap">
                                 <div className="zones-header-row">
-                                    <h4>inputConstraints (key-value)</h4>
+                                    <h4>Ràng buộc đầu vào</h4>
                                     <button type="button" className="btn-outline" onClick={() => setZoneForm((p) => ({ ...p, inputConstraints: [...(p.inputConstraints || []), { key: '', value: '' }] }))}>+ Thêm cặp</button>
                                 </div>
                                 <div className="constraints-list">
                                     {(zoneForm.inputConstraints || []).map((row, idx) => (
                                         <div className="constraint-row" key={`c-${idx}`}>
-                                            <input placeholder="key" value={row.key} onChange={(e) => setZoneForm((p) => {
+                                            <input placeholder="Khóa" value={row.key} onChange={(e) => setZoneForm((p) => {
                                                 const next = [...(p.inputConstraints || [])];
                                                 next[idx] = { ...next[idx], key: e.target.value };
                                                 return { ...p, inputConstraints: next };
                                             })} />
-                                            <input placeholder="value" value={row.value} onChange={(e) => setZoneForm((p) => {
+                                            <input placeholder="Giá trị" value={row.value} onChange={(e) => setZoneForm((p) => {
                                                 const next = [...(p.inputConstraints || [])];
                                                 next[idx] = { ...next[idx], value: e.target.value };
                                                 return { ...p, inputConstraints: next };

@@ -13,6 +13,13 @@ const fallbackImages = [
     '/src/assets/textile.png',
 ];
 
+const getProductImage = (product) => product?.images?.[0]?.image_url
+    || product?.images?.[0]?.imageUrl
+    || product?.image
+    || product?.imageUrl
+    || product?.productImageUrl
+    || null;
+
 const categoryIcons = [FiGrid, FiLayers, FiFeather, FiHeart, FiPackage];
 
 const formatCurrency = (value) => {
@@ -121,6 +128,13 @@ const HomePage = () => {
     const featuredProducts = useMemo(() => products.slice(0, 8), [products]);
     const marqueeProducts = useMemo(() => [...featuredProducts, ...featuredProducts], [featuredProducts]);
     const imageFor = (index) => fallbackImages[index % fallbackImages.length];
+    const heroImages = useMemo(() => {
+        const realImages = featuredProducts
+            .map((product) => getProductImage(product))
+            .filter(Boolean);
+        const merged = [...realImages, ...fallbackImages].filter(Boolean);
+        return merged.slice(0, 4);
+    }, [featuredProducts]);
 
     return (
         <div className="homepage luxury-homepage">
@@ -129,7 +143,7 @@ const HomePage = () => {
                 <section className="hero-section">
                     <div className="container hero-layout">
                         <div ref={heroRef} className={`hero-copy fade-up ${heroVisible ? 'animate-in' : ''}`}>
-                            <span className={`hero-pill fade-up stagger-1 ${heroVisible ? 'animate-in' : ''}`}>Thủ công truyền thống Việt Nam</span>
+                            <span className={`hero-pill fade-up stagger-1 ${heroVisible ? 'animate-in' : ''}`}>Đặt hàng quà lưu niệm Công giáo</span>
                             <h1 className={`hero-title fade-up stagger-2 ${heroVisible ? 'animate-in' : ''}`}>
                                 Nghệ thuật <span className="accent">thủ công</span> từ bàn tay người thợ
                             </h1>
@@ -153,7 +167,7 @@ const HomePage = () => {
                             <div className="gallery-grid">
                                 {[0, 1, 2, 3].map((index) => (
                                     <div key={index} className={`gallery-item ${index === 0 ? 'tall' : ''}`}>
-                                        <img src={imageFor(index)} alt="Tác phẩm thủ công" loading="lazy" />
+                                        <img src={heroImages[index] || imageFor(index)} alt="Tác phẩm thủ công" loading="lazy" />
                                     </div>
                                 ))}
                             </div>

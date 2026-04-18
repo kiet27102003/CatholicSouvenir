@@ -88,12 +88,7 @@ const getRelative = (value) => {
 };
 
 const getTransactionAmount = (tx) => Number(tx?.amount ?? tx?.value ?? tx?.money ?? 0);
-
-const isDepositTransaction = (tx) => {
-    const type = String(tx?.type || tx?.transactionType || '').toUpperCase();
-    return type.includes('DEPOSIT');
-};
-
+const isDepositTransaction = (tx) => String(tx?.type || tx?.transactionType || '').toUpperCase().includes('DEPOSIT');
 const isCurrentMonth = (value) => {
     if (!value) return false;
     const date = new Date(value);
@@ -138,8 +133,8 @@ const Workbench = ({ user }) => {
                     const list = Array.isArray(res.data) ? res.data : [];
                     setOrders(list);
                 } else {
-                    appToast.error('Không tải được đơn hàng', res.error || 'Vui lòng thử lại.');
                     setOrders([]);
+                    appToast.error('Không tải được đơn hàng', res.error || 'Vui lòng thử lại.');
                 }
             })
             .catch(() => {

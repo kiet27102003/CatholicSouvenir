@@ -1,7 +1,7 @@
 :root {
     --homepage-max-width: 1240px;
-    --homepage-accent: #2d5a3d;
-    --homepage-accent-soft: rgba(45, 90, 61, 0.1);
+    --homepage-accent: #6ba56f;
+    --homepage-accent-soft: rgba(107, 165, 111, 0.14);
 }
 
 .homepage {
@@ -39,7 +39,7 @@
     width: fit-content;
     padding: 0.45rem 0.8rem;
     border-radius: 999px;
-    background: rgba(45, 90, 61, 0.1);
+    background: rgba(107, 165, 111, 0.14);
     color: var(--homepage-accent);
     font-size: 0.78rem;
     letter-spacing: 0.08em;
@@ -82,8 +82,8 @@
 
 .btn:hover { transform: translateY(-1px); }
 .btn-primary { background: var(--homepage-accent); color: #fff; }
-.btn-outline { background: transparent; border-color: rgba(45, 90, 61, 0.22); color: var(--homepage-accent); }
-.btn-cta { background: #fff; color: #1a2e1a; display: inline-flex; align-items: center; gap: 0.5rem; }
+.btn-outline { background: transparent; border-color: rgba(107, 165, 111, 0.28); color: var(--homepage-accent); }
+.btn-cta { background: #fff; color: #2f5d33; display: inline-flex; align-items: center; gap: 0.5rem; }
 
 .hero-stats > div,
 .artisan-stats span,
@@ -178,12 +178,12 @@
 .artisan-stats { gap: 0.75rem; font-size: 0.92rem; }
 .artisan-stats span { display: inline-flex; align-items: center; gap: 0.35rem; }
 
-.cta-banner { background: #1a2e1a; color: #fff; }
+.cta-banner { background: linear-gradient(135deg, #dff2df 0%, #cfe8d1 100%); color: #18311d; }
 .cta-layout { justify-content: space-between; align-items: center; }
 .cta-layout h2 { font-family: var(--font-display); font-size: clamp(1.9rem, 3vw, 3rem); margin: 0.9rem 0; }
-.cta-layout p { max-width: 42rem; color: rgba(255,255,255,0.82); line-height: 1.7; }
+.cta-layout p { max-width: 42rem; color: #35543a; line-height: 1.7; }
 .cta-actions { display: grid; gap: 0.75rem; justify-items: end; }
-.cta-actions small { color: rgba(255,255,255,0.7); }
+.cta-actions small { color: #4b6850; }
 
 .fade-up { opacity: 0; transform: translateY(24px); transition: opacity 0.5s ease, transform 0.5s ease; }
 .fade-up.animate-in { opacity: 1; transform: translateY(0); }

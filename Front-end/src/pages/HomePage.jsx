@@ -139,7 +139,8 @@ const HomePage = () => {
                             </p>
                             <div className={`hero-actions fade-up stagger-4 ${heroVisible ? 'animate-in' : ''}`}>
                                 <button type="button" className="btn btn-primary" onClick={() => navigate('/shop')}>Khám phá ngay</button>
-                                <button type="button" className="btn btn-outline" onClick={() => navigate('/custom-requests')}>Đặt làm riêng</button>
+                                <button type="button" className="btn btn-outline" onClick={() => navigate('/templates')}>Cá nhân hóa</button>
+                                <button type="button" className="btn btn-outline" onClick={() => navigate('/custom-order')}>Đặt hàng riêng</button>
                             </div>
                             <div className={`hero-stats fade-up stagger-4 ${heroVisible ? 'animate-in' : ''}`}>
                                 <div><strong>500+</strong><span>sản phẩm</span></div>
@@ -277,8 +278,11 @@ const HomePage = () => {
                             <p>Từ vật phẩm phụng vụ đến quà tặng cao cấp, chúng tôi hỗ trợ thiết kế theo mong muốn với quy trình rõ ràng, tinh gọn.</p>
                         </div>
                         <div className="cta-actions">
-                            <button type="button" className="btn btn-cta" onClick={() => navigate('/custom-requests')}>
-                                Bắt đầu đặt hàng <FiArrowRight />
+                            <button type="button" className="btn btn-cta" onClick={() => navigate('/templates')}>
+                                Cá nhân hóa <FiArrowRight />
+                            </button>
+                            <button type="button" className="btn btn-outline" onClick={() => navigate('/custom-order')}>
+                                Đặt làm riêng <FiArrowRight />
                             </button>
                             <small>Miễn phí · Không cần đặt cọc trước</small>
                         </div>

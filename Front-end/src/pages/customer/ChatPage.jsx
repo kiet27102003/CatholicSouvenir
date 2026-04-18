@@ -5,6 +5,7 @@ import { appToast } from '../../lib/appToast';
 import { selectCustomRequestArtisan } from '../../services/customRequestService';
 import useChat from '../../hooks/useChat';
 import useWebSocket from '../../hooks/useWebSocket';
+import Header from '../../components/Header/Header';
 import ConversationList from '../../components/chat/ConversationList';
 import MessageList from '../../components/chat/MessageList';
 import MessageInput from '../../components/chat/MessageInput';
@@ -101,8 +102,13 @@ export default function ChatPage() {
 
   if (!token) {
     return (
-      <div className="chat-auth-box">
-        <div className="chat-auth-warning">Bạn cần đăng nhập để sử dụng chat.</div>
+      <div className="chat-page">
+        <Header />
+        <main className="chat-page-main">
+          <div className="chat-auth-box">
+            <div className="chat-auth-warning">Bạn cần đăng nhập để sử dụng chat.</div>
+          </div>
+        </main>
       </div>
     );
   }
@@ -138,12 +144,14 @@ export default function ChatPage() {
 
   return (
     <div className="chat-page">
-      <div className="chat-mobile-tabs">
-        <button type="button" className={mobileView === 'list' ? 'active' : ''} onClick={() => setMobileView('list')}>Danh sách</button>
-        <button type="button" className={mobileView === 'chat' ? 'active' : ''} onClick={() => setMobileView('chat')}>Chat</button>
-      </div>
+      <Header />
+      <main className="chat-page-main">
+        <div className="chat-mobile-tabs">
+          <button type="button" className={mobileView === 'list' ? 'active' : ''} onClick={() => setMobileView('list')}>Danh sách</button>
+          <button type="button" className={mobileView === 'chat' ? 'active' : ''} onClick={() => setMobileView('chat')}>Chat</button>
+        </div>
 
-      <div className="chat-layout">
+        <div className="chat-layout">
         <aside className={`chat-col left chat-conversation-list ${mobileView === 'chat' ? 'hide-mobile' : ''}`}>
           <ConversationList
             conversations={conversations}
@@ -183,7 +191,7 @@ export default function ChatPage() {
           />
         </section>
 
-        <aside className="chat-col right chat-info">
+          <aside className="chat-col right chat-info">
           <div className="card-box info-section">
             <h3>Thông tin yêu cầu</h3>
             <p className="title">{requestTitle}</p>
@@ -238,7 +246,8 @@ export default function ChatPage() {
             </p>
           </div>
         </aside>
-      </div>
+        </div>
+      </main>
     </div>
   );
 }

@@ -225,9 +225,9 @@ const ProductDetailsPage = () => {
                             <button
                                 type="button"
                                 className="btn custom-request-link"
-                                onClick={() => navigate(`/custom-requests?productId=${product.productId ?? product.id}`)}
+                                onClick={() => navigate(`/template-order?templateId=${product.productId ?? product.id}`)}
                             >
-                                Không đúng ý? Đặt làm riêng
+                                Đặt theo template
                             </button>
                         </div>
 

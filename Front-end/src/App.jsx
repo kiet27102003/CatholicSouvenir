@@ -16,10 +16,12 @@ import ArtisanDirectoryPage from './pages/ArtisanDirectoryPage'
 import ArtisanProfilePage from './pages/ArtisanProfilePage'
 import ArtisanCentrePage from './pages/ArtisanCentrePage'
 import ShopPage from './pages/ShopPage'
-import CustomRequestsListPage from './pages/customer/CustomRequestsListPage'
-import CustomRequestCreatePage from './pages/customer/CustomRequestCreatePage'
+import CustomRequestsManagePage from './pages/customer/CustomRequestsManagePage'
+import CustomRequestPage from './pages/customer/CustomRequestPage'
 import CustomRequestDetailPage from './pages/customer/CustomRequestDetail'
 import ChatPage from './pages/customer/ChatPage'
+import TemplateOrderPage from './pages/TemplateOrderPage'
+import TemplateCatalogPage from './pages/TemplateCatalogPage'
 
 import CheckoutPage from './pages/CheckoutPage'
 import CartPage from './pages/CartPage'
@@ -120,15 +122,17 @@ function App() {
 
         <Route path="/wallet" element={<WalletAccessRoute><WalletPage /></WalletAccessRoute>} />
         <Route path="/messages" element={<WalletAccessRoute><ChatPage /></WalletAccessRoute>} />
+        <Route path="/custom-order" element={<CustomRequestPage />} />
+        <Route path="/templates" element={<TemplateCatalogPage />} />
+        <Route path="/template-order" element={<TemplateOrderPage />} />
+        <Route path="/custom-requests" element={<CustomRequestsManagePage />} />
+        <Route path="/custom-requests/:id" element={<CustomRequestDetailPage />} />
 
         <Route element={<CustomerLayout />}>
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/orders" element={<OrderHistoryPage />} />
           <Route path="/orders/:orderId" element={<OrderTrackingPage />} />
           <Route path="/orders/:orderId/tracking" element={<OrderTrackingPage />} />
-          <Route path="/custom-requests" element={<CustomRequestsListPage />} />
-          <Route path="/custom-requests/new" element={<CustomRequestCreatePage />} />
-          <Route path="/custom-requests/:id" element={<CustomRequestDetailPage />} />
         </Route>
       </Routes>
     </AuthProvider>

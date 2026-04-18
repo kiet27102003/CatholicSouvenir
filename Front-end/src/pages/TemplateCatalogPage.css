@@ -1,0 +1,227 @@
+.template-catalog-page {
+    min-height: 100vh;
+    background: linear-gradient(180deg, #fafbff 0%, #ffffff 28%);
+}
+
+.template-catalog-main {
+    padding: 2rem clamp(2rem, 4vw, 4rem) 3rem;
+    max-width: 1600px;
+    margin: 0 auto;
+}
+
+.template-catalog-hero {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0 0 1rem;
+    align-items: flex-end;
+}
+
+.template-catalog-hero h1 {
+    margin: 0.75rem 0 0.75rem;
+    font-size: clamp(2rem, 4vw, 3.2rem);
+}
+
+.template-catalog-hero p {
+    margin: 0;
+    color: var(--color-text-light);
+    max-width: 62ch;
+    line-height: 1.7;
+}
+
+.template-catalog-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.85rem;
+    border-radius: 999px;
+    background: rgba(43, 74, 156, 0.08);
+    color: var(--color-primary);
+    font-weight: 700;
+}
+
+.template-catalog-hero-card {
+    min-width: 260px;
+    display: grid;
+    gap: 0.75rem;
+    padding: 1rem 1.1rem;
+    border-radius: 20px;
+    background: #fff;
+    border: 1px solid var(--color-border-light);
+    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.05);
+}
+
+.template-catalog-hero-card div {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.template-catalog-hero-card span {
+    color: var(--color-text-light);
+}
+
+.template-catalog-layout {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    gap: 1rem;
+    align-items: start;
+    padding: 0;
+}
+
+.template-catalog-sidebar,
+.template-catalog-content {
+    background: #fff;
+    border: 1px solid var(--color-border-light);
+    border-radius: 24px;
+    box-shadow: 0 18px 44px rgba(15, 23, 42, 0.05);
+}
+
+.template-catalog-sidebar {
+    padding: 1rem;
+    position: sticky;
+    top: 1rem;
+}
+
+.template-catalog-sidebar h3 {
+    margin: 0 0 1rem;
+}
+
+.template-catalog-category-list {
+    display: grid;
+    gap: 0.6rem;
+}
+
+.template-catalog-category-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    width: 100%;
+    border: 1px solid var(--color-border-light);
+    background: #fff;
+    border-radius: 14px;
+    padding: 0.85rem 0.95rem;
+    text-align: left;
+}
+
+.template-catalog-category-btn.active {
+    background: rgba(43, 74, 156, 0.08);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.template-catalog-content {
+    padding: 1rem;
+}
+
+.template-catalog-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.template-catalog-card {
+    overflow: hidden;
+    border: 1px solid var(--color-border-light);
+    border-radius: 20px;
+    background: #fff;
+    box-shadow: 0 10px 26px rgba(15, 23, 42, 0.05);
+    display: flex;
+    flex-direction: column;
+}
+
+.template-catalog-card.skeleton {
+    min-height: 360px;
+    background: linear-gradient(90deg, #f5f7fb 25%, #eef2f7 37%, #f5f7fb 63%);
+    background-size: 400% 100%;
+    animation: catalog-shimmer 1.2s ease infinite;
+}
+
+@keyframes catalog-shimmer {
+    0% { background-position: 100% 0; }
+    100% { background-position: 0 0; }
+}
+
+.template-catalog-thumb img {
+    width: 100%;
+    height: 220px;
+    object-fit: cover;
+    display: block;
+}
+
+.template-catalog-body {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.template-catalog-topline,
+.template-catalog-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    color: var(--color-text-light);
+    font-size: 0.92rem;
+}
+
+.template-catalog-body h3 {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.template-catalog-body p {
+    margin: 0;
+    color: var(--color-text-light);
+    line-height: 1.65;
+}
+
+.template-catalog-meta div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.template-catalog-action {
+    width: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.template-catalog-empty,
+.template-catalog-skeleton {
+    min-height: 320px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 1rem;
+    color: var(--color-text-light);
+}
+
+@media (max-width: 1024px) {
+    .template-catalog-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .template-catalog-sidebar {
+        position: static;
+    }
+
+    .template-catalog-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .template-catalog-hero {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .template-catalog-grid {
+        grid-template-columns: 1fr;
+    }
+}

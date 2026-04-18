@@ -1,194 +1,179 @@
-import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { FiClock, FiImage, FiMessageSquare, FiPackage, FiShield, FiStar, FiUsers, FiX } from 'react-icons/fi';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { getArtisans } from '../../services/artisanService';
-import { createCustomRequest } from '../../services/orderService';
+import Header from '../../components/Header/Header';
+import { createCustomRequestV2 as createCustomRequest } from '../../services/customRequestService';
 import { appToast } from '../../lib/appToast';
 import './CustomRequestPage.css';
 
 const CustomRequestPage = () => {
-    const location = useLocation();
     const navigate = useNavigate();
-    useAuth();
-
-    const prefilledArtisanId = location.state?.artisanId || '';
-    const prefilledArtisanName = location.state?.artisanName || '';
-
+    const { isAuthenticated } = useAuth();
     const [formData, setFormData] = useState({
         title: '',
         description: '',
         referenceImageUrl: '',
         generateAiImage: true,
-        selectedArtisanIds: prefilledArtisanId ? [prefilledArtisanId] : []
+        minBudget: '',
+        maxBudget: '',
     });
-    const [artisans, setArtisans] = useState([]);
-    const [artisansLoading, setArtisansLoading] = useState(true);
-    const [artisanListOpen, setArtisanListOpen] = useState(false);
     const [submitting, setSubmitting] = useState(false);
-
-    useEffect(() => {
-        let cancelled = false;
-        getArtisans(0, 100).then((result) => {
-            if (cancelled) return;
-            setArtisansLoading(false);
-            if (result.success && result.data?.content) {
-                setArtisans(result.data.content);
-            } else {
-                setArtisans([]);
-                if (result.error) {
-                    const msg = typeof result.error === 'string' ? result.error : 'Kiểm tra kết nối mạng';
-                    appToast.error('Không tải được', msg);
-                }
-            }
-        });
-        return () => { cancelled = true; };
-    }, []);
+    const [modalOpen, setModalOpen] = useState(false);
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
-        setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
-    };
-
-    const toggleArtisan = (artisanId) => {
-        setFormData(prev => {
-            const ids = prev.selectedArtisanIds.includes(artisanId)
-                ? prev.selectedArtisanIds.filter(id => id !== artisanId)
-                : [...prev.selectedArtisanIds, artisanId];
-            return { ...prev, selectedArtisanIds: ids };
-        });
+        setFormData((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (!isAuthenticated) {
+            appToast.warning('Vui lòng đăng nhập', 'Bạn cần đăng nhập để gửi yêu cầu đặt riêng');
+            navigate('/login');
+            return;
+        }
+
         setSubmitting(true);
         const result = await createCustomRequest({
             title: formData.title.trim(),
             description: formData.description.trim(),
+            minBudget: Number(formData.minBudget || 0),
+            maxBudget: Number(formData.maxBudget || 0),
             referenceImageUrl: formData.referenceImageUrl.trim() || undefined,
             generateAiImage: formData.generateAiImage,
-            selectedArtisanIds: formData.selectedArtisanIds
         });
         setSubmitting(false);
+
         if (result.success) {
-            appToast.success('Tạo thành công', 'Đã gửi yêu cầu đến nghệ nhân');
-            navigate('/messages');
-        } else {
-            const msg = result.error != null ? String(result.error) : 'Vui lòng thử lại';
-            appToast.error('Có lỗi xảy ra', msg);
+            setModalOpen(false);
+            setFormData({
+                title: '',
+                description: '',
+                referenceImageUrl: '',
+                generateAiImage: true,
+                minBudget: '',
+                maxBudget: '',
+            });
+            appToast.success('Gửi yêu cầu thành công', 'Nghệ nhân sẽ xem và phản hồi sớm nhất');
+            return;
         }
+
+        appToast.error('Có lỗi xảy ra', result.error != null ? String(result.error) : 'Vui lòng thử lại');
     };
 
     return (
         <div className="custom-request-page">
-            <div className="request-header">
-                <h1 className="request-title">Yêu cầu sản phẩm theo ý</h1>
-                <p className="request-subtitle">Mô tả ý tưởng của bạn, nghệ nhân của chúng tôi sẽ hiện thực hóa sản phẩm theo đức tin của bạn.</p>
-            </div>
-
-            <div className="request-form-container">
-                <form className="request-form" onSubmit={handleSubmit}>
-
-                    <div className="form-group artisan-select-group">
-                        <label className="form-label">Chọn nghệ nhân</label>
-                        <button
-                            type="button"
-                            className="artisan-list-trigger"
-                            onClick={() => setArtisanListOpen(prev => !prev)}
-                            disabled={artisansLoading}
-                        >
-                            <span className="artisan-list-trigger-text">
-                                {artisansLoading
-                                    ? 'Đang tải danh sách...'
-                                    : artisanListOpen
-                                        ? 'Thu gọn danh sách nghệ nhân'
-                                        : formData.selectedArtisanIds.length > 0
-                                            ? `Đã chọn ${formData.selectedArtisanIds.length} nghệ nhân — Nhấn để mở/chỉnh sửa`
-                                            : 'Mở danh sách nghệ nhân để chọn'}
-                            </span>
-                            <span className={`artisan-list-chevron ${artisanListOpen ? 'open' : ''}`} aria-hidden>▼</span>
-                        </button>
-                        {artisanListOpen && !artisansLoading && artisans.length > 0 && (
-                            <div className="artisan-checkbox-list">
-                                {artisans.map((a) => (
-                                    <label key={a.artisanId} className="artisan-checkbox-item">
-                                        <input
-                                            type="checkbox"
-                                            checked={formData.selectedArtisanIds.includes(a.artisanId)}
-                                            onChange={() => toggleArtisan(a.artisanId)}
-                                        />
-                                        <span>{a.artisanName || 'Nghệ nhân'}{a.specialization ? ` — ${a.specialization}` : ''}</span>
-                                    </label>
-                                ))}
-                            </div>
-                        )}
-                        {artisanListOpen && !artisansLoading && artisans.length === 0 && (
-                            <span className="input-hint">Chưa có nghệ nhân nào. Bạn vẫn có thể gửi yêu cầu.</span>
-                        )}
-                    </div>
-
-                    <div className="form-group">
-                        <label className="form-label" htmlFor="title">Tiêu đề dự án <span className="required">*</span></label>
-                        <input
-                            type="text"
-                            id="title"
-                            name="title"
-                            className="form-input"
-                            placeholder="VD: Tràng hạt gỗ ô liu có khảm bạc theo yêu cầu"
-                            value={formData.title}
-                            onChange={handleChange}
-                            required
-                        />
-                    </div>
-
-                    <div className="form-group">
-                        <label className="form-label" htmlFor="description">Mô tả chi tiết <span className="required">*</span></label>
-                        <textarea
-                            id="description"
-                            name="description"
-                            className="form-input form-textarea"
-                            placeholder="Mô tả ý tưởng của bạn. Bao gồm chất liệu, kích thước, chữ khắc, hoặc ý nghĩa tôn giáo bạn muốn thể hiện."
-                            rows="6"
-                            value={formData.description}
-                            onChange={handleChange}
-                            required
-                        ></textarea>
-                    </div>
-
-                    <div className="form-group">
-                        <label className="form-label" htmlFor="referenceImageUrl">URL ảnh tham khảo (tùy chọn)</label>
-                        <input
-                            type="url"
-                            id="referenceImageUrl"
-                            name="referenceImageUrl"
-                            className="form-input"
-                            placeholder="https://..."
-                            value={formData.referenceImageUrl}
-                            onChange={handleChange}
-                        />
-                    </div>
-
-                    <div className="form-group">
-                        <label className="form-label checkbox-label">
-                            <input
-                                type="checkbox"
-                                name="generateAiImage"
-                                checked={formData.generateAiImage}
-                                onChange={handleChange}
-                            />
-                            <span>Sinh ảnh gợi ý bằng AI từ mô tả</span>
-                        </label>
-                    </div>
-
-                    <div className="form-actions">
-                        <p className="notice-text">
-                            Gửi form này không ràng buộc bạn mua hàng. Nghệ nhân sẽ xem xét và gửi báo giá chính thức để bạn duyệt.
+            <Header />
+            <main className="custom-request-page-main">
+                <section className="custom-request-hero">
+                    <div className="custom-request-hero-content">
+                        <div className="custom-request-badge">Đặt hàng riêng cho khách hàng</div>
+                        <h1 className="custom-request-title">Thiết kế món quà Công giáo theo ý bạn</h1>
+                        <p className="custom-request-subtitle">
+                            Gửi ý tưởng, chọn nghệ nhân yêu thích và nhận báo giá riêng — hoàn toàn không bị ràng buộc mua ngay.
                         </p>
-                        <button type="submit" className="btn btn-primary btn-large" disabled={submitting}>
-                            {submitting ? 'Đang gửi yêu cầu...' : 'Gửi yêu cầu báo giá'}
+
+                        <div className="custom-request-actions">
+                            <button type="button" className="btn btn-primary btn-large" onClick={() => setModalOpen(true)}>
+                                Bắt đầu đặt riêng
+                            </button>
+                            <button type="button" className="btn btn-outline btn-large" onClick={() => navigate('/templates')}>
+                                Cá nhân hóa
+                            </button>
+                        </div>
+
+                        <div className="custom-request-stats">
+                            <div className="stat-card"><FiShield /><span>Riêng tư & an toàn</span></div>
+                            <div className="stat-card"><FiClock /><span>Phản hồi nhanh</span></div>
+                            <div className="stat-card"><FiImage /><span>Gợi ý AI trực quan</span></div>
+                        </div>
+                    </div>
+
+                    <div className="custom-request-hero-card">
+                        <div className="hero-card-top">
+                            <FiStar />
+                            <span>Quy trình 4 bước</span>
+                        </div>
+                        <ol className="hero-steps">
+                            <li><FiMessageSquare />Tạo custom request</li>
+                            <li><FiUsers />Artisan báo giá</li>
+                            <li><FiImage />Chọn artisan & thanh toán theo từng stage</li>
+                            <li><FiPackage />Artisan thực hiện, customer duyệt & tạo shipment</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section className="custom-request-content-grid">
+                    <div className="custom-request-form-card">
+                        <div className="section-heading">
+                            <h2>Thông tin yêu cầu</h2>
+                            <p>Hãy mô tả càng rõ càng tốt để nghệ nhân hiểu đúng mong muốn của bạn.</p>
+                        </div>
+                        <button type="button" className="btn btn-primary btn-large" onClick={() => setModalOpen(true)}>
+                            Mở form đặt riêng
                         </button>
                     </div>
-                </form>
-            </div>
+                </section>
+            </main>
+
+            {modalOpen && (
+                <div className="custom-request-modal-overlay" onClick={() => setModalOpen(false)} role="button" tabIndex={0}>
+                    <div className="custom-request-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Form đặt riêng">
+                        <div className="custom-request-modal-header">
+                            <div>
+                                <h2>Thông tin yêu cầu</h2>
+                                <p>Điền nội dung để gửi yêu cầu đặt riêng cho nghệ nhân.</p>
+                            </div>
+                            <button type="button" className="custom-request-modal-close" onClick={() => setModalOpen(false)} aria-label="Đóng modal">
+                                <FiX />
+                            </button>
+                        </div>
+
+                        <form className="custom-request-modal-form" onSubmit={handleSubmit}>
+                            <div className="form-group">
+                                <label className="form-label" htmlFor="title">Tiêu đề dự án <span className="required">*</span></label>
+                                <input id="title" name="title" className="form-input" value={formData.title} onChange={handleChange} required />
+                            </div>
+
+                            <div className="form-group">
+                                <label className="form-label" htmlFor="description">Mô tả chi tiết <span className="required">*</span></label>
+                                <textarea id="description" name="description" className="form-input form-textarea" rows="6" value={formData.description} onChange={handleChange} required />
+                            </div>
+
+                            <div className="custom-request-budget-row">
+                                <div className="form-group">
+                                    <label className="form-label" htmlFor="minBudget">Ngân sách tối thiểu</label>
+                                    <input id="minBudget" name="minBudget" type="number" className="form-input" value={formData.minBudget} onChange={handleChange} min="0" />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label" htmlFor="maxBudget">Ngân sách tối đa</label>
+                                    <input id="maxBudget" name="maxBudget" type="number" className="form-input" value={formData.maxBudget} onChange={handleChange} min="0" />
+                                </div>
+                            </div>
+
+                            <div className="form-group">
+                                <label className="form-label" htmlFor="referenceImageUrl">URL ảnh tham khảo (tùy chọn)</label>
+                                <input id="referenceImageUrl" name="referenceImageUrl" type="url" className="form-input" value={formData.referenceImageUrl} onChange={handleChange} placeholder="https://..." />
+                            </div>
+
+                            <div className="form-group checkbox-group">
+                                <label className="checkbox-label">
+                                    <input type="checkbox" name="generateAiImage" checked={formData.generateAiImage} onChange={handleChange} />
+                                    <span>Sinh ảnh gợi ý bằng AI từ mô tả</span>
+                                </label>
+                            </div>
+
+                            <div className="request-form-footer">
+                                <p className="notice-text">Gửi form này không ràng buộc bạn mua hàng. Nghệ nhân sẽ gửi báo giá chính thức để bạn duyệt.</p>
+                                <button type="submit" className="btn btn-primary btn-large" disabled={submitting}>
+                                    {submitting ? 'Đang gửi yêu cầu...' : 'Gửi yêu cầu báo giá'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

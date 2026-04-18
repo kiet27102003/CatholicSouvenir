@@ -70,6 +70,7 @@ export const getCustomRequestDetail = async (requestId) => {
 export const createCustomRequestV2 = async (payload) => {
     try {
         const body = {
+            title: String(payload?.title || '').trim(),
             description: String(payload?.description || '').trim(),
             minBudget: Number(payload?.minBudget || 0),
             maxBudget: Number(payload?.maxBudget || 0),

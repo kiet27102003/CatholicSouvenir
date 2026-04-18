@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import './MessageList.css';
 
 const timeOnly = (value) => {
@@ -19,16 +19,43 @@ const looksSystem = (message) => {
 };
 
 export default function MessageList({ messages, currentUserId, isLoading = false, isTyping = false }) {
+  const listRef = useRef(null);
   const bottomRef = useRef(null);
+  const [autoScrollEnabled, setAutoScrollEnabled] = useState(true);
 
   const sortedMessages = useMemo(() => {
     const list = Array.isArray(messages) ? messages : [];
     return [...list].sort((a, b) => new Date(a?.sentAt || 0) - new Date(b?.sentAt || 0));
   }, [messages]);
 
+  const isNearBottom = () => {
+    const el = listRef.current;
+    if (!el) return true;
+    const threshold = 120;
+    return el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
+  };
+
+  const scrollToBottom = (behavior = 'auto') => {
+    bottomRef.current?.scrollIntoView({ behavior, block: 'end' });
+  };
+
+  useLayoutEffect(() => {
+    scrollToBottom('auto');
+    setAutoScrollEnabled(true);
+  }, [sortedMessages.length]);
+
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [sortedMessages, isTyping]);
+    if (isTyping && autoScrollEnabled) scrollToBottom('smooth');
+  }, [isTyping, autoScrollEnabled]);
+
+  useEffect(() => {
+    if (!autoScrollEnabled) return;
+    scrollToBottom('smooth');
+  }, [sortedMessages, autoScrollEnabled]);
+
+  const handleScroll = () => {
+    setAutoScrollEnabled(isNearBottom());
+  };
 
   if (isLoading) {
     return <div className="msg-empty">Đang tải tin nhắn...</div>;
@@ -39,7 +66,7 @@ export default function MessageList({ messages, currentUserId, isLoading = false
   }
 
   return (
-    <div className="msg-list">
+    <div className="msg-list" ref={listRef} onScroll={handleScroll}>
       {sortedMessages.map((message) => {
         if (looksSystem(message)) {
           return (

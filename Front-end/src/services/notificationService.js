@@ -85,3 +85,18 @@ export const getNotifications = async ({ page = 0, size = 20 } = {}) => {
         };
     }
 };
+
+export const getUnreadNotificationCount = async () => {
+    try {
+        const response = await api.get('/notifications/unread-count');
+        const normalized = normalizeResponse(response);
+        if (!isSuccessCode(normalized.code)) {
+            return { success: false, error: normalized.message || 'Không tải được số thông báo chưa đọc.', data: 0 };
+        }
+
+        const rawCount = normalized.data?.count ?? normalized.data ?? 0;
+        return { success: true, data: Number(rawCount) || 0 };
+    } catch (error) {
+        return { success: false, error: mapError(error, 'Không tải được số thông báo chưa đọc.'), data: 0 };
+    }
+};

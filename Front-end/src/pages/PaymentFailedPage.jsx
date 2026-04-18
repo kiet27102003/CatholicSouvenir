@@ -65,13 +65,14 @@ const PaymentFailedPage = () => {
         }
 
         setRetrying(true);
+        const frontendUrl = import.meta.env.VITE_APP_FRONTEND_URL || window.location.origin;
         const res = await paymentService.initiatePayment({
             customOrderId,
             orderId: null,
             stageId: null,
             method: 'VNPAY',
-            returnUrl: `${window.location.origin}/payment/success`,
-            cancelUrl: `${window.location.origin}/payment/failed`,
+            returnUrl: `${frontendUrl}/payment/success`,
+            cancelUrl: `${frontendUrl}/payment/failed`,
         });
         setRetrying(false);
 

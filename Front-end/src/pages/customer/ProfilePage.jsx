@@ -1,38 +1,111 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { FiUser, FiShield, FiBell, FiCreditCard, FiHome, FiMail, FiMessageCircle, FiShoppingBag } from 'react-icons/fi';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import api from '../../cofig/api';
 import './ProfilePage.css';
+
+const formatDate = (value) => {
+    if (!value) return 'Chưa cập nhật';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+};
+
+const formatValue = (value) => value || 'Chưa cập nhật';
+
+const genderLabel = (gender) => {
+    if (!gender) return 'Chưa cập nhật';
+    const normalized = String(gender).toUpperCase();
+    const map = {
+        MALE: 'Nam',
+        FEMALE: 'Nữ',
+        OTHER: 'Khác',
+        NAM: 'Nam',
+        NU: 'Nữ',
+        NỮ: 'Nữ',
+        KHAC: 'Khác',
+        KHÁC: 'Khác',
+    };
+    return map[normalized] || gender;
+};
 
 const ProfilePage = () => {
     const location = useLocation();
     const navigate = useNavigate();
-    const { user, updateUser } = useAuth();
-
     const activeTab = useMemo(() => new URLSearchParams(location.search).get('tab') || 'profile', [location.search]);
 
-    const [formData, setFormData] = useState({
-        name: user?.name || '',
-        email: user?.email || '',
-        phone: user?.phone || '',
-        address: user?.address || '',
-    });
+    const emptyFormState = {
+        fullName: '',
+        email: '',
+        phone: '',
+        address: '',
+        city: '',
+        district: '',
+        ward: '',
+        postalCode: '',
+        bio: '',
+        saintName: '',
+        language: '',
+        timezone: '',
+        gender: '',
+        dateOfBirth: '',
+    };
 
-    useEffect(() => {
-        setFormData({
-            name: user?.name || '',
-            email: user?.email || '',
-            phone: user?.phone || '',
-            address: user?.address || '',
-        });
-    }, [user]);
-
+    const [formData, setFormData] = useState(emptyFormState);
+    const [initialFormData, setInitialFormData] = useState(emptyFormState);
+    const [profile, setProfile] = useState(null);
     const [editMode, setEditMode] = useState(false);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState('');
     const [twoFA, setTwoFA] = useState(true);
     const [notifEmail, setNotifEmail] = useState(true);
     const [notifSMS, setNotifSMS] = useState(false);
     const [notifPromo, setNotifPromo] = useState(true);
+
+    useEffect(() => {
+        let mounted = true;
+        const loadProfile = async () => {
+            setLoading(true);
+            setError('');
+            try {
+                const response = await api.get('/profile');
+                const data = response?.data?.data || null;
+                if (!mounted) return;
+                setProfile(data);
+                const nextFormState = {
+                    fullName: data?.fullName || '',
+                    email: data?.email || '',
+                    phone: data?.phone || '',
+                    address: data?.address || '',
+                    city: data?.city || '',
+                    district: data?.district || '',
+                    ward: data?.ward || '',
+                    postalCode: data?.postalCode || '',
+                    bio: data?.bio || '',
+                    saintName: data?.saintName || '',
+                    language: data?.language || '',
+                    timezone: data?.timezone || '',
+                    gender: data?.gender || '',
+                    dateOfBirth: data?.dateOfBirth || '',
+                };
+                setFormData(nextFormState);
+                setInitialFormData(nextFormState);
+            } catch (err) {
+                if (!mounted) return;
+                setError(err?.response?.data?.message || 'Không thể tải thông tin hồ sơ.');
+            } finally {
+                if (mounted) setLoading(false);
+            }
+        };
+        loadProfile();
+        return () => {
+            mounted = false;
+        };
+    }, []);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -41,17 +114,62 @@ const ProfilePage = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setLoading(true);
+        setSaving(true);
+        setError('');
+
+        const payload = {
+            fullName: formData.fullName?.trim() || undefined,
+            phone: formData.phone?.trim() || undefined,
+            gender: formData.gender || undefined,
+            dateOfBirth: formData.dateOfBirth || undefined,
+            bio: formData.bio?.trim() || undefined,
+            address: formData.address?.trim() || undefined,
+            city: formData.city?.trim() || undefined,
+            district: formData.district?.trim() || undefined,
+            ward: formData.ward?.trim() || undefined,
+            postalCode: formData.postalCode?.trim() || undefined,
+            saintName: formData.saintName?.trim() || undefined,
+            language: formData.language?.trim() || undefined,
+            timezone: formData.timezone?.trim() || undefined,
+        };
+
+        Object.keys(payload).forEach((key) => {
+            if (payload[key] === undefined) delete payload[key];
+        });
+
         try {
-            updateUser({
-                ...user,
-                name: formData.name,
-                phone: formData.phone,
-                address: formData.address,
-            });
+            const response = await api.patch('/profile', payload);
+            const data = response?.data?.data || null;
+            if (data) {
+                const nextFormState = {
+                    fullName: data?.fullName || '',
+                    email: data?.email || '',
+                    phone: data?.phone || '',
+                    address: data?.address || '',
+                    city: data?.city || '',
+                    district: data?.district || '',
+                    ward: data?.ward || '',
+                    postalCode: data?.postalCode || '',
+                    bio: data?.bio || '',
+                    saintName: data?.saintName || '',
+                    language: data?.language || '',
+                    timezone: data?.timezone || '',
+                    gender: data?.gender || '',
+                    dateOfBirth: data?.dateOfBirth || '',
+                };
+                setProfile(data);
+                setFormData(nextFormState);
+                setInitialFormData(nextFormState);
+            } else {
+                setProfile((prev) => (prev ? { ...prev, ...payload } : prev));
+                setInitialFormData((prev) => ({ ...prev, ...payload }));
+            }
             setEditMode(false);
+            window.alert('Cập nhật thành công');
+        } catch (err) {
+            setError(err?.response?.data?.message || 'Không thể cập nhật hồ sơ.');
         } finally {
-            setLoading(false);
+            setSaving(false);
         }
     };
 
@@ -59,9 +177,20 @@ const ProfilePage = () => {
 
     return (
         <div className="profile-page">
-            <div className="profile-block profile-block-header">
-                <h1 className="profile-title">Cài đặt tài khoản</h1>
-                <p className="profile-subtitle">Nơi gìn giữ và quản lý thông tin tâm linh của bạn.</p>
+            <div className="profile-block profile-block-header profile-hero">
+                <div className="profile-hero-avatar">
+                    {profile?.avatarUrl ? <img src={profile.avatarUrl} alt={profile?.fullName || 'Avatar'} /> : <span>{(profile?.fullName || 'U').charAt(0)}</span>}
+                </div>
+                <div className="profile-hero-content">
+                    <h1 className="profile-title">Cài đặt tài khoản</h1>
+                    <p className="profile-subtitle">Nơi gìn giữ và quản lý thông tin tâm linh của bạn.</p>
+                    <div className="profile-hero-meta">
+                        <span className="profile-badge">{formatValue(profile?.roleName)}</span>
+                        <span className={`profile-badge ${profile?.isVerified ? 'profile-badge-success' : 'profile-badge-warning'}`}>
+                            {profile?.isVerified ? 'Đã xác minh' : 'Chưa xác minh'}
+                        </span>
+                    </div>
+                </div>
             </div>
 
             {activeTab === 'profile' && (
@@ -71,23 +200,56 @@ const ProfilePage = () => {
                             <FiUser size={22} strokeWidth={2} className="profile-section-icon" />
                             <h2 className="profile-section-title">Hồ sơ cá nhân</h2>
                         </div>
-                        <button type="button" className="profile-edit-link" onClick={() => setEditMode(!editMode)}>Chỉnh sửa tất cả</button>
+                        <button type="button" className="profile-edit-link" onClick={() => setEditMode(!editMode)} disabled={loading || !!error || !profile}>
+                            Chỉnh sửa tất cả
+                        </button>
                     </div>
                     <div className="profile-section-divider" aria-hidden="true" />
-                    <form onSubmit={handleSubmit} className="profile-form">
-                        <div className="profile-form-grid">
-                            <div className="profile-field"><label>HỌ VÀ TÊN</label><input type="text" name="name" value={formData.name} onChange={handleChange} readOnly={!editMode} className={!editMode ? 'readonly' : ''} /></div>
-                            <div className="profile-field"><label>SỐ ĐIỆN THOẠI</label><input type="tel" name="phone" value={formData.phone} onChange={handleChange} readOnly={!editMode} className={!editMode ? 'readonly' : ''} /></div>
-                            <div className="profile-field"><label>EMAIL</label><input type="email" name="email" value={formData.email} readOnly disabled className="readonly" /></div>
-                            <div className="profile-field"><label>ĐỊA CHỈ GIAO HÀNG MẶC ĐỊNH</label><input type="text" name="address" value={formData.address} onChange={handleChange} readOnly={!editMode} className={!editMode ? 'readonly' : ''} /></div>
+                    {loading ? (
+                        <p>Đang tải hồ sơ...</p>
+                    ) : error ? (
+                        <div className="profile-error">
+                            <p>{error}</p>
+                            <button type="button" className="btn btn-outline" onClick={() => window.location.reload()}>Thử lại</button>
                         </div>
-                        {editMode && (
-                            <div className="profile-form-actions">
-                                <button type="button" className="btn btn-outline" onClick={() => setEditMode(false)}>Hủy</button>
-                                <button type="submit" className="btn btn-primary" disabled={loading}>{loading ? 'Đang lưu...' : 'Lưu thay đổi'}</button>
+                    ) : (
+                        <form onSubmit={handleSubmit} className="profile-form">
+                            <div className="profile-form-grid">
+                                <div className="profile-field"><label>HỌ VÀ TÊN</label><input type="text" name="fullName" value={formData.fullName} onChange={handleChange} readOnly={!editMode} className={!editMode ? 'readonly' : ''} /></div>
+                                <div className="profile-field">
+                                    <label>GIỚI TÍNH</label>
+                                    {editMode ? (
+                                        <select name="gender" value={formData.gender} onChange={handleChange} className="profile-select">
+                                            <option value="">Chưa cập nhật</option>
+                                            <option value="MALE">Nam</option>
+                                            <option value="FEMALE">Nữ</option>
+                                            <option value="OTHER">Khác</option>
+                                        </select>
+                                    ) : (
+                                        <input type="text" value={genderLabel(formData.gender)} readOnly className="readonly" />
+                                    )}
+                                </div>
+                                <div className="profile-field"><label>NGÀY SINH</label><input type="date" name="dateOfBirth" value={formData.dateOfBirth || ''} onChange={handleChange} readOnly={!editMode} className={!editMode ? 'readonly' : ''} /></div>
+                                <div className="profile-field"><label>SỐ ĐIỆN THOẠI</label><input type="tel" name="phone" value={formData.phone} onChange={handleChange} readOnly={!editMode} className={!editMode ? 'readonly' : ''} /></div>
+                                <div className="profile-field"><label>EMAIL</label><input type="email" name="email" value={formData.email} readOnly disabled className="readonly" /></div>
+                                <div className="profile-field"><label>TÊN THÁNH</label><input type="text" name="saintName" value={formData.saintName} onChange={handleChange} readOnly={!editMode} className={!editMode ? 'readonly' : ''} /></div>
+                                <div className="profile-field profile-field-full"><label>TIỂU SỬ</label><textarea name="bio" value={formData.bio} onChange={handleChange} readOnly={!editMode} className={!editMode ? 'readonly' : ''} rows="4" placeholder="Giới thiệu ngắn về bản thân" /></div>
+                                <div className="profile-field"><label>ĐỊA CHỈ GIAO HÀNG MẶC ĐỊNH</label><input type="text" name="address" value={formData.address} onChange={handleChange} readOnly={!editMode} className={!editMode ? 'readonly' : ''} /></div>
+                                <div className="profile-field"><label>THÀNH PHỐ/TỈNH</label><input type="text" name="city" value={formData.city} onChange={handleChange} readOnly={!editMode} className={!editMode ? 'readonly' : ''} /></div>
+                                <div className="profile-field"><label>QUẬN/HUYỆN</label><input type="text" name="district" value={formData.district} onChange={handleChange} readOnly={!editMode} className={!editMode ? 'readonly' : ''} /></div>
+                                <div className="profile-field"><label>PHƯỜNG/XÃ</label><input type="text" name="ward" value={formData.ward} onChange={handleChange} readOnly={!editMode} className={!editMode ? 'readonly' : ''} /></div>
+                                <div className="profile-field"><label>MÃ BƯU CHÍNH</label><input type="text" name="postalCode" value={formData.postalCode} onChange={handleChange} readOnly={!editMode} className={!editMode ? 'readonly' : ''} /></div>
+                                <div className="profile-field"><label>NGÔN NGỮ</label><input type="text" name="language" value={formData.language} onChange={handleChange} readOnly={!editMode} className={!editMode ? 'readonly' : ''} /></div>
+                                <div className="profile-field"><label>MÚI GIỜ</label><input type="text" name="timezone" value={formData.timezone} onChange={handleChange} readOnly={!editMode} className={!editMode ? 'readonly' : ''} /></div>
                             </div>
-                        )}
-                    </form>
+                            {editMode && (
+                                <div className="profile-form-actions">
+                                    <button type="button" className="btn btn-outline" onClick={() => { setFormData(initialFormData); setEditMode(false); }}>Hủy</button>
+                                    <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Đang lưu...' : 'Lưu thay đổi'}</button>
+                                </div>
+                            )}
+                        </form>
+                    )}
                 </section>
             )}
 

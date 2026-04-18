@@ -276,14 +276,24 @@ const Header = () => {
                                             <FiUser size={16} strokeWidth={2} />
                                             Hồ sơ cá nhân
                                         </button>
-                                        <button type="button" className="dropdown-item" onClick={() => { setUserMenuOpen(false); navigate('/orders'); }}>
-                                            <FiShoppingCart size={16} strokeWidth={2} />
-                                            Đơn hàng của tôi
-                                        </button>
-                                        <button type="button" className="dropdown-item" onClick={() => { setUserMenuOpen(false); navigate('/wallet'); }}>
-                                            <FiMessageSquare size={16} strokeWidth={2} />
-                                            Ví của tôi
-                                        </button>
+                                        {user?.role !== 'artisan' && (
+                                            <>
+                                                <button type="button" className="dropdown-item" onClick={() => { setUserMenuOpen(false); navigate('/orders'); }}>
+                                                    <FiShoppingCart size={16} strokeWidth={2} />
+                                                    Đơn hàng của tôi
+                                                </button>
+                                                <button type="button" className="dropdown-item" onClick={() => { setUserMenuOpen(false); navigate('/wallet'); }}>
+                                                    <FiMessageSquare size={16} strokeWidth={2} />
+                                                    Ví của tôi
+                                                </button>
+                                            </>
+                                        )}
+                                        {user?.role === 'artisan' && (
+                                            <button type="button" className="dropdown-item" onClick={() => { setUserMenuOpen(false); navigate('/artisan'); }}>
+                                                <FiStar size={16} strokeWidth={2} />
+                                                Dashboard Artisan
+                                            </button>
+                                        )}
                                         <div className="dropdown-divider" />
                                         <button type="button" className="dropdown-item dropdown-logout" onClick={() => { setUserMenuOpen(false); handleAuthAction(); }}>
                                             <FiLogOut size={16} strokeWidth={2} />

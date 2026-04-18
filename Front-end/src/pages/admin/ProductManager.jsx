@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { FiSearch, FiFilter, FiRefreshCw, FiPackage, FiCheck, FiX, FiTrash2, FiAlertTriangle, FiEye } from 'react-icons/fi';
+import { FiSearch, FiFilter, FiRefreshCw, FiPackage, FiCheck, FiX, FiTrash2, FiAlertTriangle, FiEye, FiMoreVertical } from 'react-icons/fi';
 import productService from '../../services/productService';
 import { appToast } from '../../lib/appToast';
 import './admin-common.css';
@@ -22,6 +22,7 @@ const ProductManager = () => {
 
     // Xem chi tiết sản phẩm
     const [detailProduct, setDetailProduct] = useState(null);
+    const [openActionMenuId, setOpenActionMenuId] = useState(null);
 
     const fetchProducts = useCallback(async () => {
         setLoading(true);
@@ -48,6 +49,17 @@ const ProductManager = () => {
     useEffect(() => {
         fetchProducts();
     }, [fetchProducts]);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (!event.target.closest('.action-dropdown')) {
+                setOpenActionMenuId(null);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     const filteredProducts = products.filter((p) => {
         const nameMatch = (p.productName || '')
@@ -304,44 +316,42 @@ const ProductManager = () => {
                                                 {p.status || '—'}
                                             </span>
                                         </td>
-                                        <td className="text-center">
-                                            <div className="action-buttons">
+                                        <td className="text-center action-cell">
+                                            <div className="action-dropdown">
                                                 <button
                                                     type="button"
-                                                    className="btn-action view"
-                                                    title="Xem chi tiết"
-                                                    onClick={() => setDetailProduct(p)}
+                                                    className="btn-action action-trigger"
+                                                    title="Mở menu hành động"
+                                                    aria-expanded={openActionMenuId === p.productId}
+                                                    aria-haspopup="menu"
+                                                    onClick={() => setOpenActionMenuId((current) => (current === p.productId ? null : p.productId))}
                                                 >
-                                                    <FiEye />
+                                                    <FiMoreVertical />
                                                 </button>
-                                                {isPending(p) && (
-                                                    <>
-                                                        <button
-                                                            type="button"
-                                                            className="btn-action edit"
-                                                            title="Duyệt"
-                                                            onClick={() => openApproveModal(p)}
-                                                        >
-                                                            <FiCheck />
+                                                {openActionMenuId === p.productId && (
+                                                    <div className="action-menu" role="menu">
+                                                        <button type="button" className="action-menu-item" onClick={() => { setDetailProduct(p); setOpenActionMenuId(null); }}>
+                                                            <FiEye />
+                                                            <span>Xem chi tiết</span>
                                                         </button>
-                                                        <button
-                                                            type="button"
-                                                            className="btn-action delete"
-                                                            title="Từ chối"
-                                                            onClick={() => openRejectModal(p)}
-                                                        >
-                                                            <FiX />
+                                                        {isPending(p) && (
+                                                            <>
+                                                                <button type="button" className="action-menu-item" onClick={() => { openApproveModal(p); setOpenActionMenuId(null); }}>
+                                                                    <FiCheck />
+                                                                    <span>Duyệt</span>
+                                                                </button>
+                                                                <button type="button" className="action-menu-item" onClick={() => { openRejectModal(p); setOpenActionMenuId(null); }}>
+                                                                    <FiX />
+                                                                    <span>Từ chối</span>
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                        <button type="button" className="action-menu-item danger" onClick={() => { openDeleteModal(p); setOpenActionMenuId(null); }}>
+                                                            <FiTrash2 />
+                                                            <span>Xóa</span>
                                                         </button>
-                                                    </>
+                                                    </div>
                                                 )}
-                                                <button
-                                                    type="button"
-                                                    className="btn-action trash"
-                                                    title="Xóa"
-                                                    onClick={() => openDeleteModal(p)}
-                                                >
-                                                    <FiTrash2 />
-                                                </button>
                                             </div>
                                         </td>
                                     </tr>

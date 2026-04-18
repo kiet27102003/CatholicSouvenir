@@ -33,6 +33,7 @@ import CartDrawer from './components/CartDrawer/CartDrawer'
 
 import AdminLayout from './pages/admin/AdminLayout'
 import AdminWallets from './pages/admin/AdminWallets'
+import AdminWithdrawals from './pages/admin/AdminWithdrawals'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import SystemConfig from './pages/admin/SystemConfig'
 import UserManager from './pages/admin/UserManager'
@@ -116,6 +117,7 @@ function App() {
           <Route path="orders" element={<AdminComingSoon title="Đơn hàng" />} />
           <Route path="payments" element={<AdminComingSoon title="Thanh toán" />} />
           <Route path="wallets" element={<AdminWallets />} />
+          <Route path="withdrawals" element={<AdminWithdrawals />} />
           <Route path="categories" element={<CategoryManager />} />
           <Route path="artisan-applications" element={<ArtisanApplications />} />
         </Route>

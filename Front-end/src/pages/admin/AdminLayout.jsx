@@ -14,9 +14,9 @@ import {
     FiHome,
     FiClipboard,
     FiDollarSign,
-    FiActivity,
     FiGift,
     FiCreditCard,
+    FiRepeat,
 } from 'react-icons/fi';
 
 const AdminLayout = () => {
@@ -38,7 +38,7 @@ const AdminLayout = () => {
         { path: '/admin/orders', name: 'Đơn hàng', icon: <FiClipboard /> },
         { path: '/admin/payments', name: 'Thanh toán', icon: <FiDollarSign /> },
         { path: '/admin/wallets', name: 'Quản lý ví', icon: <FiCreditCard /> },
-        { path: '/admin/settings', name: 'Giám sát hệ thống', icon: <FiActivity /> },
+        { path: '/admin/withdrawals', name: 'Rút tiền', icon: <FiRepeat /> },
         { path: '/admin/customers', name: 'Khách hàng', icon: <FiUser /> },
         { path: '/admin/artisans', name: 'Nghệ nhân', icon: <FiAward /> },
         { path: '/admin/categories', name: 'Danh mục', icon: <FiGrid /> },

@@ -123,6 +123,8 @@ const shortDescription = (text, max = 96) => {
     return `${t.slice(0, max)}…`;
 };
 
+const formatCustomerStatus = (acc) => (isCustomerBlocked(acc) ? 'Bị chặn' : 'Hoạt động');
+
 const CustomerDetailPage = () => {
     const { id } = useParams();
     const [account, setAccount] = useState(null);
@@ -238,36 +240,22 @@ const CustomerDetailPage = () => {
         setShowLockConfirm(false);
     };
 
-    const detailBreadcrumb = (
-        <>
-            <Link to="/admin">Admin</Link>
-            {' / '}
-            <Link to="/admin/customers">Quản lý khách hàng</Link>
-            {' / '}
-            <span>Chi tiết khách hàng</span>
-        </>
-    );
-
     const topbarTitle =
         loading ? 'Đang tải…' : account ? displayVal(account.fullName) : 'Chi tiết khách hàng';
 
     if (!id) {
         return (
-            <>
-                <AdminTopbar title="Chi tiết khách hàng" />
-                <div className="admin-page customer-detail-page">
-                    <p className="admin-page-subtitle">Thiếu mã khách hàng.</p>
-                    <Link to="/admin/customers" className="portfolio-link">
-                        Quay lại danh sách
-                    </Link>
-                </div>
-            </>
+            <div className="admin-page customer-detail-page">
+                <p className="admin-page-subtitle">Thiếu mã khách hàng.</p>
+                <Link to="/admin/customers" className="portfolio-link">
+                    Quay lại danh sách
+                </Link>
+            </div>
         );
     }
 
     return (
         <>
-            <AdminTopbar title={topbarTitle} breadcrumb={detailBreadcrumb} />
             <div className="admin-page customer-detail-page">
             {loading ? (
                 <div className="admin-empty-state">
@@ -291,13 +279,16 @@ const CustomerDetailPage = () => {
                                     {getInitials(account.fullName || account.email)}
                                 </div>
                                 <h2 className="customer-profile-name">{displayVal(account.fullName)}</h2>
+                                <p className="customer-profile-subtitle">
+                                    {displayVal(account.email)}
+                                </p>
                                 <div className="customer-profile-badges">
                                     <span
                                         className={`status-badge ${
                                             isCustomerBlocked(account) ? 'badge-danger' : 'badge-success'
                                         }`}
                                     >
-                                        {isCustomerBlocked(account) ? 'Bị chặn' : 'Hoạt động'}
+                                        {formatCustomerStatus(account)}
                                     </span>
                                     <span className="role-tag">{tierBadge === '—' ? '—' : tierBadge}</span>
                                 </div>

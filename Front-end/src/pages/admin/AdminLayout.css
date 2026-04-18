@@ -6,17 +6,17 @@
     --admin-radius: 12px;
     --admin-radius-sm: 10px;
     --admin-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-    --admin-bg: #f8fafc;
+    --admin-bg: #f4fbf6;
     --admin-card-bg: #ffffff;
-    --admin-sidebar-bg: #ffffff;
-    --admin-sidebar-hover: #fff7ed;
-    --admin-sidebar-active-bg: #ea580c;
-    --admin-sidebar-text: #334155;
-    --admin-sidebar-text-muted: #94a3b8;
-    --admin-text-primary: #0f172a;
-    --admin-text-muted: #64748b;
-    --admin-border: #e2e8f0;
-    --admin-border-light: #f1f5f9;
+    --admin-sidebar-bg: #f9fff9;
+    --admin-sidebar-hover: #ecfdf3;
+    --admin-sidebar-active-bg: #22c55e;
+    --admin-sidebar-text: #1f3d2a;
+    --admin-sidebar-text-muted: #6b8f78;
+    --admin-text-primary: #12301f;
+    --admin-text-muted: #5f7c68;
+    --admin-border: #d6eadc;
+    --admin-border-light: #eaf5ed;
 
     display: flex;
     min-height: 100vh;
@@ -58,8 +58,8 @@
     width: 32px;
     height: 32px;
     border-radius: 9px;
-    background: #ffedd5;
-    color: #ea580c;
+    background: #dcfce7;
+    color: #16a34a;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -117,13 +117,13 @@
 
 .nav-link:hover {
     background: var(--admin-sidebar-hover);
-    color: #9a3412;
+    color: #166534;
 }
 
 .nav-link.active {
     color: #ffffff;
-    background: var(--admin-sidebar-active-bg);
-    box-shadow: 0 8px 18px rgba(234, 88, 12, 0.28);
+    background: linear-gradient(135deg, #16a34a, #22c55e);
+    box-shadow: 0 8px 18px rgba(34, 197, 94, 0.24);
 }
 
 .nav-icon {
@@ -147,8 +147,8 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
+    background: #eefaf1;
+    border: 1px solid #d6eadc;
     border-radius: 12px;
     padding: 8px;
 }
@@ -158,7 +158,7 @@
     height: 38px;
     border-radius: 999px;
     object-fit: cover;
-    border: 1px solid #fed7aa;
+    border: 1px solid #bbf7d0;
 }
 
 .admin-user-info {
@@ -193,8 +193,8 @@
 }
 
 .logout-btn:hover {
-    color: #b91c1c;
-    background: #fee2e2;
+    color: #166534;
+    background: #dcfce7;
 }
 
 /* ========== Main Wrapper ========== */

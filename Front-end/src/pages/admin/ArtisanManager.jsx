@@ -8,9 +8,12 @@ import {
     FiRefreshCw,
     FiUserPlus,
     FiAward,
-    FiMoreHorizontal,
+    FiMoreVertical,
+    FiCheck,
+    FiX,
+    FiTrash2,
 } from 'react-icons/fi';
-import { getArtisans } from '../../services/artisanService';
+import { getArtisans, getArtisanById } from '../../services/artisanService';
 import { appToast } from '../../lib/appToast';
 import './admin-common.css';
 import './UserManager.css';
@@ -67,6 +70,11 @@ const ArtisanManager = () => {
     const [totalElements, setTotalElements] = useState(0);
     const [totalPages, setTotalPages] = useState(1);
     const [selected, setSelected] = useState(() => new Set());
+    const [detailOpen, setDetailOpen] = useState(false);
+    const [detailLoading, setDetailLoading] = useState(false);
+    const [selectedArtisan, setSelectedArtisan] = useState(null);
+    const [selectedArtisanError, setSelectedArtisanError] = useState('');
+    const [openActionMenuId, setOpenActionMenuId] = useState(null);
 
     const loadPage = useCallback(async (pageIndex) => {
         setLoading(true);
@@ -94,6 +102,17 @@ const ArtisanManager = () => {
     useEffect(() => {
         setSelected(new Set());
     }, [page, artisans]);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (!event.target.closest('.action-dropdown')) {
+                setOpenActionMenuId(null);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     const specialtyOptions = useMemo(() => {
         const set = new Set();
@@ -162,25 +181,52 @@ const ArtisanManager = () => {
         return [page - 1, page, page + 1];
     }, [totalPages, page]);
 
-    const orderCount = (a) => a.orderCount ?? a.totalOrders ?? a.completedOrders;
-    const ratingVal = (a) => a.rating ?? a.averageRating ?? a.avgRating;
+    const formatExperience = (years) => {
+        if (years == null || years === '') return '—';
+        const n = Number(years);
+        if (Number.isNaN(n)) return displayVal(years);
+        return `${n} năm`;
+    };
+
+    const trimBio = (bio) => {
+        const text = String(bio || '').trim();
+        if (!text) return 'Chưa cập nhật giới thiệu';
+        return text.length > 92 ? `${text.slice(0, 92).trim()}…` : text;
+    };
+
+    const artisanNameTitle = (a) => [a.artisanName, a.specialization, formatArtisanCode(a.artisanId)].filter(Boolean).join(' • ');
 
     const revenueRatingCell = (a) => {
-        const o = orderCount(a);
-        const r = ratingVal(a);
-        const hasO = o != null && o !== '';
-        const hasR = r != null && r !== '' && !Number.isNaN(Number(r));
-        if (!hasO && !hasR) {
-            return <span className="muted">—</span>;
-        }
+        const hasPortfolio = Boolean(a.portfolioUrl);
         return (
             <div className="revenue-rating-cell">
-                <span>{hasO ? `${displayVal(o)} đơn` : '—'}</span>
-                <span className="muted">
-                    {hasR ? `${Number(r).toFixed(1)} ★` : 'Chưa có ĐG'}
-                </span>
+                <span>{formatExperience(a.experienceYears)}</span>
+                <span className="muted">{hasPortfolio ? 'Có portfolio' : 'Chưa có portfolio'}</span>
             </div>
         );
+    };
+
+    const openDetail = async (artisanId) => {
+        if (!artisanId) return;
+        setDetailOpen(true);
+        setDetailLoading(true);
+        setSelectedArtisanError('');
+
+        const response = await getArtisanById(artisanId);
+        if (!response.success) {
+            setSelectedArtisan(null);
+            setSelectedArtisanError(response.error || 'Không tải được thông tin nghệ nhân.');
+        } else {
+            setSelectedArtisan(response.data || null);
+        }
+
+        setDetailLoading(false);
+    };
+
+    const closeDetail = () => {
+        setDetailOpen(false);
+        setSelectedArtisan(null);
+        setSelectedArtisanError('');
     };
 
     const allVisibleIds = filteredRows.map((a) => a.artisanId).filter(Boolean);
@@ -188,7 +234,7 @@ const ArtisanManager = () => {
         allVisibleIds.length > 0 && allVisibleIds.every((id) => selected.has(id));
 
     return (
-        <div className="admin-page user-manager-page">
+        <div className="admin-page user-manager-page artisan-manager-page">
             <div className="admin-page-header user-manager-header">
                 <div>
                     <h1 className="admin-page-title">Quản lý nghệ nhân</h1>
@@ -274,8 +320,8 @@ const ArtisanManager = () => {
                                 </th>
                                 <th>Nghệ nhân</th>
                                 <th>Chuyên môn</th>
-                                <th>Trạng thái</th>
-                                <th>Doanh thu &amp; đánh giá</th>
+                                <th>Kinh nghiệm</th>
+                                <th>Portfolio</th>
                                 <th className="text-right">Hành động</th>
                             </tr>
                         </thead>
@@ -319,7 +365,7 @@ const ArtisanManager = () => {
                                                 />
                                             </td>
                                             <td>
-                                                <div className="table-user-cell">
+                                                <div className="table-user-cell artisan-name-cell" title={artisanNameTitle(a)}>
                                                     <div className="table-avatar-initials" aria-hidden>
                                                         {getInitials(a.artisanName)}
                                                     </div>
@@ -334,31 +380,60 @@ const ArtisanManager = () => {
                                                 </div>
                                             </td>
                                             <td>{displayVal(a.specialization)}</td>
+                                            <td>{formatExperience(a.experienceYears)}</td>
                                             <td>
-                                                <span className={`status-badge ${st.className}`}>{st.label}</span>
+                                                <span className="status-badge badge-secondary">
+                                                    {a.portfolioUrl ? 'Có portfolio' : 'Chưa có portfolio'}
+                                                </span>
                                             </td>
-                                            <td>{revenueRatingCell(a)}</td>
-                                            <td className="text-right">
-                                                <div className="action-icons-row">
+                                            <td className="text-right artisan-actions-cell">
+                                                <div className="action-dropdown">
                                                     <button
                                                         type="button"
-                                                        className="btn-action"
-                                                        title="Xem"
-                                                        onClick={() => id && navigate(`/artisans/${id}`)}
-                                                        disabled={!id}
+                                                        className="btn-action action-trigger"
+                                                        title="Mở menu hành động"
+                                                        aria-expanded={openActionMenuId === id}
+                                                        aria-haspopup="menu"
+                                                        onClick={() => setOpenActionMenuId((current) => (current === id ? null : id))}
                                                     >
-                                                        <FiEye />
+                                                        <FiMoreVertical />
                                                     </button>
-                                                    <button
-                                                        type="button"
-                                                        className="btn-action"
-                                                        title="Duyệt / từ chối"
-                                                    >
-                                                        <FiMoreHorizontal />
-                                                    </button>
-                                                    <button type="button" className="btn-action" title="Đình chỉ">
-                                                        <FiSlash />
-                                                    </button>
+                                                    {openActionMenuId === id && (
+                                                        <div className="action-menu" role="menu">
+                                                            <button
+                                                                type="button"
+                                                                className="action-menu-item"
+                                                                onClick={() => { openDetail(id); setOpenActionMenuId(null); }}
+                                                            >
+                                                                <FiEye />
+                                                                <span>Xem chi tiết</span>
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                className="action-menu-item"
+                                                                onClick={() => { setOpenActionMenuId(null); navigate(`/admin/artisan-applications?artisanId=${id}`); }}
+                                                            >
+                                                                <FiCheck />
+                                                                <span>Duyệt</span>
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                className="action-menu-item"
+                                                                onClick={() => { setOpenActionMenuId(null); navigate(`/admin/artisan-applications?artisanId=${id}&action=reject`); }}
+                                                            >
+                                                                <FiX />
+                                                                <span>Từ chối</span>
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                className="action-menu-item danger"
+                                                                onClick={() => { setOpenActionMenuId(null); navigate(`/admin/artisans/${id}/suspend`); }}
+                                                            >
+                                                                <FiSlash />
+                                                                <span>Đình chỉ</span>
+                                                            </button>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>
@@ -405,6 +480,68 @@ const ArtisanManager = () => {
                     </div>
                 )}
             </div>
+
+            {detailOpen && (
+                <div className="detail-overlay" onClick={closeDetail} role="presentation">
+                    <div className="detail-modal artisan-detail-modal" onClick={(event) => event.stopPropagation()}>
+                        <div className="detail-modal-header">
+                            <h3>Chi tiết nghệ nhân</h3>
+                            <button type="button" className="detail-close" onClick={closeDetail}>&times;</button>
+                        </div>
+
+                        <div className="detail-modal-body">
+                            {detailLoading ? (
+                                <div className="admin-empty-state" style={{ padding: '24px 0' }}>
+                                    <FiRefreshCw className="spin" style={{ fontSize: '2rem' }} />
+                                    <p>Đang tải thông tin nghệ nhân...</p>
+                                </div>
+                            ) : selectedArtisanError ? (
+                                <div className="admin-empty-state" style={{ padding: '24px 0' }}>
+                                    <FiAward style={{ fontSize: '2rem', color: 'var(--admin-border)' }} />
+                                    <p>{selectedArtisanError}</p>
+                                </div>
+                            ) : selectedArtisan ? (
+                                <>
+                                    <div className="detail-row">
+                                        <span className="detail-label">Mã nghệ nhân</span>
+                                        <span className="detail-value mono">{selectedArtisan.artisanId || '—'}</span>
+                                    </div>
+                                    <div className="detail-row">
+                                        <span className="detail-label">Tên nghệ nhân</span>
+                                        <span className="detail-value">{selectedArtisan.artisanName || '—'}</span>
+                                    </div>
+                                    <div className="detail-row">
+                                        <span className="detail-label">Số điện thoại</span>
+                                        <span className="detail-value">{selectedArtisan.phoneNumber || '—'}</span>
+                                    </div>
+                                    <div className="detail-row">
+                                        <span className="detail-label">Chuyên môn</span>
+                                        <span className="detail-value">{selectedArtisan.specialization || '—'}</span>
+                                    </div>
+                                    <div className="detail-row">
+                                        <span className="detail-label">Kinh nghiệm</span>
+                                        <span className="detail-value">{formatExperience(selectedArtisan.experienceYears)}</span>
+                                    </div>
+                                    <div className="detail-row">
+                                        <span className="detail-label">Portfolio</span>
+                                        <span className="detail-value">
+                                            {selectedArtisan.portfolioUrl ? (
+                                                <a className="portfolio-link" href={selectedArtisan.portfolioUrl} target="_blank" rel="noreferrer">
+                                                    Mở portfolio
+                                                </a>
+                                            ) : '—'}
+                                        </span>
+                                    </div>
+                                    <div className="detail-row" style={{ gridColumn: '1 / -1' }}>
+                                        <span className="detail-label">Giới thiệu</span>
+                                        <span className="detail-value">{trimBio(selectedArtisan.bio)}</span>
+                                    </div>
+                                </>
+                            ) : null}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

@@ -1,40 +1,60 @@
 import api from '../cofig/api';
 
-/**
- * Gọi API AI tạo thiết kế sản phẩm (demo).
- * POST /api/ai/generate-design
- * @param {Object} payload
- * @param {string} payload.description - Mô tả sản phẩm
- * @param {string} payload.style - Phong cách
- * @param {string} payload.material - Chất liệu
- * @param {string} payload.size - Kích thước
- * @returns {Promise<{ success: boolean, data?: object, error?: string }>}
- */
-export const generateDesign = async (payload) => {
-    try {
-        const body = {
-            description: String(payload.description ?? '').trim(),
-            style: String(payload.style ?? '').trim(),
-            material: String(payload.material ?? '').trim(),
-            size: String(payload.size ?? '').trim(),
+const normalizeResponse = (response) => {
+    if (response?.data?.code != null) {
+        return {
+            code: response.data.code,
+            message: response.data.message,
+            data: response.data.data,
         };
-        const response = await api.post('/ai/generate-design', body);
-        const res = response.data;
-        if (res?.code !== undefined && res.code !== 200) {
+    }
+
+    return {
+        code: 200,
+        message: 'OK',
+        data: response?.data,
+    };
+};
+
+const mapError = (error, fallback) => {
+    const message =
+        error?.response?.data?.message ??
+        error?.response?.data?.error ??
+        error?.message ??
+        fallback;
+    return typeof message === 'string' ? message : fallback;
+};
+
+export const generateConceptImage = async ({ description }) => {
+    const body = {
+        description: String(description ?? '').trim(),
+    };
+
+    if (!body.description) {
+        return { success: false, error: 'Thiếu mô tả để tạo ảnh concept.' };
+    }
+
+    try {
+        const response = await api.post('/ai/generate-concept', body);
+        const normalized = normalizeResponse(response);
+
+        if (normalized.code !== 0 && normalized.code !== 200 && normalized.code !== 201) {
             return {
                 success: false,
-                error: res?.message || 'Tạo thiết kế thất bại.',
+                error: normalized.message || 'Tạo ảnh concept thất bại.',
             };
         }
-        return { success: true, data: res?.data ?? res };
-    } catch (err) {
-        const message =
-            err.response?.data?.message ||
-            err.response?.data?.error ||
-            err.message ||
-            'Không thể kết nối tới dịch vụ AI.';
-        return { success: false, error: message };
+
+        return {
+            success: true,
+            data: normalized.data || {},
+        };
+    } catch (error) {
+        return {
+            success: false,
+            error: mapError(error, 'Không thể kết nối tới dịch vụ AI.'),
+        };
     }
 };
 
-export default { generateDesign };
+export default { generateConceptImage };

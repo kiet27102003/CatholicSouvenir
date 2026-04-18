@@ -75,12 +75,9 @@ export const createCustomRequestV2 = async (payload) => {
             minBudget: Number(payload?.minBudget || 0),
             maxBudget: Number(payload?.maxBudget || 0),
             referenceImages: Array.isArray(payload?.referenceImages) ? payload.referenceImages.filter(Boolean) : [],
-            generateAiImage: payload?.generateAiImage !== false,
+            aiConceptImageUrl: String(payload?.aiConceptImageUrl || '').trim(),
+            aiImagePrompt: String(payload?.aiImagePrompt || '').trim(),
         };
-
-        if (payload?.artisanId) {
-            body.artisanId = payload.artisanId;
-        }
 
         const response = await api.post('/custom-requests', body);
 

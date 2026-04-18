@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import Header from '../../components/Header/Header';
 import ImageUpload from '../../components/ui/ImageUpload';
+import { generateConceptImage } from '../../services/aiService';
 import { createCustomRequestV2 as createCustomRequest } from '../../services/customRequestService';
 import { appToast } from '../../lib/appToast';
 import './CustomRequestPage.css';
@@ -15,16 +16,68 @@ const CustomRequestPage = () => {
         title: '',
         description: '',
         referenceImageUrl: '',
-        generateAiImage: true,
+        aiConceptImageUrl: '',
+        aiImagePrompt: '',
         minBudget: '',
         maxBudget: '',
     });
     const [submitting, setSubmitting] = useState(false);
+    const [generatingImage, setGeneratingImage] = useState(false);
     const [modalOpen, setModalOpen] = useState(false);
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
         setFormData((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+    };
+
+    const validateForm = () => {
+        const title = formData.title.trim();
+        const description = formData.description.trim();
+        const minBudget = Number(formData.minBudget || 0);
+        const maxBudget = Number(formData.maxBudget || 0);
+
+        if (title.length < 15) {
+            return 'Tiêu đề phải có ít nhất 15 ký tự.';
+        }
+
+        if (description.length < 50) {
+            return 'Mô tả phải có ít nhất 50 ký tự.';
+        }
+
+        if (Number.isFinite(minBudget) && Number.isFinite(maxBudget) && minBudget > maxBudget) {
+            return 'Ngân sách tối thiểu phải nhỏ hơn hoặc bằng ngân sách tối đa.';
+        }
+
+        if (!formData.aiConceptImageUrl.trim()) {
+            return 'Vui lòng tạo hoặc thêm ảnh AI concept trước khi gửi.';
+        }
+
+        return '';
+    };
+
+    const handleGenerateAiImage = async () => {
+        const description = formData.description.trim();
+        if (description.length < 50) {
+            appToast.warning('Thiếu mô tả', 'Mô tả phải có ít nhất 50 ký tự trước khi tạo ảnh AI');
+            return;
+        }
+
+        setGeneratingImage(true);
+        const result = await generateConceptImage({ description });
+        setGeneratingImage(false);
+
+        if (result.success) {
+            const data = result.data || {};
+            setFormData((prev) => ({
+                ...prev,
+                aiConceptImageUrl: String(data.imageUrl || '').trim(),
+                aiImagePrompt: String(data.prompt || '').trim(),
+            }));
+            appToast.success('Tạo ảnh AI thành công', 'Ảnh concept đã được cập nhật');
+            return;
+        }
+
+        appToast.error('Không tạo được ảnh AI', result.error != null ? String(result.error) : 'Vui lòng thử lại');
     };
 
     const handleSubmit = async (e) => {
@@ -35,14 +88,21 @@ const CustomRequestPage = () => {
             return;
         }
 
+        const validationError = validateForm();
+        if (validationError) {
+            appToast.warning('Dữ liệu chưa hợp lệ', validationError);
+            return;
+        }
+
         setSubmitting(true);
         const result = await createCustomRequest({
             title: formData.title.trim(),
             description: formData.description.trim(),
             minBudget: Number(formData.minBudget || 0),
             maxBudget: Number(formData.maxBudget || 0),
-            referenceImageUrl: formData.referenceImageUrl.trim() || undefined,
-            generateAiImage: formData.generateAiImage,
+            referenceImages: formData.referenceImageUrl.trim() ? [formData.referenceImageUrl.trim()] : [],
+            aiConceptImageUrl: formData.aiConceptImageUrl.trim(),
+            aiImagePrompt: formData.aiImagePrompt.trim(),
         });
         setSubmitting(false);
 
@@ -52,7 +112,8 @@ const CustomRequestPage = () => {
                 title: '',
                 description: '',
                 referenceImageUrl: '',
-                generateAiImage: true,
+                aiConceptImageUrl: '',
+                aiImagePrompt: '',
                 minBudget: '',
                 maxBudget: '',
             });
@@ -161,16 +222,42 @@ const CustomRequestPage = () => {
                                 folder="custom-requests"
                             />
 
-                            <div className="form-group checkbox-group">
-                                <label className="checkbox-label">
-                                    <input type="checkbox" name="generateAiImage" checked={formData.generateAiImage} onChange={handleChange} />
-                                    <span>Sinh ảnh gợi ý bằng AI từ mô tả</span>
-                                </label>
+                            <div className="form-group">
+                                <label className="form-label">Ảnh concept AI</label>
+                                <div className="ai-concept-preview">
+                                    {formData.aiConceptImageUrl.trim() ? (
+                                        <img src={formData.aiConceptImageUrl.trim()} alt="AI concept preview" className="ai-concept-preview-img" />
+                                    ) : (
+                                        <div className="ai-concept-preview-empty">
+                                            <FiImage />
+                                            <span>Chưa có ảnh concept</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="form-group">
+                                <button type="button" className="btn btn-outline btn-large" onClick={handleGenerateAiImage} disabled={generatingImage || submitting}>
+                                    {generatingImage ? 'Đang tạo ảnh AI...' : 'Generate AI Image'}
+                                </button>
+                            </div>
+
+                            <div className="form-group">
+                                <label className="form-label" htmlFor="aiImagePrompt">Prompt AI</label>
+                                <textarea
+                                    id="aiImagePrompt"
+                                    name="aiImagePrompt"
+                                    className="form-input form-textarea"
+                                    rows="4"
+                                    value={formData.aiImagePrompt}
+                                    onChange={handleChange}
+                                    placeholder="Mô tả ảnh concept bạn muốn AI tạo..."
+                                />
                             </div>
 
                             <div className="request-form-footer">
                                 <p className="notice-text">Gửi form này không ràng buộc bạn mua hàng. Nghệ nhân sẽ gửi báo giá chính thức để bạn duyệt.</p>
-                                <button type="submit" className="btn btn-primary btn-large" disabled={submitting}>
+                                <button type="submit" className="btn btn-primary btn-large" disabled={submitting || generatingImage}>
                                     {submitting ? 'Đang gửi yêu cầu...' : 'Gửi yêu cầu báo giá'}
                                 </button>
                             </div>

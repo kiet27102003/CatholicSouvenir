@@ -29,6 +29,8 @@ import PaymentSuccessPage from './pages/PaymentSuccessPage'
 import PaymentFailedPage from './pages/PaymentFailedPage'
 import OrderTrackingPage from './pages/customer/OrderTrackingPage'
 import WalletPage from './pages/customer/WalletPage'
+import ComplaintCenterPage from './pages/customer/ComplaintCenterPage'
+import ComplaintHistoryPage from './pages/customer/ComplaintHistoryPage'
 import CartDrawer from './components/CartDrawer/CartDrawer'
 
 import AdminLayout from './pages/admin/AdminLayout'
@@ -44,6 +46,9 @@ import ProductManager from './pages/admin/ProductManager'
 import CategoryManager from './pages/admin/CategoryManager'
 import ArtisanApplications from './pages/admin/ArtisanApplications'
 import AdminComingSoon from './pages/admin/AdminComingSoon'
+import CommissionManagement from './pages/admin/CommissionManagement'
+import ShipmentDemoStatusPage from './pages/admin/ShipmentDemoStatusPage'
+import ShipmentManagementPage from './pages/artisan/ShipmentManagementPage'
 
 function ArtisanOnlyRoute({ children }) {
   const { user, loading } = useAuth()
@@ -93,6 +98,7 @@ function App() {
         <Route path="/artisan-centre" element={<ArtisanCentrePage />} />
         <Route path="/checkout" element={<CheckoutPage />} />
         <Route path="/payment/success" element={<PaymentSuccessPage />} />
+        <Route path="/payment/error" element={<PaymentFailedPage />} />
         <Route path="/payment/failed" element={<PaymentFailedPage />} />
         <Route path="/cart" element={<CartPage />} />
 
@@ -103,18 +109,20 @@ function App() {
         <Route path="/artisan/messages" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
         <Route path="/artisan/requests/:id/custom-order" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
         <Route path="/artisan/orders" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
+        <Route path="/artisan/shipments" element={<ArtisanOnlyRoute><ShipmentManagementPage /></ArtisanOnlyRoute>} />
         <Route path="/artisan/orders/:id" element={<ArtisanOnlyRoute><ArtisanOrderDetailPage /></ArtisanOnlyRoute>} />
 
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<Navigate to="/admin/dashboard" replace />} />
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="settings" element={<SystemConfig />} />
+          <Route path="commission" element={<CommissionManagement />} />
           <Route path="users" element={<UserManager />} />
           <Route path="customers" element={<CustomerManager />} />
           <Route path="customers/:id" element={<CustomerDetailPage />} />
           <Route path="artisans" element={<ArtisanManager />} />
           <Route path="products" element={<ProductManager />} />
-          <Route path="orders" element={<AdminComingSoon title="Đơn hàng" />} />
+          <Route path="orders" element={<ShipmentDemoStatusPage />} />
           <Route path="payments" element={<AdminComingSoon title="Thanh toán" />} />
           <Route path="wallets" element={<AdminWallets />} />
           <Route path="withdrawals" element={<AdminWithdrawals />} />
@@ -123,6 +131,8 @@ function App() {
         </Route>
 
         <Route path="/wallet" element={<WalletAccessRoute><WalletPage /></WalletAccessRoute>} />
+        <Route path="/complaints" element={<ComplaintCenterPage />} />
+        <Route path="/complaint-history" element={<ComplaintHistoryPage />} />
         <Route path="/messages" element={<WalletAccessRoute><ChatPage /></WalletAccessRoute>} />
         <Route path="/custom-order" element={<CustomRequestPage />} />
         <Route path="/templates" element={<TemplateCatalogPage />} />

@@ -18,6 +18,7 @@ const getViewFromPath = (pathname) => {
     if (/^\/artisan\/requests\/[^/]+\/custom-order$/.test(pathname)) return 'customOrderCreate';
     if (pathname === '/artisan/orders') return 'customOrders';
     if (pathname === '/artisan/wallet') return 'wallet';
+    if (pathname === '/artisan/shipments') return 'shipments';
     if (pathname === '/artisan/messages') return 'messages';
     return 'dashboard';
 };
@@ -27,6 +28,7 @@ const viewToPath = (view) => {
     if (view === 'requests') return '/artisan/requests';
     if (view === 'customOrders') return '/artisan/orders';
     if (view === 'wallet') return '/artisan/wallet';
+    if (view === 'shipments') return '/artisan/shipments';
     if (view === 'messages') return '/artisan/messages';
     return '/artisan';
 };

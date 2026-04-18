@@ -96,6 +96,26 @@
     overflow-y: auto;
 }
 
+.sidebar-nav-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-group-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(107, 143, 120, 0.25), transparent);
+    margin: 10px 10px 14px;
+}
+
+.sidebar-group-title {
+    margin: 0 10px 8px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--admin-sidebar-text-muted);
+}
+
 .sidebar-nav ul {
     list-style: none;
     padding: 0;

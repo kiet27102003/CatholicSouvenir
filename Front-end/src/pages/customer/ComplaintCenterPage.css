@@ -1,0 +1,82 @@
+.complaint-center-page {
+    padding: 24px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.complaint-center-header,
+.complaint-center-toolbar,
+.complaint-pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.complaint-list {
+    display: grid;
+    gap: 12px;
+}
+
+.complaint-card {
+    text-align: left;
+    padding: 16px;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    background: #fff;
+    cursor: pointer;
+}
+
+.complaint-card strong,
+.complaint-card span,
+.complaint-card p,
+.complaint-card small {
+    display: block;
+    margin-bottom: 6px;
+}
+
+.complaint-empty {
+    padding: 24px;
+    text-align: center;
+    border: 1px dashed #d1d5db;
+    border-radius: 16px;
+}
+
+.complaint-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    z-index: 50;
+}
+
+.complaint-modal {
+    width: min(720px, 100%);
+    background: #fff;
+    border-radius: 20px;
+    padding: 24px;
+}
+
+.complaint-form-grid {
+    display: grid;
+    gap: 12px;
+    margin: 16px 0;
+}
+
+.complaint-form-grid textarea,
+.complaint-form-grid input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+}
+
+.complaint-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+}

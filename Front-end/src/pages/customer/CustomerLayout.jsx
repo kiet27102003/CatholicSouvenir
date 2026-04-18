@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, Outlet, Navigate, useLocation } from 'react-router-dom';
-import { FiUser, FiShield, FiBell, FiCreditCard, FiTruck, FiLogOut, FiEdit2, FiDollarSign } from 'react-icons/fi';
+import { FiUser, FiShield, FiBell, FiCreditCard, FiTruck, FiAlertCircle } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import Header from '../../components/Header/Header';
 import Footer from '../../components/Footer/Footer';
@@ -21,7 +21,7 @@ const CustomerLayout = () => {
     const isSecurityActive = isProfile && activeTab === 'security';
     const isNotificationsActive = isProfile && activeTab === 'notifications';
     const isPaymentActive = isProfile && activeTab === 'payment';
-    const isWalletActive = location.pathname === '/wallet';
+    const isComplaintActive = location.pathname === '/complaints' || location.pathname === '/complaint-history';
 
     return (
         <div className="customer-layout">
@@ -49,23 +49,15 @@ const CustomerLayout = () => {
                             <FiTruck size={20} strokeWidth={2} />
                             Đơn hàng của tôi
                         </NavLink>
-                        <NavLink to="/wallet" className={`sidebar-link ${isWalletActive ? 'active' : ''}`}>
-                            <FiDollarSign size={20} strokeWidth={2} />
-                            Ví của tôi
-                        </NavLink>
-                        <NavLink to="/custom-requests" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
-                            <FiEdit2 size={20} strokeWidth={2} />
-                            Yêu cầu đặt riêng
+                        <NavLink to="/complaint-history" className={`sidebar-link ${isComplaintActive ? 'active' : ''}`}>
+                            <FiAlertCircle size={20} strokeWidth={2} />
+                            Khiếu nại
                         </NavLink>
                         <NavLink to="/messages" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
                             <FiBell size={20} strokeWidth={2} />
                             Tin nhắn
                         </NavLink>
                         <div className="sidebar-divider" role="separator" aria-hidden="true" />
-                        <button type="button" className="sidebar-link sidebar-logout" onClick={logout}>
-                            <FiLogOut size={20} strokeWidth={2} />
-                            Đăng xuất
-                        </button>
                     </nav>
 
                     <div className="sidebar-support">

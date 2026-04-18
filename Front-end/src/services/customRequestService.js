@@ -403,7 +403,9 @@ export const updateCustomOrderStatus = async (orderId, status) => {
     if (!orderId || !status) return { success: false, error: 'Thiếu thông tin cập nhật trạng thái.' };
 
     try {
-        const response = await api.put(`/custom-orders/${orderId}/status`, { status });
+        const response = await api.put(`/custom-orders/${orderId}/status`, null, {
+            params: { status },
+        });
         const normalized = normalizeResponse(response);
 
         if (!isSuccessCode(normalized.code)) {
@@ -433,25 +435,17 @@ export const cancelCustomOrder = async (orderId, reason = '') => {
     }
 };
 
-export const uploadStageProof = async (stageId, payload = {}) => {
+export const completeStage = async (stageId, payload = {}) => {
     if (!stageId) return { success: false, error: 'Thiếu mã stage.' };
 
     const completionImageUrl = String(payload?.completionImageUrl || payload?.imageUrl || '').trim();
     if (!completionImageUrl) return { success: false, error: 'Thiếu ảnh bằng chứng hoàn thành.' };
 
-    const body = {
-        // Backend thực tế đang validate imageUrl, nhưng response trả completionImageUrl.
-        // Gửi cả 2 key để tương thích.
-        imageUrl: completionImageUrl,
-        completionImageUrl,
-    };
-
-    if (String(payload?.notes || '').trim()) {
-        body.notes = String(payload.notes).trim();
-    }
-
     try {
-        const response = await api.post(`/stages/${stageId}/upload-proof`, body);
+        const response = await api.put(`/stages/${stageId}/complete`, {
+            completionImageUrl,
+            notes: String(payload?.notes || '').trim(),
+        });
         const normalized = normalizeResponse(response);
 
         if (!isSuccessCode(normalized.code)) {
@@ -464,8 +458,8 @@ export const uploadStageProof = async (stageId, payload = {}) => {
     }
 };
 
-export const completeStage = async (stageId, payload = {}) => {
-    return uploadStageProof(stageId, payload);
+export const uploadStageProof = async (stageId, payload = {}) => {
+    return completeStage(stageId, payload);
 };
 
 export default {

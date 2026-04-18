@@ -1,15 +1,16 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { FiCalendar, FiCheckCircle, FiClock, FiDollarSign, FiFileText, FiMail, FiPhone, FiUser } from 'react-icons/fi';
+import { FiCalendar, FiCheckCircle, FiClock, FiDollarSign, FiFileText, FiMail, FiPhone, FiTruck, FiUser } from 'react-icons/fi';
 import { useNavigate, useParams } from 'react-router-dom';
 import ImageUpload from '../../components/ui/ImageUpload';
 import { useAuth } from '../../context/AuthContext';
 import { appToast } from '../../lib/appToast';
 import {
-    cancelCustomOrder,
     completeStage,
     getCustomOrderDetail,
     getCustomOrderStages,
+    updateCustomOrderStatus,
 } from '../../services/customRequestService';
+import { createShipment } from '../../services/shipmentService';
 import Sidebar from './components/Sidebar';
 import './ArtisanDashboard.css';
 import './ArtisanOrderDetailPage.css';
@@ -26,23 +27,59 @@ const formatDate = (value) => {
     }
 };
 
-const getStatusLabel = (status) => {
-    const s = String(status || '').toUpperCase();
-    if (s === 'PENDING') return 'Chờ xử lý';
-    if (s === 'IN_PROGRESS') return 'Đang thực hiện';
-    if (s === 'COMPLETED') return 'Hoàn thành';
-    if (s === 'CANCELLED') return 'Đã huỷ';
-    if (s === 'PENDING_PAYMENT') return 'Chờ thanh toán';
-    if (s === 'PAID') return 'Đã thanh toán';
-    return status || '—';
+const ORDER_STATUS_LABELS = {
+    PENDING_PAYMENT: 'Chờ thanh toán',
+    CONFIRMED: 'Đã xác nhận',
+    IN_PROGRESS: 'Đang thực hiện',
+    IN_PRODUCTION: 'Đang sản xuất',
+    SHIPPING: 'Đang giao hàng',
+    DELIVERED: 'Đã giao',
+    COMPLETED: 'Hoàn thành',
+    CANCELLED: 'Đã huỷ',
+    REFUNDED: 'Đã hoàn tiền',
 };
+
+const ORDER_STATUS_OPTIONS = [
+    { value: 'PENDING_PAYMENT', label: 'Chờ thanh toán' },
+    { value: 'CONFIRMED', label: 'Đã xác nhận' },
+    { value: 'IN_PROGRESS', label: 'Đang thực hiện' },
+    { value: 'IN_PRODUCTION', label: 'Đang sản xuất' },
+    { value: 'SHIPPING', label: 'Đang giao hàng' },
+    { value: 'DELIVERED', label: 'Đã giao' },
+    { value: 'COMPLETED', label: 'Hoàn thành' },
+    { value: 'CANCELLED', label: 'Đã huỷ' },
+    { value: 'REFUNDED', label: 'Đã hoàn tiền' },
+];
+
+const getStatusLabel = (status) => ORDER_STATUS_LABELS[String(status || '').toUpperCase()] || status || '—';
 
 const getStatusClass = (status) => {
     const s = String(status || '').toUpperCase();
     if (s === 'COMPLETED') return 'completed';
-    if (s === 'CANCELLED') return 'cancelled';
-    if (s === 'IN_PROGRESS' || s === 'PAID') return 'in-progress';
+    if (s === 'CANCELLED' || s === 'REFUNDED') return 'cancelled';
+    if (s === 'IN_PROGRESS' || s === 'IN_PRODUCTION' || s === 'SHIPPING' || s === 'DELIVERED' || s === 'PAID') return 'in-progress';
     return 'pending';
+};
+
+const ORDER_STATUS_FLOW = {
+    PENDING_PAYMENT: ['CONFIRMED', 'CANCELLED'],
+    CONFIRMED: ['IN_PROGRESS', 'CANCELLED'],
+    IN_PROGRESS: ['IN_PRODUCTION', 'CANCELLED'],
+    IN_PRODUCTION: ['SHIPPING', 'CANCELLED'],
+    SHIPPING: ['DELIVERED', 'CANCELLED'],
+    DELIVERED: ['COMPLETED', 'REFUNDED'],
+    COMPLETED: [],
+    CANCELLED: [],
+    REFUNDED: [],
+};
+
+const getAllowedNextStatuses = (status, role) => {
+    const current = String(status || '').toUpperCase();
+    const currentAllowed = ORDER_STATUS_FLOW[current] || [];
+    if (role !== 'ADMIN') {
+        return currentAllowed.filter((nextStatus) => nextStatus !== 'REFUNDED');
+    }
+    return currentAllowed;
 };
 
 const isCompleted = (stage) => String(stage?.status || '').toUpperCase() === 'COMPLETED';
@@ -55,6 +92,7 @@ const ArtisanOrderDetailPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const { user, logout } = useAuth();
+    const role = String(user?.role || '').toUpperCase();
 
     const [loading, setLoading] = useState(true);
     const [order, setOrder] = useState(null);
@@ -65,6 +103,25 @@ const ArtisanOrderDetailPage = () => {
     const [cancelConfirmText, setCancelConfirmText] = useState('');
     const [proofByStage, setProofByStage] = useState({});
     const [notesByStage, setNotesByStage] = useState({});
+    const [shipmentFormOpen, setShipmentFormOpen] = useState(false);
+    const [shippingSubmitting, setShippingSubmitting] = useState(false);
+    const [shipmentForm, setShipmentForm] = useState({
+        recipientName: '',
+        recipientPhone: '',
+        deliveryAddress: '',
+        toDistrictId: '',
+        toWardCode: '',
+        orderValue: '',
+        weight: '1000',
+        length: '20',
+        width: '20',
+        height: '20',
+        note: '',
+        serviceTypeId: '2',
+        paymentTypeId: '1',
+    });
+    const [statusDraft, setStatusDraft] = useState('');
+    const [statusSubmitting, setStatusSubmitting] = useState(false);
 
     const loadAll = async () => {
         setLoading(true);
@@ -79,8 +136,10 @@ const ArtisanOrderDetailPage = () => {
             return;
         }
 
-        setOrder(detailRes.data || null);
+        const nextOrder = detailRes.data || null;
+        setOrder(nextOrder);
         setStages(stagesRes.success ? (Array.isArray(stagesRes.data) ? stagesRes.data : []) : []);
+        setStatusDraft(String(nextOrder?.status || '').toUpperCase());
     };
 
     useEffect(() => {
@@ -94,6 +153,18 @@ const ArtisanOrderDetailPage = () => {
     }, [stages]);
 
     const activeStage = useMemo(() => stages.find(isActiveStage) || null, [stages]);
+
+    const shipmentReady = useMemo(() => {
+        const phone = String(order?.recipientPhone || order?.customerPhone || order?.shippingPhone || '').trim();
+        const address = String(order?.deliveryAddress || order?.shippingAddress || '').trim();
+        const name = String(order?.recipientName || order?.customerName || '').trim();
+        return {
+            recipientName: shipmentForm.recipientName || name,
+            recipientPhone: shipmentForm.recipientPhone || phone,
+            deliveryAddress: shipmentForm.deliveryAddress || address,
+            orderValue: shipmentForm.orderValue || order?.totalPrice || 0,
+        };
+    }, [order, shipmentForm]);
 
     const revenueCurrent = Number(activeStage?.amount || 0) * 0.9;
     const completedRevenue = stages.filter(isCompleted).reduce((sum, stage) => sum + Number(stage?.amount || 0) * 0.9, 0);
@@ -109,7 +180,7 @@ const ArtisanOrderDetailPage = () => {
         if (cancelConfirmText.trim() !== 'Hủy đơn') return;
 
         setCancelling(true);
-        const res = await cancelCustomOrder(id);
+        const res = await updateCustomOrderStatus(id, 'CANCELLED');
         setCancelling(false);
 
         if (!res.success) {
@@ -120,6 +191,31 @@ const ArtisanOrderDetailPage = () => {
         setCancelModalOpen(false);
         appToast.success('Đã huỷ đơn thành công');
         navigate('/artisan/orders');
+    };
+
+    const handleStatusUpdate = async () => {
+        if (!id || !statusDraft || statusSubmitting) return;
+
+        const currentStatus = String(order?.status || '').toUpperCase();
+        const nextStatus = String(statusDraft || '').toUpperCase();
+        const allowedNextStatuses = getAllowedNextStatuses(currentStatus, role);
+
+        if (!allowedNextStatuses.includes(nextStatus)) {
+            appToast.warning('Trạng thái không hợp lệ', 'Vui lòng chọn trạng thái đúng theo luồng xử lý.');
+            return;
+        }
+
+        setStatusSubmitting(true);
+        const res = await updateCustomOrderStatus(id, nextStatus);
+        setStatusSubmitting(false);
+
+        if (!res.success) {
+            appToast.error('Cập nhật trạng thái thất bại', res.error || 'Vui lòng thử lại');
+            return;
+        }
+
+        appToast.success(`Đã chuyển sang ${getStatusLabel(nextStatus)}`);
+        loadAll();
     };
 
     const handleCompleteStage = async (stage) => {
@@ -147,11 +243,60 @@ const ArtisanOrderDetailPage = () => {
         loadAll();
     };
 
+    const openShipmentForm = () => {
+        setShipmentFormOpen(true);
+        setShipmentForm((prev) => ({
+            ...prev,
+            recipientName: prev.recipientName || shipmentReady.recipientName,
+            recipientPhone: prev.recipientPhone || shipmentReady.recipientPhone,
+            deliveryAddress: prev.deliveryAddress || shipmentReady.deliveryAddress,
+            orderValue: prev.orderValue || String(shipmentReady.orderValue || ''),
+        }));
+    };
+
+    const handleCreateShipment = async () => {
+        if (!order?.orderId || shippingSubmitting) return;
+
+        if (!shipmentForm.recipientName.trim() || !shipmentForm.recipientPhone.trim() || !shipmentForm.deliveryAddress.trim()) {
+            appToast.error('Thiếu thông tin giao hàng', 'Vui lòng nhập đầy đủ người nhận, số điện thoại và địa chỉ.');
+            return;
+        }
+
+        setShippingSubmitting(true);
+        const res = await createShipment({
+            orderId: order.orderId,
+            customOrderId: order?.customOrderId || order?.id || undefined,
+            recipientName: shipmentForm.recipientName.trim(),
+            recipientPhone: shipmentForm.recipientPhone.trim(),
+            deliveryAddress: shipmentForm.deliveryAddress.trim(),
+            toDistrictId: shipmentForm.toDistrictId,
+            toWardCode: shipmentForm.toWardCode.trim(),
+            orderValue: shipmentForm.orderValue || order?.totalPrice || 0,
+            weight: shipmentForm.weight,
+            length: shipmentForm.length,
+            width: shipmentForm.width,
+            height: shipmentForm.height,
+            note: shipmentForm.note.trim(),
+            serviceTypeId: shipmentForm.serviceTypeId,
+            paymentTypeId: shipmentForm.paymentTypeId,
+        });
+        setShippingSubmitting(false);
+
+        if (!res.success) {
+            appToast.error('Tạo vận đơn thất bại', res.error || 'Vui lòng thử lại');
+            return;
+        }
+
+        setShipmentFormOpen(false);
+        appToast.success('Đã tạo vận đơn thành công');
+    };
+
     if (!id) return <div className="artisan-empty">Thiếu mã đơn hàng.</div>;
     if (loading) return <div className="artisan-skeleton-page" />;
     if (!order) return <div className="artisan-empty">Không tìm thấy đơn hàng.</div>;
 
     const status = String(order?.status || '').toUpperCase();
+    const allowedNextStatuses = getAllowedNextStatuses(status, role);
     const orderTitle = order?.requestDescription || order?.requestTitle || order?.description || 'Đơn tùy chỉnh';
 
     return (
@@ -321,6 +466,44 @@ const ArtisanOrderDetailPage = () => {
                                 </div>
                             </article>
 
+                            <article className="card-box side-card shipment-card">
+                                <h3>Tạo vận đơn</h3>
+                                <p className="muted">Tạo vận đơn cho đơn này trực tiếp từ dashboard artisan.</p>
+                                <div className="shipment-card-actions">
+                                    <button type="button" className="btn btn-primary" onClick={openShipmentForm}>
+                                        <FiTruck /> Tạo vận đơn
+                                    </button>
+                                </div>
+                            </article>
+
+                            <article className="card-box side-card">
+                                <h3>Cập nhật trạng thái</h3>
+                                <p className="muted">Dùng API PUT /api/custom-orders/:id/status với query param status.</p>
+                                <div className="status-update-panel">
+                                    <select
+                                        className="form-input"
+                                        value={statusDraft}
+                                        onChange={(e) => setStatusDraft(e.target.value)}
+                                        disabled={!allowedNextStatuses.length || statusSubmitting}
+                                    >
+                                        <option value="">Chọn trạng thái mới</option>
+                                        {allowedNextStatuses.map((optionValue) => (
+                                            <option key={optionValue} value={optionValue}>
+                                                {getStatusLabel(optionValue)}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <button
+                                        type="button"
+                                        className="btn btn-outline"
+                                        onClick={handleStatusUpdate}
+                                        disabled={!statusDraft || statusSubmitting || !allowedNextStatuses.includes(statusDraft)}
+                                    >
+                                        {statusSubmitting ? 'Đang cập nhật...' : 'Cập nhật trạng thái'}
+                                    </button>
+                                </div>
+                            </article>
+
                             <article className="card-box side-card">
                                 <h3>Thông tin nghệ nhân</h3>
                                 <p><FiUser /> <strong>{order?.artisanName || '—'}</strong></p>
@@ -375,6 +558,36 @@ const ArtisanOrderDetailPage = () => {
                                         disabled={cancelConfirmText.trim() !== 'Hủy đơn' || cancelling}
                                     >
                                         {cancelling ? 'Đang hủy...' : 'Hủy đơn'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {shipmentFormOpen && (
+                        <div className="cancel-modal-overlay" onClick={() => setShipmentFormOpen(false)} aria-hidden="true">
+                            <div className="cancel-modal shipment-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+                                <h3>Tạo vận đơn</h3>
+                                <p className="muted">Điền thông tin người nhận và thông số kiện hàng để gửi sang hệ thống vận chuyển.</p>
+                                <div className="shipment-form-grid">
+                                    <input className="form-input" placeholder="Tên người nhận" value={shipmentForm.recipientName} onChange={(e) => setShipmentForm((prev) => ({ ...prev, recipientName: e.target.value }))} />
+                                    <input className="form-input" placeholder="Số điện thoại" value={shipmentForm.recipientPhone} onChange={(e) => setShipmentForm((prev) => ({ ...prev, recipientPhone: e.target.value }))} />
+                                    <input className="form-input shipment-span-2" placeholder="Địa chỉ giao hàng" value={shipmentForm.deliveryAddress} onChange={(e) => setShipmentForm((prev) => ({ ...prev, deliveryAddress: e.target.value }))} />
+                                    <input className="form-input" placeholder="Mã quận" value={shipmentForm.toDistrictId} onChange={(e) => setShipmentForm((prev) => ({ ...prev, toDistrictId: e.target.value }))} />
+                                    <input className="form-input" placeholder="Mã phường" value={shipmentForm.toWardCode} onChange={(e) => setShipmentForm((prev) => ({ ...prev, toWardCode: e.target.value }))} />
+                                    <input className="form-input" placeholder="Giá trị đơn" value={shipmentForm.orderValue} onChange={(e) => setShipmentForm((prev) => ({ ...prev, orderValue: e.target.value }))} />
+                                    <input className="form-input" placeholder="Cân nặng (gram)" value={shipmentForm.weight} onChange={(e) => setShipmentForm((prev) => ({ ...prev, weight: e.target.value }))} />
+                                    <input className="form-input" placeholder="Dài" value={shipmentForm.length} onChange={(e) => setShipmentForm((prev) => ({ ...prev, length: e.target.value }))} />
+                                    <input className="form-input" placeholder="Rộng" value={shipmentForm.width} onChange={(e) => setShipmentForm((prev) => ({ ...prev, width: e.target.value }))} />
+                                    <input className="form-input" placeholder="Cao" value={shipmentForm.height} onChange={(e) => setShipmentForm((prev) => ({ ...prev, height: e.target.value }))} />
+                                    <input className="form-input" placeholder="Service Type ID" value={shipmentForm.serviceTypeId} onChange={(e) => setShipmentForm((prev) => ({ ...prev, serviceTypeId: e.target.value }))} />
+                                    <input className="form-input" placeholder="Payment Type ID" value={shipmentForm.paymentTypeId} onChange={(e) => setShipmentForm((prev) => ({ ...prev, paymentTypeId: e.target.value }))} />
+                                    <textarea className="form-input shipment-span-2" rows="3" placeholder="Ghi chú" value={shipmentForm.note} onChange={(e) => setShipmentForm((prev) => ({ ...prev, note: e.target.value }))} />
+                                </div>
+                                <div className="cancel-modal-actions">
+                                    <button type="button" className="btn btn-outline" onClick={() => setShipmentFormOpen(false)} disabled={shippingSubmitting}>Đóng</button>
+                                    <button type="button" className="btn btn-primary" onClick={handleCreateShipment} disabled={shippingSubmitting}>
+                                        {shippingSubmitting ? 'Đang tạo...' : 'Tạo vận đơn'}
                                     </button>
                                 </div>
                             </div>

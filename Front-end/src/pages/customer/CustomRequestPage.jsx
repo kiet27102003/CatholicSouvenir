@@ -140,8 +140,8 @@ const CustomRequestPage = () => {
                             <button type="button" className="btn btn-primary btn-large" onClick={() => setModalOpen(true)}>
                                 Bắt đầu đặt riêng
                             </button>
-                            <button type="button" className="btn btn-outline btn-large" onClick={() => navigate('/templates')}>
-                                Cá nhân hóa
+                            <button type="button" className="btn btn-outline btn-large" onClick={() => navigate('/custom-requests')}>
+                                Xem yêu cầu của tôi
                             </button>
                         </div>
 

@@ -83,17 +83,17 @@ const HomePage = () => {
         let ignore = false;
 
         const toList = (data) => {
-            if (Array.isArray(data)) return data;
-            return data?.content || data?.data || data?.items || [];
+            const source = data?.content ?? data?.data?.content ?? data?.data ?? data?.items ?? data?.result ?? data;
+            return Array.isArray(source) ? source : [];
         };
 
         const loadData = async () => {
             setLoading(true);
             try {
                 const [categoriesData, productsData, artisansData] = await Promise.all([
-                    api.get('/api/categories/root').then((res) => res.data),
-                    api.get('/api/products?page=0&size=8').then((res) => res.data),
-                    api.get('/api/users?role=ARTISAN&page=0&size=3').then((res) => res.data),
+                    api.get('/categories/root').then((res) => res.data),
+                    api.get('/product?page=0&size=10&sortBy=productPrice&sortDir=asc').then((res) => res.data),
+                    api.get('/artisans?page=0&size=20').then((res) => res.data),
                 ]);
 
                 if (ignore) return;

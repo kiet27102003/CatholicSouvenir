@@ -3,6 +3,7 @@ import { FiClock, FiImage, FiMessageSquare, FiPackage, FiShield, FiStar, FiUsers
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import Header from '../../components/Header/Header';
+import ImageUpload from '../../components/ui/ImageUpload';
 import { createCustomRequestV2 as createCustomRequest } from '../../services/customRequestService';
 import { appToast } from '../../lib/appToast';
 import './CustomRequestPage.css';
@@ -152,10 +153,13 @@ const CustomRequestPage = () => {
                                 </div>
                             </div>
 
-                            <div className="form-group">
-                                <label className="form-label" htmlFor="referenceImageUrl">URL ảnh tham khảo (tùy chọn)</label>
-                                <input id="referenceImageUrl" name="referenceImageUrl" type="url" className="form-input" value={formData.referenceImageUrl} onChange={handleChange} placeholder="https://..." />
-                            </div>
+                            <ImageUpload
+                                value={formData.referenceImageUrl}
+                                onChange={(nextValue) => setFormData((prev) => ({ ...prev, referenceImageUrl: nextValue }))}
+                                label="Ảnh tham khảo"
+                                helperText="Tải ảnh lên Supabase Storage hoặc dán URL ảnh sẵn có."
+                                folder="custom-requests"
+                            />
 
                             <div className="form-group checkbox-group">
                                 <label className="checkbox-label">

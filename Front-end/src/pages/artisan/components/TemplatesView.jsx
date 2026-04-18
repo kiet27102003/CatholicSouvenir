@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import templateService from '../../../services/templateService';
 import categoryService from '../../../services/categoryService';
 import { appToast } from '../../../lib/appToast';
+import ImageUploadZone from '../../../components/ui/ImageUploadZone';
 import './TemplatesView.css';
 
 const PLACEHOLDER_IMAGE = 'https://via.placeholder.com/120x90?text=No+Image';
@@ -95,7 +96,7 @@ const defaultTemplateForm = {
     material: '',
     style: '',
     basePromptHint: '',
-    baseImagesText: '',
+    baseImages: [],
     isActive: true,
     customZones: [],
 };
@@ -132,6 +133,7 @@ const TemplatesView = ({ user }) => {
     const [templateFormDirty, setTemplateFormDirty] = useState(false);
     const [pendingCloseTemplateModal, setPendingCloseTemplateModal] = useState(false);
     const [templatePriceFocused, setTemplatePriceFocused] = useState(false);
+    const [uploadingTemplateImage, setUploadingTemplateImage] = useState(false);
 
     const [zoneModalOpen, setZoneModalOpen] = useState(false);
     const [zoneModalMode, setZoneModalMode] = useState('create');
@@ -186,9 +188,7 @@ const TemplatesView = ({ user }) => {
         if (result.success) {
             const pageData = result.data;
             const normalizedContent = (pageData.content || []).map(normalizeTemplate);
-            pageData.content = artisanId
-                ? normalizedContent.filter((item) => String(item.artisanId || '').trim() === String(artisanId).trim())
-                : normalizedContent;
+            pageData.content = normalizedContent;
             setTemplatesPage(pageData);
         } else {
             setTemplatesPage({ content: [], totalElements: 0, totalPages: 0, number: page, size });
@@ -281,7 +281,7 @@ const TemplatesView = ({ user }) => {
             material: detail.material || item.material || '',
             style: detail.style || item.style || '',
             basePromptHint: detail.basePromptHint || item.basePromptHint || '',
-            baseImagesText: (detail.baseImages || item.baseImages || []).join('\n'),
+            baseImages: Array.isArray(detail.baseImages || item.baseImages) ? (detail.baseImages || item.baseImages).filter(Boolean) : [],
             isActive: detail.isActive !== false,
             customZones: mappedZones,
             templateId,
@@ -334,11 +334,10 @@ const TemplatesView = ({ user }) => {
             material: (templateForm.material || '').trim() || undefined,
             style: (templateForm.style || '').trim() || undefined,
             basePromptHint: (templateForm.basePromptHint || '').trim() || undefined,
-            baseImages: (templateForm.baseImagesText || '').split('\n').map((s) => s.trim()).filter(Boolean),
+            baseImages: (templateForm.baseImages || []).filter(Boolean),
             customZones: mappedCustomZones,
             isActive: Boolean(templateForm.isActive),
         };
-
 
         setSaving(true);
         const result = templateModalMode === 'create'
@@ -711,143 +710,188 @@ const TemplatesView = ({ user }) => {
                             <button type="button" className="modal-close" onClick={closeTemplateModal}>×</button>
                         </div>
                         <form className="template-modal-body" onSubmit={submitTemplate}>
-                            <div className="template-form-grid">
-                                    <label>Tên mẫu *<input value={templateForm.name} onChange={(e) => { setTemplateFormDirty(true); setTemplateForm((p) => ({ ...p, name: e.target.value })); }} /></label>
-                                    <label>Danh mục *
-                                        <select value={templateForm.categoryId} onChange={(e) => { setTemplateFormDirty(true); setTemplateForm((p) => ({ ...p, categoryId: e.target.value })); }}>
-                                            <option value="">-- Chọn danh mục --</option>
-                                            {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                        </select>
-                                    </label>
-                                    <label>Giá gốc *<input
-                                        type="text"
-                                        inputMode="numeric"
-                                        autoComplete="off"
-                                        value={templatePriceFocused ? templateForm.basePrice : formatNumberInput(templateForm.basePrice)}
-                                        onFocus={handleTemplatePriceFocus}
-                                        onBlur={handleTemplatePriceBlur}
-                                        onChange={(e) => {
-                                            const next = normalizeTemplatePrice(e.target.value);
-                                            markTemplateDirty((p) => ({ ...p, basePrice: next }));
-                                        }}
-                                    /></label>
-                                    <label>Chất liệu<input value={templateForm.material} onChange={(e) => { setTemplateFormDirty(true); setTemplateForm((p) => ({ ...p, material: e.target.value })); }} /></label>
-                                    <label>Phong cách<input value={templateForm.style} onChange={(e) => { setTemplateFormDirty(true); setTemplateForm((p) => ({ ...p, style: e.target.value })); }} /></label>
-                                    <label className="wide">Mô tả<textarea rows={3} value={templateForm.description} onChange={(e) => { setTemplateFormDirty(true); setTemplateForm((p) => ({ ...p, description: e.target.value })); }} /></label>
-                                    <label className="wide">Base Prompt Hint<textarea rows={3} value={templateForm.basePromptHint} onChange={(e) => { setTemplateFormDirty(true); setTemplateForm((p) => ({ ...p, basePromptHint: e.target.value })); }} /></label>
-                                    <label className="wide">Base Images (mỗi dòng 1 URL)<textarea rows={4} value={templateForm.baseImagesText} onChange={(e) => { setTemplateFormDirty(true); setTemplateForm((p) => ({ ...p, baseImagesText: e.target.value })); }} /></label>
-                                    <label className="checkbox-label"><input type="checkbox" checked={templateForm.isActive} onChange={(e) => { setTemplateFormDirty(true); setTemplateForm((p) => ({ ...p, isActive: e.target.checked })); }} /> Hoạt động</label>
-                                </div>
-
-                                <div className="constraints-wrap" style={{ marginTop: 12 }}>
-                                    <div className="zones-header-row">
-                                        <h4>Custom Zones</h4>
-                                        <button
-                                            type="button"
-                                            className="btn-outline"
-                                            onClick={() => { setTemplateFormDirty(true); setTemplateForm((p) => ({
-                                                ...p,
-                                                customZones: [...(p.customZones || []), createEmptyTemplateZone()],
-                                            })); }}
-                                        >
-                                            + Thêm zone
-                                        </button>
-                                    </div>
-
-                                    {(templateForm.customZones || []).length === 0 ? (
-                                        <p className="template-subtext">Chưa có zone. Bấm "Thêm zone" để tạo.</p>
-                                    ) : (
-                                        <div className="constraints-list">
-                                            {(templateForm.customZones || []).map((zone, idx) => (
-                                                <div className="zone-card" key={`template-zone-${idx}`}>
-                                                    <div className="template-form-grid" style={{ width: '100%' }}>
-                                                        <label>Tên zone *
-                                                            <input
-                                                                value={zone.zoneName}
-                                                                onChange={(e) => setTemplateFormDirty(true) || setTemplateForm((p) => {
-                                                                    const next = [...(p.customZones || [])];
-                                                                    next[idx] = { ...next[idx], zoneName: e.target.value };
-                                                                    return { ...p, customZones: next };
-                                                                })}
-                                                            />
-                                                        </label>
-                                                        <label>Input type *
-                                                            <select
-                                                                value={zone.inputType}
-                                                                onChange={(e) => setTemplateFormDirty(true) || setTemplateForm((p) => {
-                                                                    const next = [...(p.customZones || [])];
-                                                                    next[idx] = { ...next[idx], inputType: e.target.value };
-                                                                    return { ...p, customZones: next };
-                                                                })}
-                                                            >
-                                                                {INPUT_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}
-                                                            </select>
-                                                        </label>
-                                                        <label>Extra price
-                                                            <input
-                                                                type="number"
-                                                                value={zone.extraPrice}
-                                                                onChange={(e) => setTemplateFormDirty(true) || setTemplateForm((p) => {
-                                                                    const next = [...(p.customZones || [])];
-                                                                    next[idx] = { ...next[idx], extraPrice: e.target.value };
-                                                                    return { ...p, customZones: next };
-                                                                })}
-                                                            />
-                                                        </label>
-                                                        <label>Sort order
-                                                            <input
-                                                                type="number"
-                                                                value={zone.sortOrder}
-                                                                onChange={(e) => setTemplateFormDirty(true) || setTemplateForm((p) => {
-                                                                    const next = [...(p.customZones || [])];
-                                                                    next[idx] = { ...next[idx], sortOrder: e.target.value };
-                                                                    return { ...p, customZones: next };
-                                                                })}
-                                                            />
-                                                        </label>
-                                                        <label className="wide">Mô tả zone
-                                                            <input
-                                                                value={zone.zoneDescription}
-                                                                onChange={(e) => setTemplateFormDirty(true) || setTemplateForm((p) => {
-                                                                    const next = [...(p.customZones || [])];
-                                                                    next[idx] = { ...next[idx], zoneDescription: e.target.value };
-                                                                    return { ...p, customZones: next };
-                                                                })}
-                                                            />
-                                                        </label>
-                                                        <label className="checkbox-label">
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={zone.isRequired}
-                                                                onChange={(e) => setTemplateFormDirty(true) || setTemplateForm((p) => {
-                                                                    const next = [...(p.customZones || [])];
-                                                                    next[idx] = { ...next[idx], isRequired: e.target.checked };
-                                                                    return { ...p, customZones: next };
-                                                                })}
-                                                            /> Bắt buộc
-                                                        </label>
-                                                    </div>
-
-                                                    <div className="table-actions">
-                                                        <button
-                                                            type="button"
-                                                            className="action-btn danger"
-                                                            onClick={() => setTemplateFormDirty(true) || setTemplateForm((p) => {
-                                                                const next = [...(p.customZones || [])];
-                                                                next.splice(idx, 1);
-                                                                return { ...p, customZones: next };
-                                                            })}
-                                                        >
-                                                            ✕
-                                                        </button>
-                                                    </div>
+                            <div className="form-columns">
+                                <div className="form-column-left">
+                                    {(templateForm.baseImages || []).length > 0 && (
+                                        <div className="template-base-images-preview">
+                                            <div className="template-base-image-main">
+                                                <img src={templateForm.baseImages[0]} alt="Base 1" />
+                                                <button
+                                                    type="button"
+                                                    className="icon-button"
+                                                    onClick={() => {
+                                                        setTemplateFormDirty(true);
+                                                        setTemplateForm((p) => ({
+                                                            ...p,
+                                                            baseImages: (p.baseImages || []).slice(1),
+                                                        }));
+                                                    }}
+                                                >
+                                                    ×
+                                                </button>
+                                            </div>
+                                            {(templateForm.baseImages || []).length > 1 && (
+                                                <div className="template-base-thumb-grid">
+                                                    {(templateForm.baseImages || []).slice(1).map((imageUrl, index) => {
+                                                        const removeIndex = index + 1;
+                                                        return (
+                                                            <div key={`template-base-preview-${removeIndex}`} className="template-base-thumb">
+                                                                <img src={imageUrl} alt={`Base ${removeIndex + 1}`} />
+                                                                <button
+                                                                    type="button"
+                                                                    className="icon-button"
+                                                                    onClick={() => {
+                                                                        setTemplateFormDirty(true);
+                                                                        setTemplateForm((p) => ({
+                                                                            ...p,
+                                                                            baseImages: (p.baseImages || []).filter((_, idx) => idx !== removeIndex),
+                                                                        }));
+                                                                    }}
+                                                                >
+                                                                    ×
+                                                                </button>
+                                                            </div>
+                                                        );
+                                                    })}
                                                 </div>
-                                            ))}
+                                            )}
                                         </div>
                                     )}
+                                    <div className="form-field wide-field">
+                                        <label>Base Images</label>
+                                        <ImageUploadZone
+                                            multiple
+                                            folder="templates"
+                                            onUpload={(urls) => {
+                                                setTemplateFormDirty(true);
+                                                setTemplateForm((p) => ({ ...p, baseImages: urls }));
+                                            }}
+                                        />
+                                    </div>
                                 </div>
 
-                            <div className="template-modal-actions">
+                                <div className="form-column-right">
+                                    <div className="form-row">
+                                        <div className="form-field">
+                                            <label>Tên mẫu <span className="required-mark">*</span></label>
+                                            <input value={templateForm.name} onChange={(e) => { setTemplateFormDirty(true); setTemplateForm((p) => ({ ...p, name: e.target.value })); }} />
+                                        </div>
+                                        <div className="form-field">
+                                            <label>Danh mục <span className="required-mark">*</span></label>
+                                            <select value={templateForm.categoryId} onChange={(e) => { setTemplateFormDirty(true); setTemplateForm((p) => ({ ...p, categoryId: e.target.value })); }}>
+                                                <option value="">-- Chọn danh mục --</option>
+                                                {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div className="form-row">
+                                        <div className="form-field">
+                                            <label>Giá gốc <span className="required-mark">*</span></label>
+                                            <input
+                                                type="text"
+                                                inputMode="numeric"
+                                                autoComplete="off"
+                                                value={templatePriceFocused ? templateForm.basePrice : formatNumberInput(templateForm.basePrice)}
+                                                onFocus={handleTemplatePriceFocus}
+                                                onBlur={handleTemplatePriceBlur}
+                                                onChange={(e) => {
+                                                    const next = normalizeTemplatePrice(e.target.value);
+                                                    markTemplateDirty((p) => ({ ...p, basePrice: next }));
+                                                }}
+                                            />
+                                        </div>
+                                        <div className="form-field">
+                                            <label>Chất liệu</label>
+                                            <input value={templateForm.material} onChange={(e) => { setTemplateFormDirty(true); setTemplateForm((p) => ({ ...p, material: e.target.value })); }} />
+                                        </div>
+                                    </div>
+
+                                    <div className="form-row">
+                                        <div className="form-field">
+                                            <label>Phong cách</label>
+                                            <input value={templateForm.style} onChange={(e) => { setTemplateFormDirty(true); setTemplateForm((p) => ({ ...p, style: e.target.value })); }} />
+                                        </div>
+                                        <div className="form-field">
+                                            <label>&nbsp;</label>
+                                            <label className="checkbox-label"><input type="checkbox" checked={templateForm.isActive} onChange={(e) => { setTemplateFormDirty(true); setTemplateForm((p) => ({ ...p, isActive: e.target.checked })); }} /> Hoạt động</label>
+                                        </div>
+                                    </div>
+
+                                    <div className="form-field wide-field">
+                                        <label>Mô tả</label>
+                                        <textarea rows={3} value={templateForm.description} onChange={(e) => { setTemplateFormDirty(true); setTemplateForm((p) => ({ ...p, description: e.target.value })); }} />
+                                    </div>
+
+                                    <div className="form-field wide-field">
+                                        <label>Base Prompt Hint</label>
+                                        <textarea rows={2} value={templateForm.basePromptHint} onChange={(e) => { setTemplateFormDirty(true); setTemplateForm((p) => ({ ...p, basePromptHint: e.target.value })); }} />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="constraints-wrap modal-zone-section">
+                                <div className="zones-header-row">
+                                    <h4>Custom Zones</h4>
+                                    <button
+                                        type="button"
+                                        className="btn-outline"
+                                        onClick={() => { setTemplateFormDirty(true); setTemplateForm((p) => ({
+                                            ...p,
+                                            customZones: [...(p.customZones || []), createEmptyTemplateZone()],
+                                        })); }}
+                                    >
+                                        + Thêm zone
+                                    </button>
+                                </div>
+
+                                {(templateForm.customZones || []).length === 0 ? (
+                                    <p className="template-subtext">Chưa có zone. Bấm "Thêm zone" để tạo.</p>
+                                ) : (
+                                    <div className="constraints-list">
+                                        {(templateForm.customZones || []).map((zone, idx) => (
+                                            <div className="zone-row" key={`template-zone-${idx}`}>
+                                                <div className="zone-row-top">
+                                                    <div className="form-field">
+                                                        <label>Tên zone <span className="required-mark">*</span></label>
+                                                        <input value={zone.zoneName} onChange={(e) => setTemplateFormDirty(true) || setTemplateForm((p) => { const next = [...(p.customZones || [])]; next[idx] = { ...next[idx], zoneName: e.target.value }; return { ...p, customZones: next }; })} />
+                                                    </div>
+                                                    <div className="form-field">
+                                                        <label>Input type <span className="required-mark">*</span></label>
+                                                        <select value={zone.inputType} onChange={(e) => setTemplateFormDirty(true) || setTemplateForm((p) => { const next = [...(p.customZones || [])]; next[idx] = { ...next[idx], inputType: e.target.value }; return { ...p, customZones: next }; })}>
+                                                            {INPUT_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}
+                                                        </select>
+                                                    </div>
+                                                    <div className="form-field">
+                                                        <label>Extra price</label>
+                                                        <input type="number" value={zone.extraPrice} onChange={(e) => setTemplateFormDirty(true) || setTemplateForm((p) => { const next = [...(p.customZones || [])]; next[idx] = { ...next[idx], extraPrice: e.target.value }; return { ...p, customZones: next }; })} />
+                                                    </div>
+                                                    <div className="form-field">
+                                                        <label>Sort order</label>
+                                                        <input type="number" value={zone.sortOrder} onChange={(e) => setTemplateFormDirty(true) || setTemplateForm((p) => { const next = [...(p.customZones || [])]; next[idx] = { ...next[idx], sortOrder: e.target.value }; return { ...p, customZones: next }; })} />
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        className="action-btn danger zone-delete-btn"
+                                                        onClick={() => setTemplateFormDirty(true) || setTemplateForm((p) => { const next = [...(p.customZones || [])]; next.splice(idx, 1); return { ...p, customZones: next }; })}
+                                                    >
+                                                        ✕
+                                                    </button>
+                                                </div>
+                                                <div className="zone-row-bottom">
+                                                    <div className="form-field">
+                                                        <label>Mô tả zone</label>
+                                                        <input value={zone.zoneDescription} onChange={(e) => setTemplateFormDirty(true) || setTemplateForm((p) => { const next = [...(p.customZones || [])]; next[idx] = { ...next[idx], zoneDescription: e.target.value }; return { ...p, customZones: next }; })} />
+                                                    </div>
+                                                    <label className="checkbox-label"><input type="checkbox" checked={zone.isRequired} onChange={(e) => setTemplateFormDirty(true) || setTemplateForm((p) => { const next = [...(p.customZones || [])]; next[idx] = { ...next[idx], isRequired: e.target.checked }; return { ...p, customZones: next }; })} /> Bắt buộc</label>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="template-modal-actions template-modal-actions-footer">
                                 <button type="button" className="btn-outline" onClick={closeTemplateModal} disabled={saving}>Hủy</button>
                                 <button type="submit" className="btn-primary" disabled={saving}>{saving ? 'Đang lưu...' : 'Lưu'}</button>
                             </div>

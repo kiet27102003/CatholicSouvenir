@@ -64,7 +64,6 @@
 
 .hero-actions,
 .hero-stats,
-.product-meta,
 .section-header-row,
 .cta-layout,
 .artisan-stats {
@@ -140,7 +139,7 @@
 .artisans-grid { display: grid; gap: 1.25rem; }
 .products-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .artisans-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.product-card { overflow: hidden; }
+.product-card { overflow: hidden; display: flex; flex-direction: column; height: 100%; }
 .marquee-track {
     overflow: hidden;
     position: relative;
@@ -150,8 +149,9 @@
 }
 .marquee-row {
     width: max-content;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: none;
     grid-auto-flow: column;
+    grid-auto-columns: 180px;
     animation: marquee-left 32s linear infinite;
 }
 .marquee-track:hover .marquee-row {
@@ -165,12 +165,13 @@
 .product-media { position: relative; overflow: hidden; aspect-ratio: 1 / 1; background: linear-gradient(135deg, #efe7dd, #dbc6ad); }
 .product-media img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s ease; }
 .product-card:hover .product-media img { transform: scale(1.06); }
-.product-body { padding: 1rem; display: grid; gap: 0.7rem; }
-.product-category { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-text-light); }
-.product-meta { align-items: center; justify-content: space-between; }
-.product-meta strong { font-size: 1.05rem; }
-.cart-btn { width: 38px; height: 38px; border-radius: 50%; border: none; background: var(--homepage-accent); color: #fff; display: grid; place-items: center; }
-.badge { position: absolute; top: 0.9rem; left: 0.9rem; background: #fff; color: var(--homepage-accent); padding: 0.35rem 0.65rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
+.product-body { padding: 0.8rem; display: flex; flex-direction: column; gap: 0.5rem; flex: 1; }
+.product-category { font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-text-light); }
+.product-artisan { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.product-meta { margin-top: auto; display: flex; align-items: center; justify-content: space-between; }
+.product-meta strong { font-size: 0.95rem; }
+.cart-btn { width: 34px; height: 34px; border-radius: 50%; border: none; background: var(--homepage-accent); color: #fff; display: grid; place-items: center; flex-shrink: 0; }
+.badge { position: absolute; top: 0.7rem; left: 0.7rem; background: #fff; color: var(--homepage-accent); padding: 0.3rem 0.55rem; border-radius: 999px; font-size: 0.7rem; font-weight: 600; }
 
 .artisan-card { display: flex; align-items: center; gap: 1rem; padding: 1.25rem; }
 .artisan-avatar { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; background: var(--homepage-accent); color: #fff; font-weight: 700; font-size: 1.1rem; flex-shrink: 0; }

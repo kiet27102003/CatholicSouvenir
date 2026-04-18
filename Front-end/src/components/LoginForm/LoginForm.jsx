@@ -27,6 +27,8 @@ const LoginForm = () => {
                 const role = (result.user?.role ?? '').toUpperCase();
                 if (role === 'ADMIN') {
                     navigate('/admin');
+                } else if (role === 'ARTISAN') {
+                    navigate('/artisan');
                 } else {
                     navigate('/');
                 }

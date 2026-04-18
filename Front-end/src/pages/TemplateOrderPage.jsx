@@ -127,7 +127,6 @@ const TemplateOrderPage = () => {
 
             addToCart({
                 id: template.templateId,
-                productId: template.templateId,
                 title: template.name,
                 price: totalPrice,
                 basePrice: template.basePrice,

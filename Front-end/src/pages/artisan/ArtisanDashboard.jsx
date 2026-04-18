@@ -78,18 +78,21 @@ const ArtisanDashboard = () => {
                 className={`artisan-main ${activeView === 'messages' ? 'artisan-main--chat' : ''}`}
                 style={activeView === 'messages' ? { padding: 0 } : undefined}
             >
-                <div className="artisan-main-inner">
-                    {activeView === 'dashboard' && <Workbench user={user} />}
-                    {activeView === 'commissions' && <div className="view-placeholder">Commissions View</div>}
-                    {activeView === 'messages' && <ChatPage />}
-                    {activeView === 'portfolio' && <PortfolioView user={user} />}
-                    {activeView === 'templates' && <TemplatesView user={user} />}
-                    {activeView === 'requests' && <ArtisanRequestsPage embedded />}
-                    {activeView === 'customOrderCreate' && <ArtisanQuoteCreatePage embedded />}
-                    {activeView === 'customOrders' && <ArtisanOrdersPage embedded />}
-                    {activeView === 'wallet' && <WalletPage embedded />}
-                    {activeView === 'earnings' && <div className="view-placeholder">Earnings View</div>}
-                </div>
+                {activeView === 'messages' ? (
+                    <ChatPage hideHeader />
+                ) : (
+                    <div className="artisan-main-inner">
+                        {activeView === 'dashboard' && <Workbench user={user} />}
+                        {activeView === 'commissions' && <div className="view-placeholder">Commissions View</div>}
+                        {activeView === 'portfolio' && <PortfolioView user={user} />}
+                        {activeView === 'templates' && <TemplatesView user={user} />}
+                        {activeView === 'requests' && <ArtisanRequestsPage embedded />}
+                        {activeView === 'customOrderCreate' && <ArtisanQuoteCreatePage embedded />}
+                        {activeView === 'customOrders' && <ArtisanOrdersPage embedded />}
+                        {activeView === 'wallet' && <WalletPage embedded />}
+                        {activeView === 'earnings' && <div className="view-placeholder">Earnings View</div>}
+                    </div>
+                )}
             </main>
         </div>
     );

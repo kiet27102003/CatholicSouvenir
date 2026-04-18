@@ -4,6 +4,7 @@ import { getOrdersByArtisan } from '../../../services/orderService';
 import { getMyWallet, getWalletTransactions } from '../../../services/walletService';
 import { getOpenCustomRequests, getArtisanCustomOrders, getCustomOrderStages } from '../../../services/customRequestService';
 import { getMyConversations } from '../../../services/chatService';
+import { getNotifications, getUnreadNotificationCount, markAllNotificationsAsRead, markNotificationAsRead } from '../../../services/notificationService';
 import { appToast } from '../../../lib/appToast';
 import api from '../../../cofig/api';
 import './Workbench.css';
@@ -99,6 +100,12 @@ const isCurrentMonth = (value) => {
 
 const getDueDate = (stage) => stage?.dueDate || stage?.estimatedDueDate || stage?.deadline || stage?.expectedAt || null;
 
+const resolveNotificationTarget = (notification) => {
+    const candidate = notification?.targetUrl || notification?.url || notification?.link || notification?.actionUrl || notification?.data?.url || notification?.data?.targetUrl || '';
+    if (typeof candidate !== 'string' || !candidate.trim()) return null;
+    return candidate.startsWith('/') ? candidate : `/${candidate.replace(/^\/+/, '')}`;
+};
+
 const Workbench = ({ user }) => {
     const navigate = useNavigate();
     const artisanId = user?.id || user?.artisanId || user?.artisanUuid;
@@ -113,6 +120,9 @@ const Workbench = ({ user }) => {
     const [openRequestTotal, setOpenRequestTotal] = useState(0);
     const [actionableCount, setActionableCount] = useState(0);
     const [shipmentCandidates, setShipmentCandidates] = useState([]);
+    const [notificationCount, setNotificationCount] = useState(0);
+    const [notifications, setNotifications] = useState([]);
+    const [showNotifications, setShowNotifications] = useState(false);
 
     const [loadingOrders, setLoadingOrders] = useState(true);
     const [loadingWallet, setLoadingWallet] = useState(true);
@@ -268,15 +278,26 @@ const Workbench = ({ user }) => {
                 if (active) setLoadingMessages(false);
             });
 
-        const actionableTask = api.get('/notifications/actionable-count')
-            .then((res) => {
+        const notificationTask = Promise.all([
+            getUnreadNotificationCount(),
+            getNotifications({ page: 0, size: 5 }),
+        ])
+            .then(([countRes, listRes]) => {
                 if (!active) return;
-                const value = Number(res?.data?.data ?? res?.data ?? 0);
-                setActionableCount(Number.isNaN(value) ? 0 : value);
+                if (countRes.success) setNotificationCount(countRes.data || 0);
+                else setNotificationCount(0);
+
+                if (listRes.success) {
+                    const list = Array.isArray(listRes.data?.content) ? listRes.data.content : [];
+                    setNotifications(list);
+                } else {
+                    setNotifications([]);
+                }
             })
             .catch(() => {
                 if (!active) return;
-                setActionableCount(0);
+                setNotificationCount(0);
+                setNotifications([]);
             });
 
         void Promise.all([
@@ -286,7 +307,7 @@ const Workbench = ({ user }) => {
             requestsTask,
             customOrdersTask,
             messagesTask,
-            actionableTask,
+            notificationTask,
         ]);
 
         return () => {
@@ -366,6 +387,28 @@ const Workbench = ({ user }) => {
     const showShipmentWidget = !loadingShipments && shipmentCandidates.length > 0;
     const displayName = user?.fullName || user?.name || user?.username || 'bạn';
 
+    const handleNotificationClick = async (notification) => {
+        if (!notification) return;
+
+        if (!notification?.read && notification?.id) {
+            const res = await markNotificationAsRead(notification.id);
+            if (!res.success) {
+                appToast.error('Không thể đánh dấu đã đọc', res.error || 'Vui lòng thử lại.');
+                return;
+            }
+
+            setNotifications((prev) => prev.map((item) => (item?.id === notification.id ? { ...item, read: true } : item)));
+            setNotificationCount((prev) => Math.max(0, prev - 1));
+        }
+
+        const targetUrl = resolveNotificationTarget(notification);
+        setShowNotifications(false);
+
+        if (targetUrl) {
+            navigate(targetUrl);
+        }
+    };
+
     return (
         <div className="wb">
             <header className="wb-header">
@@ -375,8 +418,60 @@ const Workbench = ({ user }) => {
                 </div>
 
                 <div className="wb-header-actions">
-                    <span className="wb-live-indicator">● Đang nhận đơn</span>
-                    <button type="button" className="wb-btn wb-btn--ghost" onClick={() => appToast.info('Trạng thái', 'Đã chuyển sang tạm nghỉ.')}>Tạm nghỉ</button>
+                    <div className="wb-notification-wrap">
+                        <button type="button" className="wb-notification-btn" onClick={() => setShowNotifications((value) => !value)} aria-label="Thông báo">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M15 17H5l1.4-1.4A2 2 0 0 0 7 14.2V10a5 5 0 1 1 10 0v4.2a2 2 0 0 0 .6 1.4L19 17h-4m-5 0a2 2 0 0 0 4 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                            <span className="wb-notification-badge">{notificationCount > 99 ? '99+' : notificationCount}</span>
+                        </button>
+
+                        {showNotifications && (
+                            <div className="wb-notification-dropdown" role="dialog" aria-label="Danh sách thông báo">
+                                <div className="wb-notification-dropdown-header">
+                                    <h4>Thông báo mới</h4>
+                                    <button
+                                        type="button"
+                                        className="wb-notification-mark-all"
+                                        onClick={async () => {
+                                            const res = await markAllNotificationsAsRead();
+                                            if (res.success) {
+                                                setNotifications((prev) => prev.map((item) => ({ ...item, read: true })));
+                                                setNotificationCount(0);
+                                            } else {
+                                                appToast.error('Không thể đánh dấu đã đọc', res.error || 'Vui lòng thử lại.');
+                                            }
+                                        }}
+                                    >
+                                        Đánh dấu tất cả đã đọc
+                                    </button>
+                                </div>
+                                <div className="wb-notification-list">
+                                    {notifications.length === 0 ? (
+                                        <div className="wb-notification-empty">Chưa có thông báo mới.</div>
+                                    ) : (
+                                        notifications.map((notification, index) => (
+                                            <button
+                                                key={notification?.id || index}
+                                                type="button"
+                                                className={`wb-notification-item ${notification?.read ? '' : 'unread'}`}
+                                                onClick={() => {
+                                                    void handleNotificationClick(notification);
+                                                }}
+                                            >
+                                                <div className="wb-notification-item-top">
+                                                    <span className="wb-notification-title">{notification?.title || notification?.type || 'Thông báo'}</span>
+                                                    <span className={`wb-notification-priority ${String(notification?.priority || 'low').toLowerCase()}`}>{notification?.priority || 'LOW'}</span>
+                                                </div>
+                                                <p className="wb-notification-message">{notification?.message || notification?.content || 'Bạn có một thông báo mới.'}</p>
+                                                <span className="wb-notification-time">{notification?.createdAt || notification?.time || ''}</span>
+                                            </button>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
                     <button type="button" className="wb-btn wb-btn--primary" onClick={() => navigate('/artisan/templates')}>+ Thêm sản phẩm</button>
                 </div>
             </header>
@@ -498,7 +593,7 @@ const Workbench = ({ user }) => {
                         )}
                     </Widget>
 
-                    <Widget title="Tin nhắn" actionText="Xem tất cả →" onAction={() => navigate('/messages')}>
+                    <Widget title="Tin nhắn" actionText="Xem tất cả →" onAction={() => navigate('/artisan/messages')}>
                         {loadingMessages ? (
                             <WidgetSkeleton rows={3} />
                         ) : sortedConversations.length === 0 ? (

@@ -100,3 +100,33 @@ export const getUnreadNotificationCount = async () => {
         return { success: false, error: mapError(error, 'Không tải được số thông báo chưa đọc.'), data: 0 };
     }
 };
+
+export const markNotificationAsRead = async (notificationId) => {
+    if (!notificationId) return { success: false, error: 'Thiếu notificationId.', data: null };
+
+    try {
+        const response = await api.post(`/notifications/${notificationId}/read`);
+        const normalized = normalizeResponse(response);
+        if (!isSuccessCode(normalized.code)) {
+            return { success: false, error: normalized.message || 'Không thể đánh dấu đã đọc.', data: null };
+        }
+
+        return { success: true, data: normalized.data };
+    } catch (error) {
+        return { success: false, error: mapError(error, 'Không thể đánh dấu đã đọc.'), data: null };
+    }
+};
+
+export const markAllNotificationsAsRead = async () => {
+    try {
+        const response = await api.post('/notifications/read-all');
+        const normalized = normalizeResponse(response);
+        if (!isSuccessCode(normalized.code)) {
+            return { success: false, error: normalized.message || 'Không thể đánh dấu tất cả đã đọc.', data: null };
+        }
+
+        return { success: true, data: normalized.data };
+    } catch (error) {
+        return { success: false, error: mapError(error, 'Không thể đánh dấu tất cả đã đọc.'), data: null };
+    }
+};

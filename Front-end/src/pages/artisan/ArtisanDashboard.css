@@ -45,10 +45,24 @@
     width: calc(100% - 280px);
     margin-left: 280px;
     min-height: 100vh;
-    overflow-x: hidden;
+    overflow: hidden;
     box-sizing: border-box;
+    display: block;
+}
+
+.artisan-main--chat .chat-page,
+.artisan-main--chat .chat-page-main {
+    height: 100vh;
+}
+
+.artisan-main--chat .chat-page-main {
+    max-width: none;
+}
+
+.artisan-main-inner--chat {
+    padding: 0;
+    height: 100vh;
     display: flex;
-    justify-content: stretch;
 }
 
 .view-placeholder {
@@ -112,6 +126,10 @@
         padding: 72px 0 0;
     }
 
+    .artisan-main-inner--chat {
+        height: calc(100vh - 72px);
+    }
+
     .view-placeholder {
         padding: 32px 24px;
         font-size: 1rem;
@@ -129,5 +147,9 @@
         width: 100%;
         margin-left: 0;
         padding: 64px 0 16px;
+    }
+
+    .artisan-main-inner--chat {
+        height: calc(100vh - 64px - 16px);
     }
 }

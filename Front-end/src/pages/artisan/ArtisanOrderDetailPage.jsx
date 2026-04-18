@@ -88,6 +88,13 @@ const isActiveStage = (stage) => {
     return s === 'PAID' || s === 'IN_PROGRESS';
 };
 
+const LOCATION_API_BASE = 'https://provinces.open-api.vn/api';
+
+const mapLocationItem = (item) => ({
+    code: String(item?.code ?? item?.province_id ?? item?.district_id ?? item?.ward_id ?? ''),
+    name: item?.name || item?.province_name || item?.district_name || item?.ward_name || '',
+});
+
 const ArtisanOrderDetailPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -109,8 +116,9 @@ const ArtisanOrderDetailPage = () => {
         recipientName: '',
         recipientPhone: '',
         deliveryAddress: '',
-        toDistrictId: '',
-        toWardCode: '',
+        provinceCode: '',
+        districtCode: '',
+        wardCode: '',
         orderValue: '',
         weight: '1000',
         length: '20',
@@ -122,6 +130,10 @@ const ArtisanOrderDetailPage = () => {
     });
     const [statusDraft, setStatusDraft] = useState('');
     const [statusSubmitting, setStatusSubmitting] = useState(false);
+    const [provinces, setProvinces] = useState([]);
+    const [districts, setDistricts] = useState([]);
+    const [wards, setWards] = useState([]);
+    const [locationLoading, setLocationLoading] = useState({ provinces: false, districts: false, wards: false });
 
     const loadAll = async () => {
         setLoading(true);
@@ -165,6 +177,28 @@ const ArtisanOrderDetailPage = () => {
             orderValue: shipmentForm.orderValue || order?.totalPrice || 0,
         };
     }, [order, shipmentForm]);
+
+    const selectedProvince = useMemo(
+        () => provinces.find((item) => item.code === shipmentForm.provinceCode) || null,
+        [provinces, shipmentForm.provinceCode],
+    );
+    const selectedDistrict = useMemo(
+        () => districts.find((item) => item.code === shipmentForm.districtCode) || null,
+        [districts, shipmentForm.districtCode],
+    );
+
+    useEffect(() => {
+        if (!shipmentFormOpen) {
+            setShipmentForm((prev) => ({
+                ...prev,
+                provinceCode: '',
+                districtCode: '',
+                wardCode: '',
+            }));
+            setDistricts([]);
+            setWards([]);
+        }
+    }, [shipmentFormOpen]);
 
     const revenueCurrent = Number(activeStage?.amount || 0) * 0.9;
     const completedRevenue = stages.filter(isCompleted).reduce((sum, stage) => sum + Number(stage?.amount || 0) * 0.9, 0);
@@ -254,6 +288,71 @@ const ArtisanOrderDetailPage = () => {
         }));
     };
 
+    useEffect(() => {
+        const loadProvinces = async () => {
+            setLocationLoading((prev) => ({ ...prev, provinces: true }));
+            try {
+                const response = await fetch(`${LOCATION_API_BASE}/p/`);
+                const data = await response.json();
+                setProvinces(Array.isArray(data) ? data.map(mapLocationItem) : []);
+            } catch {
+                appToast.error('Không tải được danh sách tỉnh/thành');
+            } finally {
+                setLocationLoading((prev) => ({ ...prev, provinces: false }));
+            }
+        };
+
+        loadProvinces();
+    }, []);
+
+    useEffect(() => {
+        const loadDistricts = async () => {
+            if (!shipmentForm.provinceCode) {
+                setDistricts([]);
+                setWards([]);
+                return;
+            }
+
+            setLocationLoading((prev) => ({ ...prev, districts: true }));
+            try {
+                const response = await fetch(`${LOCATION_API_BASE}/p/${shipmentForm.provinceCode}?depth=2`);
+                const data = await response.json();
+                setDistricts(Array.isArray(data?.districts) ? data.districts.map(mapLocationItem) : []);
+                setWards([]);
+                setShipmentForm((prev) => ({ ...prev, districtCode: '', wardCode: '' }));
+            } catch {
+                appToast.error('Không tải được danh sách quận/huyện');
+            } finally {
+                setLocationLoading((prev) => ({ ...prev, districts: false }));
+            }
+        };
+
+        loadDistricts();
+    }, [shipmentForm.provinceCode]);
+
+    useEffect(() => {
+        const loadWards = async () => {
+            if (!shipmentForm.districtCode) {
+                setWards([]);
+                return;
+            }
+
+            setLocationLoading((prev) => ({ ...prev, wards: true }));
+            try {
+                const response = await fetch(`${LOCATION_API_BASE}/d/${shipmentForm.districtCode}?depth=2`);
+                const data = await response.json();
+                setWards(Array.isArray(data?.wards) ? data.wards.map(mapLocationItem) : []);
+                setShipmentForm((prev) => ({ ...prev, wardCode: '' }));
+            } catch {
+                appToast.error('Không tải được danh sách phường/xã');
+            } finally {
+                setLocationLoading((prev) => ({ ...prev, wards: false }));
+            }
+        };
+
+        loadWards();
+    }, [shipmentForm.districtCode]);
+
     const handleCreateShipment = async () => {
         if (!order?.orderId || shippingSubmitting) return;
 
@@ -269,8 +368,8 @@ const ArtisanOrderDetailPage = () => {
             recipientName: shipmentForm.recipientName.trim(),
             recipientPhone: shipmentForm.recipientPhone.trim(),
             deliveryAddress: shipmentForm.deliveryAddress.trim(),
-            toDistrictId: shipmentForm.toDistrictId,
-            toWardCode: shipmentForm.toWardCode.trim(),
+            toDistrictId: selectedDistrict?.code || '',
+            toWardCode: shipmentForm.wardCode,
             orderValue: shipmentForm.orderValue || order?.totalPrice || 0,
             weight: shipmentForm.weight,
             length: shipmentForm.length,
@@ -478,7 +577,6 @@ const ArtisanOrderDetailPage = () => {
 
                             <article className="card-box side-card">
                                 <h3>Cập nhật trạng thái</h3>
-                                <p className="muted">Dùng API PUT /api/custom-orders/:id/status với query param status.</p>
                                 <div className="status-update-panel">
                                     <select
                                         className="form-input"
@@ -573,15 +671,50 @@ const ArtisanOrderDetailPage = () => {
                                     <input className="form-input" placeholder="Tên người nhận" value={shipmentForm.recipientName} onChange={(e) => setShipmentForm((prev) => ({ ...prev, recipientName: e.target.value }))} />
                                     <input className="form-input" placeholder="Số điện thoại" value={shipmentForm.recipientPhone} onChange={(e) => setShipmentForm((prev) => ({ ...prev, recipientPhone: e.target.value }))} />
                                     <input className="form-input shipment-span-2" placeholder="Địa chỉ giao hàng" value={shipmentForm.deliveryAddress} onChange={(e) => setShipmentForm((prev) => ({ ...prev, deliveryAddress: e.target.value }))} />
-                                    <input className="form-input" placeholder="Mã quận" value={shipmentForm.toDistrictId} onChange={(e) => setShipmentForm((prev) => ({ ...prev, toDistrictId: e.target.value }))} />
-                                    <input className="form-input" placeholder="Mã phường" value={shipmentForm.toWardCode} onChange={(e) => setShipmentForm((prev) => ({ ...prev, toWardCode: e.target.value }))} />
+                                    <select
+                                        className="form-input"
+                                        value={shipmentForm.provinceCode}
+                                        onChange={(e) => setShipmentForm((prev) => ({ ...prev, provinceCode: e.target.value }))}
+                                        disabled={locationLoading.provinces}
+                                    >
+                                        <option value="">Chọn tỉnh/thành</option>
+                                        {provinces.map((item) => (
+                                            <option key={item.code} value={item.code}>
+                                                {item.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <select
+                                        className="form-input"
+                                        value={shipmentForm.districtCode}
+                                        onChange={(e) => setShipmentForm((prev) => ({ ...prev, districtCode: e.target.value }))}
+                                        disabled={!shipmentForm.provinceCode || locationLoading.districts}
+                                    >
+                                        <option value="">Chọn quận/huyện</option>
+                                        {districts.map((item) => (
+                                            <option key={item.code} value={item.code}>
+                                                {item.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <select
+                                        className="form-input"
+                                        value={shipmentForm.wardCode}
+                                        onChange={(e) => setShipmentForm((prev) => ({ ...prev, wardCode: e.target.value }))}
+                                        disabled={!shipmentForm.districtCode || locationLoading.wards}
+                                    >
+                                        <option value="">Chọn phường/xã</option>
+                                        {wards.map((item) => (
+                                            <option key={item.code} value={item.code}>
+                                                {item.name}
+                                            </option>
+                                        ))}
+                                    </select>
                                     <input className="form-input" placeholder="Giá trị đơn" value={shipmentForm.orderValue} onChange={(e) => setShipmentForm((prev) => ({ ...prev, orderValue: e.target.value }))} />
                                     <input className="form-input" placeholder="Cân nặng (gram)" value={shipmentForm.weight} onChange={(e) => setShipmentForm((prev) => ({ ...prev, weight: e.target.value }))} />
                                     <input className="form-input" placeholder="Dài" value={shipmentForm.length} onChange={(e) => setShipmentForm((prev) => ({ ...prev, length: e.target.value }))} />
                                     <input className="form-input" placeholder="Rộng" value={shipmentForm.width} onChange={(e) => setShipmentForm((prev) => ({ ...prev, width: e.target.value }))} />
                                     <input className="form-input" placeholder="Cao" value={shipmentForm.height} onChange={(e) => setShipmentForm((prev) => ({ ...prev, height: e.target.value }))} />
-                                    <input className="form-input" placeholder="Service Type ID" value={shipmentForm.serviceTypeId} onChange={(e) => setShipmentForm((prev) => ({ ...prev, serviceTypeId: e.target.value }))} />
-                                    <input className="form-input" placeholder="Payment Type ID" value={shipmentForm.paymentTypeId} onChange={(e) => setShipmentForm((prev) => ({ ...prev, paymentTypeId: e.target.value }))} />
                                     <textarea className="form-input shipment-span-2" rows="3" placeholder="Ghi chú" value={shipmentForm.note} onChange={(e) => setShipmentForm((prev) => ({ ...prev, note: e.target.value }))} />
                                 </div>
                                 <div className="cancel-modal-actions">

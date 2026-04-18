@@ -19,6 +19,20 @@
   overflow: hidden;
 }
 
+.chat-page.chat-page--embedded {
+  height: 100%;
+}
+
+.chat-page-main.chat-page-main--embedded {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  gap: 0;
+}
+
 .chat-mobile-tabs {
   display: none;
   gap: 8px;

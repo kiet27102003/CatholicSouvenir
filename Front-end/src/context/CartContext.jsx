@@ -182,13 +182,15 @@ export const CartProvider = ({ children }) => {
             return acc;
         }, {});
 
-        const result = await cartService.addCartItem({
-            type: 'PRODUCT',
-            productId: normalized.productId,
-            templateId: normalized.templateId ?? null,
+        const payload = {
+            type: normalized.templateId ? 'TEMPLATE' : 'PRODUCT',
+            templateId: normalized.templateId ?? '',
+            productId: normalized.templateId ? '' : normalized.productId,
             customizationData,
             quantity: normalized.quantity,
-        });
+        };
+
+        const result = await cartService.addCartItem(payload);
         if (!result.success) {
             appToast.error('Lưu giỏ hàng thất bại, sẽ thử lại sau');
         }
@@ -247,9 +249,12 @@ export const CartProvider = ({ children }) => {
             value: String(product?.customRequests?.[z?.key || z?.zoneName] || '').trim(),
             extraPrice: Number(z?.amount || 0),
         }));
+        const templateId = String(product.templateId ?? '').trim();
+        const productId = String(product.productId ?? product.id ?? '').trim();
 
         addItem({
-            productId: String(product.productId ?? product.id ?? ''),
+            templateId: templateId || null,
+            productId: templateId ? '' : productId,
             productName: product.title ?? product.productName ?? 'Sản phẩm',
             artisanName: product.artisanName ?? product.artisan ?? '',
             imageUrl: product.image ?? product.images?.[0]?.image_url ?? product.images?.[0]?.imageUrl ?? null,

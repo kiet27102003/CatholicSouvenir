@@ -20,6 +20,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
+    position: relative;
 }
 
 .sidebar-logo {
@@ -49,6 +50,12 @@
     font-size: 11px;
     color: #6c757d;
     letter-spacing: 0.3px;
+}
+
+.sidebar-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 .sidebar-notification {

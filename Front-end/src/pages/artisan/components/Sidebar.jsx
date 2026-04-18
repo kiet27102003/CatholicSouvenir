@@ -13,16 +13,15 @@ const Sidebar = ({ user, activeView, setActiveView, onLogout, isOpen = false, on
     }, [safeUserName]);
 
     const menuItems = [
-        { id: 'dashboard', icon: 'dashboard', label: 'Dashboard', badge: null },
-        { id: 'commissions', icon: 'work', label: 'Commissions', badge: 3 },
-        { id: 'messages', icon: 'mail', label: 'Messages', badge: 2 },
-        { id: 'portfolio', icon: 'portfolio', label: 'Portfolio', badge: null },
+        { id: 'dashboard', icon: 'dashboard', label: 'Bảng điều khiển', badge: null },
+        { id: 'messages', icon: 'mail', label: 'Tin nhắn', badge: 2 },
+        { id: 'portfolio', icon: 'portfolio', label: 'Hồ sơ năng lực', badge: null },
         { id: 'templates', icon: 'templates', label: 'Mẫu thiết kế', badge: null },
         { id: 'requests', icon: 'request', label: 'Yêu cầu từ khách', badge: null },
         { id: 'customOrders', icon: 'orders', label: 'Đơn tùy chỉnh', badge: null },
         { id: 'shipments', icon: 'shipments', label: 'Vận đơn', badge: null },
         { id: 'wallet', icon: 'money', label: 'Ví của tôi', badge: null },
-        { id: 'earnings', icon: 'money', label: 'Earnings', badge: null },
+        { id: 'earnings', icon: 'money', label: 'Thu nhập', badge: null },
     ];
 
     return (
@@ -41,6 +40,7 @@ const Sidebar = ({ user, activeView, setActiveView, onLogout, isOpen = false, on
                     </div>
                 </div>
 
+                
             </div>
 
             <nav className="sidebar-nav">
@@ -69,7 +69,7 @@ const Sidebar = ({ user, activeView, setActiveView, onLogout, isOpen = false, on
                     )}
                     <div className="user-info">
                         <h3 className="user-name" title={safeUserName}>{safeUserName}</h3>
-                        <p className="user-role">Master Woodcarver</p>
+                        <p className="user-role">Nghệ nhân</p>
                     </div>
                     <button type="button" className="sidebar-logout" onClick={onLogout} aria-label="Đăng xuất">
                         <span className="nav-icon">

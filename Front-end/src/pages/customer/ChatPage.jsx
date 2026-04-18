@@ -43,7 +43,7 @@ const formatBudget = (min, max) => `${new Intl.NumberFormat('vi-VN').format(Numb
 
 const quoteTemplate = `📋 Báo giá của tôi:\n• Tổng giá: ___ đ\n• Thời gian: ___ ngày\n• Giai đoạn 1: ...\n• Giai đoạn 2: ...\n• Giai đoạn 3: ...\nVui lòng xác nhận để tôi bắt đầu.`;
 
-export default function ChatPage() {
+export default function ChatPage({ hideHeader = false } = {}) {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const [mobileView, setMobileView] = useState('list');
@@ -103,7 +103,7 @@ export default function ChatPage() {
   if (!token) {
     return (
       <div className="chat-page">
-        <Header />
+        {!hideHeader && <Header />}
         <main className="chat-page-main">
           <div className="chat-auth-box">
             <div className="chat-auth-warning">Bạn cần đăng nhập để sử dụng chat.</div>
@@ -143,9 +143,9 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="chat-page">
-      <Header />
-      <main className="chat-page-main">
+    <div className={`chat-page ${hideHeader ? 'chat-page--embedded' : ''}`}>
+      {!hideHeader && <Header />}
+      <main className={`chat-page-main ${hideHeader ? 'chat-page-main--embedded' : ''}`}>
         <div className="chat-mobile-tabs">
           <button type="button" className={mobileView === 'list' ? 'active' : ''} onClick={() => setMobileView('list')}>Danh sách</button>
           <button type="button" className={mobileView === 'chat' ? 'active' : ''} onClick={() => setMobileView('chat')}>Chat</button>

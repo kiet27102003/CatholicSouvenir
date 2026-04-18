@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { FiCalendar, FiCheckCircle, FiClock, FiPackage, FiUser, FiXCircle } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import { appToast } from '../../lib/appToast';
 import { cancelCustomOrder, getArtisanCustomOrders } from '../../services/customRequestService';
@@ -26,7 +28,15 @@ const getStatusText = (status) => {
     if (s === 'IN_PROGRESS') return 'Đang thực hiện';
     if (s === 'COMPLETED') return 'Hoàn thành';
     if (s === 'CANCELLED') return 'Đã huỷ';
-    return status || 'Không xác định';
+    return 'Chờ xử lý';
+};
+
+const getStatusClass = (status) => {
+    const s = String(status || '').toUpperCase();
+    if (s === 'IN_PROGRESS') return 'in-progress';
+    if (s === 'COMPLETED') return 'completed';
+    if (s === 'CANCELLED') return 'cancelled';
+    return 'pending';
 };
 
 const getProgress = (order) => {
@@ -42,6 +52,9 @@ const ArtisanOrdersPage = () => {
     const [orders, setOrders] = useState([]);
     const [activeTab, setActiveTab] = useState('ALL');
     const [cancellingId, setCancellingId] = useState('');
+    const [cancelModalOpen, setCancelModalOpen] = useState(false);
+    const [targetCancelOrderId, setTargetCancelOrderId] = useState('');
+    const [cancelConfirmText, setCancelConfirmText] = useState('');
 
     const fetchOrders = async () => {
         setLoading(true);
@@ -61,17 +74,47 @@ const ArtisanOrdersPage = () => {
         fetchOrders();
     }, []);
 
+    useEffect(() => {
+        if (!cancelModalOpen) return undefined;
+
+        const previousOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+
+        return () => {
+            document.body.style.overflow = previousOverflow;
+        };
+    }, [cancelModalOpen]);
+
     const filtered = useMemo(() => {
         if (activeTab === 'ALL') return orders;
         return orders.filter((order) => String(order?.status || '').toUpperCase() === activeTab);
     }, [activeTab, orders]);
 
-    const handleCancel = async (orderId) => {
-        if (!orderId || cancellingId) return;
-        if (!window.confirm('Bạn có chắc muốn huỷ đơn này?')) return;
+    const summary = useMemo(() => {
+        const inProgress = orders.filter((order) => String(order?.status || '').toUpperCase() === 'IN_PROGRESS').length;
+        const completed = orders.filter((order) => String(order?.status || '').toUpperCase() === 'COMPLETED').length;
+        const cancelled = orders.filter((order) => String(order?.status || '').toUpperCase() === 'CANCELLED').length;
+        return {
+            total: orders.length,
+            inProgress,
+            completed,
+            cancelled,
+        };
+    }, [orders]);
 
-        setCancellingId(String(orderId));
-        const res = await cancelCustomOrder(orderId);
+    const openCancelModal = (orderId) => {
+        if (!orderId) return;
+        setTargetCancelOrderId(String(orderId));
+        setCancelConfirmText('');
+        setCancelModalOpen(true);
+    };
+
+    const handleCancel = async () => {
+        if (!targetCancelOrderId || cancellingId) return;
+        if (cancelConfirmText.trim() !== 'Hủy đơn') return;
+
+        setCancellingId(String(targetCancelOrderId));
+        const res = await cancelCustomOrder(targetCancelOrderId);
         setCancellingId('');
 
         if (!res.success) {
@@ -79,17 +122,55 @@ const ArtisanOrdersPage = () => {
             return;
         }
 
+        setCancelModalOpen(false);
+        setTargetCancelOrderId('');
+        setCancelConfirmText('');
         appToast.success('Huỷ đơn thành công');
         fetchOrders();
     };
 
     return (
-        <div className="artisan-orders-page">
-            <header className="artisan-page-header">
-                <h1>Đơn hàng tùy chỉnh</h1>
+        <div className="artisan-orders-page modern-artisan-orders">
+            <header className="artisan-orders-header">
+                <div>
+                    <p className="page-kicker">Quản lý đơn hàng</p>
+                    <h1>Đơn hàng tùy chỉnh</h1>
+                    <p className="page-subtitle">Theo dõi tiến độ từng yêu cầu, cập nhật trạng thái và thao tác nhanh ngay trên một màn hình.</p>
+                </div>
             </header>
 
-            <div className="tabs">
+            <section className="orders-summary-grid">
+                <article className="summary-card">
+                    <span className="summary-icon"><FiPackage /></span>
+                    <div>
+                        <p>Tổng đơn</p>
+                        <strong>{summary.total}</strong>
+                    </div>
+                </article>
+                <article className="summary-card">
+                    <span className="summary-icon summary-icon-progress"><FiClock /></span>
+                    <div>
+                        <p>Đang thực hiện</p>
+                        <strong>{summary.inProgress}</strong>
+                    </div>
+                </article>
+                <article className="summary-card">
+                    <span className="summary-icon summary-icon-completed"><FiCheckCircle /></span>
+                    <div>
+                        <p>Hoàn thành</p>
+                        <strong>{summary.completed}</strong>
+                    </div>
+                </article>
+                <article className="summary-card">
+                    <span className="summary-icon summary-icon-cancelled"><FiXCircle /></span>
+                    <div>
+                        <p>Đã huỷ</p>
+                        <strong>{summary.cancelled}</strong>
+                    </div>
+                </article>
+            </section>
+
+            <div className="tabs" role="tablist" aria-label="Lọc đơn hàng">
                 {tabs.map((tab) => (
                     <button
                         key={tab.key}
@@ -105,44 +186,56 @@ const ArtisanOrdersPage = () => {
             {loading ? (
                 <div className="list-grid">{[1, 2, 3].map((item) => <div key={item} className="artisan-skeleton-card" />)}</div>
             ) : filtered.length === 0 ? (
-                <div className="artisan-empty">Chưa có đơn hàng tùy chỉnh</div>
+                <div className="artisan-empty">Không có đơn nào ở trạng thái này.</div>
             ) : (
                 <div className="list-grid">
                     {filtered.map((order) => {
                         const id = order?.customOrderId ?? order?.orderId ?? order?.id;
                         const stages = Array.isArray(order?.stages) ? order.stages : [];
                         const progress = getProgress(order);
-                        const currentStage = stages.find((stage) => String(stage?.status || '').toUpperCase() === 'PAID' && stage?.canComplete);
+                        const status = String(order?.status || '').toUpperCase();
 
                         return (
                             <article key={String(id)} className="order-card">
-                                <header>
-                                    <h3>{order?.requestDescription || order?.requestTitle || 'Yêu cầu custom'}</h3>
-                                    <p>{order?.customerName || order?.customer?.fullName || 'Khách hàng'} · {formatDate(order?.createdAt)} · {formatCurrency(order?.totalPrice)}</p>
-                                    <span className="status-badge">{getStatusText(order?.status)}</span>
+                                <header className="order-card-header">
+                                    <div>
+                                        <h3>{order?.requestDescription || order?.requestTitle || 'Yêu cầu custom'}</h3>
+                                        <div className="order-meta-row">
+                                            <span><FiUser /> {order?.customerName || order?.customer?.fullName || 'Khách hàng'}</span>
+                                            <span><FiCalendar /> {formatDate(order?.createdAt)}</span>
+                                            <strong>{formatCurrency(order?.totalPrice)}</strong>
+                                        </div>
+                                    </div>
+                                    <span className={`status-badge ${getStatusClass(status)}`}>{getStatusText(status)}</span>
                                 </header>
 
                                 <div className="order-stage-badges">
-                                    {stages.map((stage, idx) => {
-                                        const s = String(stage?.status || '').toUpperCase();
-                                        const klass = s === 'COMPLETED' ? 'done' : stage?.canComplete ? 'active' : 'idle';
-                                        return <span key={`${stage?.id || idx}`} className={`mini-badge ${klass}`}>{idx + 1}</span>;
-                                    })}
+                                    {stages.length === 0 ? (
+                                        <span className="no-stage">Chưa có giai đoạn</span>
+                                    ) : (
+                                        stages.map((stage, idx) => {
+                                            const s = String(stage?.status || '').toUpperCase();
+                                            const klass = s === 'COMPLETED' ? 'done' : stage?.canComplete ? 'active' : 'idle';
+                                            return <span key={`${stage?.id || idx}`} className={`mini-badge ${klass}`}>{idx + 1}</span>;
+                                        })
+                                    )}
                                 </div>
 
                                 <div className="progress-wrap">
+                                    <div className="progress-label-row">
+                                        <span>Tiến độ thực hiện</span>
+                                        <strong>{progress}%</strong>
+                                    </div>
                                     <div className="progress-track"><div className="progress-value" style={{ width: `${progress}%` }} /></div>
-                                    <small>{progress}% hoàn thành</small>
                                 </div>
 
-                                <footer>
-                                    <span>Đang làm: {currentStage?.stageName || 'Chưa có'}</span>
+                                <footer className="order-card-footer">
                                     <div className="actions">
                                         <button
                                             type="button"
                                             className="btn btn-outline btn-sm"
-                                            disabled={String(order?.status || '').toUpperCase() === 'COMPLETED' || cancellingId === String(id)}
-                                            onClick={() => handleCancel(id)}
+                                            disabled={status === 'COMPLETED' || cancellingId === String(id)}
+                                            onClick={() => openCancelModal(id)}
                                         >
                                             {cancellingId === String(id) ? 'Đang huỷ...' : 'Huỷ đơn'}
                                         </button>
@@ -152,7 +245,7 @@ const ArtisanOrdersPage = () => {
                                             disabled={!id}
                                             onClick={() => navigate(`/artisan/orders/${id}`)}
                                         >
-                                            Quản lý
+                                            Quản lý chi tiết
                                         </button>
                                     </div>
                                 </footer>
@@ -160,6 +253,41 @@ const ArtisanOrdersPage = () => {
                         );
                     })}
                 </div>
+            )}
+
+            {cancelModalOpen && createPortal(
+                <div className="cancel-modal-overlay" onClick={() => setCancelModalOpen(false)} aria-hidden="true">
+                    <div className="cancel-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+                        <h3>Xác nhận hủy đơn</h3>
+                        <p>Để xác nhận, vui lòng nhập chính xác <strong>Hủy đơn</strong> vào ô bên dưới.</p>
+                        <input
+                            type="text"
+                            className="form-input"
+                            placeholder="Nhập: Hủy đơn"
+                            value={cancelConfirmText}
+                            onChange={(e) => setCancelConfirmText(e.target.value)}
+                        />
+                        <div className="cancel-modal-actions">
+                            <button
+                                type="button"
+                                className="btn btn-outline"
+                                onClick={() => setCancelModalOpen(false)}
+                                disabled={cancellingId === targetCancelOrderId}
+                            >
+                                Đóng
+                            </button>
+                            <button
+                                type="button"
+                                className="btn btn-danger"
+                                onClick={handleCancel}
+                                disabled={cancelConfirmText.trim() !== 'Hủy đơn' || cancellingId === targetCancelOrderId}
+                            >
+                                {cancellingId === targetCancelOrderId ? 'Đang hủy...' : 'Hủy đơn'}
+                            </button>
+                        </div>
+                    </div>
+                </div>,
+                document.body
             )}
         </div>
     );

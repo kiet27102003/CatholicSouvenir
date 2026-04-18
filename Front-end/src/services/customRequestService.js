@@ -436,38 +436,39 @@ export const cancelCustomOrder = async (orderId, reason = '') => {
     }
 };
 
-export const uploadStageProof = async (stageId, imageUrl) => {
-    if (!stageId || !imageUrl) return { success: false, error: 'Thiếu stage hoặc ảnh bằng chứng.' };
+export const uploadStageProof = async (stageId, payload = {}) => {
+    if (!stageId) return { success: false, error: 'Thiếu mã stage.' };
+
+    const completionImageUrl = String(payload?.completionImageUrl || payload?.imageUrl || '').trim();
+    if (!completionImageUrl) return { success: false, error: 'Thiếu ảnh bằng chứng hoàn thành.' };
+
+    const body = {
+        // Backend thực tế đang validate imageUrl, nhưng response trả completionImageUrl.
+        // Gửi cả 2 key để tương thích.
+        imageUrl: completionImageUrl,
+        completionImageUrl,
+    };
+
+    if (String(payload?.notes || '').trim()) {
+        body.notes = String(payload.notes).trim();
+    }
 
     try {
-        const response = await api.post(`/stages/${stageId}/upload-proof`, { imageUrl });
+        const response = await api.post(`/stages/${stageId}/upload-proof`, body);
         const normalized = normalizeResponse(response);
 
         if (!isSuccessCode(normalized.code)) {
-            return { success: false, error: normalized.message || 'Upload bằng chứng thất bại.' };
+            return { success: false, error: normalized.message || 'Cập nhật hoàn thành stage thất bại.' };
         }
 
         return { success: true, data: normalized.data || {} };
     } catch (error) {
-        return { success: false, error: mapError(error, 'Upload bằng chứng thất bại.') };
+        return { success: false, error: mapError(error, 'Cập nhật hoàn thành stage thất bại.') };
     }
 };
 
-export const completeStage = async (stageId, payload) => {
-    if (!stageId) return { success: false, error: 'Thiếu mã stage.' };
-
-    try {
-        const response = await api.post(`/stages/${stageId}/complete`, payload);
-        const normalized = normalizeResponse(response);
-
-        if (!isSuccessCode(normalized.code)) {
-            return { success: false, error: normalized.message || 'Hoàn thành stage thất bại.' };
-        }
-
-        return { success: true, data: normalized.data || {} };
-    } catch (error) {
-        return { success: false, error: mapError(error, 'Hoàn thành stage thất bại.') };
-    }
+export const completeStage = async (stageId, payload = {}) => {
+    return uploadStageProof(stageId, payload);
 };
 
 export default {

@@ -11,6 +11,8 @@ const ImageUpload = ({
     folder = 'references',
     accept = 'image/*',
     disabled = false,
+    hideFilePicker = false,
+    nativeFileInputOnly = false,
 }) => {
     const inputRef = useRef(null);
     const [uploading, setUploading] = useState(false);
@@ -62,21 +64,27 @@ const ImageUpload = ({
                 </div>
 
                 <div className="image-upload-actions">
-                    <input
-                        ref={inputRef}
-                        type="file"
-                        accept={accept}
-                        onChange={handleFileChange}
-                        disabled={disabled || uploading}
-                    />
-                    <button
-                        type="button"
-                        className="btn btn-outline"
-                        onClick={() => inputRef.current?.click()}
-                        disabled={disabled || uploading}
-                    >
-                        <FiUpload /> {uploading ? 'Đang tải...' : 'Tải ảnh lên'}
-                    </button>
+                    {!hideFilePicker && (
+                        <>
+                            <input
+                                ref={inputRef}
+                                type="file"
+                                accept={accept}
+                                onChange={handleFileChange}
+                                disabled={disabled || uploading}
+                            />
+                            {!nativeFileInputOnly && (
+                                <button
+                                    type="button"
+                                    className="btn btn-outline"
+                                    onClick={() => inputRef.current?.click()}
+                                    disabled={disabled || uploading}
+                                >
+                                    <FiUpload /> {uploading ? 'Đang tải...' : 'Choose File'}
+                                </button>
+                            )}
+                        </>
+                    )}
                     <div className="image-upload-url-row">
                         <input
                             className="form-input"

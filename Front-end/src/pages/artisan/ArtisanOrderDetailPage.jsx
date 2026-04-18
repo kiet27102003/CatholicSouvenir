@@ -1,21 +1,22 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { FiCalendar, FiCheckCircle, FiClock, FiDollarSign, FiFileText, FiMail, FiPhone, FiUser } from 'react-icons/fi';
 import { useNavigate, useParams } from 'react-router-dom';
+import ImageUpload from '../../components/ui/ImageUpload';
 import { useAuth } from '../../context/AuthContext';
 import { appToast } from '../../lib/appToast';
-import Sidebar from './components/Sidebar';
 import {
     cancelCustomOrder,
     completeStage,
     getCustomOrderDetail,
     getCustomOrderStages,
-    uploadReferenceImage,
-    uploadStageProof,
 } from '../../services/customRequestService';
+import Sidebar from './components/Sidebar';
 import './ArtisanDashboard.css';
 import './ArtisanOrderDetailPage.css';
 
 const moneyFormatter = new Intl.NumberFormat('vi-VN');
 const formatCurrency = (value) => `${moneyFormatter.format(Number(value || 0))} đ`;
+
 const formatDate = (value) => {
     if (!value) return '—';
     try {
@@ -27,26 +28,28 @@ const formatDate = (value) => {
 
 const getStatusLabel = (status) => {
     const s = String(status || '').toUpperCase();
-    if (s === 'PENDING') return 'PENDING';
-    if (s === 'IN_PROGRESS') return 'IN_PROGRESS';
-    if (s === 'COMPLETED') return 'COMPLETED';
-    if (s === 'CANCELLED') return 'CANCELLED';
-    if (s === 'PENDING_PAYMENT') return 'PENDING_PAYMENT';
+    if (s === 'PENDING') return 'Chờ xử lý';
+    if (s === 'IN_PROGRESS') return 'Đang thực hiện';
+    if (s === 'COMPLETED') return 'Hoàn thành';
+    if (s === 'CANCELLED') return 'Đã huỷ';
+    if (s === 'PENDING_PAYMENT') return 'Chờ thanh toán';
+    if (s === 'PAID') return 'Đã thanh toán';
     return status || '—';
 };
 
 const getStatusClass = (status) => {
     const s = String(status || '').toUpperCase();
-    if (s === 'PENDING') return 'bg-yellow-100 text-yellow-800';
-    if (s === 'IN_PROGRESS') return 'bg-blue-100 text-blue-800';
-    if (s === 'COMPLETED') return 'bg-green-100 text-green-800';
-    if (s === 'CANCELLED') return 'bg-red-100 text-red-800';
-    if (s === 'PENDING_PAYMENT') return 'bg-sky-100 text-sky-800';
-    return 'bg-gray-100 text-gray-700';
+    if (s === 'COMPLETED') return 'completed';
+    if (s === 'CANCELLED') return 'cancelled';
+    if (s === 'IN_PROGRESS' || s === 'PAID') return 'in-progress';
+    return 'pending';
 };
 
 const isCompleted = (stage) => String(stage?.status || '').toUpperCase() === 'COMPLETED';
-const isActiveStage = (stage) => String(stage?.status || '').toUpperCase() === 'PAID' || String(stage?.status || '').toUpperCase() === 'IN_PROGRESS';
+const isActiveStage = (stage) => {
+    const s = String(stage?.status || '').toUpperCase();
+    return s === 'PAID' || s === 'IN_PROGRESS';
+};
 
 const ArtisanOrderDetailPage = () => {
     const { id } = useParams();
@@ -57,7 +60,9 @@ const ArtisanOrderDetailPage = () => {
     const [order, setOrder] = useState(null);
     const [stages, setStages] = useState([]);
     const [submittingStageId, setSubmittingStageId] = useState('');
-    const [proofUploadingId, setProofUploadingId] = useState('');
+    const [cancelling, setCancelling] = useState(false);
+    const [cancelModalOpen, setCancelModalOpen] = useState(false);
+    const [cancelConfirmText, setCancelConfirmText] = useState('');
     const [proofByStage, setProofByStage] = useState({});
     const [notesByStage, setNotesByStage] = useState({});
 
@@ -94,42 +99,27 @@ const ArtisanOrderDetailPage = () => {
     const completedRevenue = stages.filter(isCompleted).reduce((sum, stage) => sum + Number(stage?.amount || 0) * 0.9, 0);
     const expectedRemain = stages.filter((stage) => !isCompleted(stage)).reduce((sum, stage) => sum + Number(stage?.amount || 0) * 0.9, 0);
 
-    const handleCancelOrder = async () => {
-        if (!id) return;
-        if (!window.confirm('Bạn có chắc muốn huỷ đơn này?')) return;
+    const openCancelModal = () => {
+        setCancelConfirmText('');
+        setCancelModalOpen(true);
+    };
 
+    const handleCancelOrder = async () => {
+        if (!id || cancelling) return;
+        if (cancelConfirmText.trim() !== 'Hủy đơn') return;
+
+        setCancelling(true);
         const res = await cancelCustomOrder(id);
+        setCancelling(false);
+
         if (!res.success) {
             appToast.error('Huỷ đơn thất bại', res.error || 'Vui lòng thử lại');
             return;
         }
 
+        setCancelModalOpen(false);
         appToast.success('Đã huỷ đơn thành công');
         navigate('/artisan/orders');
-    };
-
-    const handleUploadProof = async (stageId, file) => {
-        if (!file || !stageId || proofUploadingId) return;
-
-        setProofUploadingId(String(stageId));
-        const uploadRes = await uploadReferenceImage(file);
-        if (!uploadRes.success) {
-            setProofUploadingId('');
-            appToast.error('Upload ảnh thất bại', uploadRes.error || 'Vui lòng thử lại');
-            return;
-        }
-
-        const proofUrl = uploadRes.data;
-        const proofRes = await uploadStageProof(stageId, proofUrl);
-        setProofUploadingId('');
-
-        if (!proofRes.success) {
-            appToast.error('Lưu ảnh bằng chứng thất bại', proofRes.error || 'Vui lòng thử lại');
-            return;
-        }
-
-        setProofByStage((prev) => ({ ...prev, [String(stageId)]: proofUrl }));
-        appToast.success('Đã upload ảnh bằng chứng');
     };
 
     const handleCompleteStage = async (stage) => {
@@ -138,6 +128,7 @@ const ArtisanOrderDetailPage = () => {
 
         const completionImageUrl = proofByStage[String(stageId)] || stage?.completionImageUrl || '';
         const notes = notesByStage[String(stageId)] || '';
+
         if (!completionImageUrl) {
             appToast.warning('Vui lòng upload ảnh kết quả trước khi hoàn thành');
             return;
@@ -171,30 +162,83 @@ const ArtisanOrderDetailPage = () => {
                 setActiveView={(view) => navigate(view === 'customOrders' ? '/artisan/orders' : `/artisan/${view}`)}
                 onLogout={logout}
             />
+
             <main className="artisan-main">
-                <div className="artisan-order-detail-page">
-                    <header className="artisan-order-header">
-                        <button type="button" className="btn btn-outline" onClick={() => navigate('/artisan/orders')}>← Quay lại</button>
-                        <div>
+                <div className="artisan-order-detail-page modern-order-detail-page">
+                    <header className="detail-page-header">
+                        <button type="button" className="btn btn-outline back-btn-top" onClick={() => navigate('/artisan/orders')}>
+                            ← Quay lại danh sách
+                        </button>
+
+                        <div className="header-main-row">
                             <h1>{orderTitle}</h1>
-                            <span className={`status-badge ${getStatusClass(status)}`}>{getStatusLabel(status)}</span>
                         </div>
-                        {status !== 'COMPLETED' && (
-                            <button type="button" className="btn btn-outline" onClick={handleCancelOrder}>Huỷ đơn</button>
-                        )}
                     </header>
 
-                    <div className="artisan-order-grid">
+                    <section className="detail-summary-grid">
+                        <article className="summary-card summary-status-card">
+                            <span className="summary-icon"><FiCheckCircle /></span>
+                            <div>
+                                <p>Trạng thái đơn</p>
+                                <strong><span className={`status-badge ${getStatusClass(status)}`}>{getStatusLabel(status)}</span></strong>
+                            </div>
+                        </article>
+                        <article className="summary-card">
+                            <span className="summary-icon"><FiDollarSign /></span>
+                            <div>
+                                <p>Tổng đơn</p>
+                                <strong>{formatCurrency(order?.totalPrice)}</strong>
+                            </div>
+                        </article>
+                        <article className="summary-card">
+                            <span className="summary-icon icon-blue"><FiClock /></span>
+                            <div>
+                                <p>Đang xử lý</p>
+                                <strong>{activeStage?.stageName || '—'}</strong>
+                            </div>
+                        </article>
+                        <article className="summary-card">
+                            <span className="summary-icon icon-green"><FiCheckCircle /></span>
+                            <div>
+                                <p>Tiến độ</p>
+                                <strong>{progress}%</strong>
+                            </div>
+                        </article>
+                        <article className="summary-card">
+                            <span className="summary-icon icon-amber"><FiCalendar /></span>
+                            <div>
+                                <p>Ngày tạo</p>
+                                <strong>{formatDate(order?.createdAt)}</strong>
+                            </div>
+                        </article>
+                    </section>
+
+                    <div className="detail-layout-grid">
                         <section className="left-col">
-                            <article className="card-box">
+                            <article className="card-box info-card">
                                 <h3>Thông tin đơn</h3>
-                                <p>Tên khách hàng: <strong>{order?.customerName || '—'}</strong></p>
-                                <p>Tổng giá trị: <strong>{formatCurrency(order?.totalPrice)}</strong></p>
-                                <p>Mô tả: <strong>{order?.description || '—'}</strong></p>
+                                <div className="info-grid">
+                                    <div>
+                                        <label>Khách hàng</label>
+                                        <p>{order?.customerName || '—'}</p>
+                                    </div>
+                                    <div>
+                                        <label>Tổng giá trị</label>
+                                        <p>{formatCurrency(order?.totalPrice)}</p>
+                                    </div>
+                                    <div className="full-width">
+                                        <label>Mô tả</label>
+                                        <p>{order?.description || '—'}</p>
+                                    </div>
+                                </div>
                             </article>
 
                             <article className="card-box">
-                                <h3>Các giai đoạn</h3>
+                                <div className="stage-card-header">
+                                    <h3>Tiến độ các giai đoạn</h3>
+                                    <span>{stages.length} giai đoạn</span>
+                                </div>
+
                                 <div className="progress-wrap">
                                     <div className="progress-track"><div className="progress-value" style={{ width: `${progress}%` }} /></div>
                                     <small>{progress}% hoàn thành</small>
@@ -210,30 +254,33 @@ const ArtisanOrderDetailPage = () => {
 
                                         return (
                                             <div key={String(stageId || idx)} className={`stage-item ${completed ? 'completed' : active ? 'active' : 'pending'}`}>
-                                                <div className="dot">{completed ? '✓' : idx + 1}</div>
-                                                <div className="content">
-                                                    <div className="top-row">
+                                                <div className="timeline-dot">{completed ? '✓' : idx + 1}</div>
+                                                <div className="stage-content">
+                                                    <div className="stage-top-row">
                                                         <h4>{stage?.stageName || `Giai đoạn ${idx + 1}`}</h4>
-                                                        <span className="badge">{getStatusLabel(stage?.status)}</span>
+                                                        <span className={`mini-status ${getStatusClass(stage?.status)}`}>{getStatusLabel(stage?.status)}</span>
                                                     </div>
-                                                    <div className="sub-row">
+
+                                                    <div className="stage-sub-row">
                                                         <span>{completed ? `Hoàn thành: ${formatDate(stage?.completedAt)}` : `Hạn: ${formatDate(stage?.dueDate)}`}</span>
                                                         <strong>{formatCurrency(stage?.amount)}</strong>
                                                     </div>
 
                                                     {proofPreview && <img src={proofPreview} alt="completion" className="proof-thumb" />}
-                                                    {completed && <p className="muted">Khách đã duyệt</p>}
+
+                                                    {completed && <p className="muted">Giai đoạn đã hoàn thành.</p>}
+
                                                     {active && (
                                                         <div className="stage-complete-form">
-                                                            <label className="upload-zone">
-                                                                Upload ảnh kết quả
-                                                                <input
-                                                                    type="file"
-                                                                    accept="image/*"
-                                                                    disabled={proofUploadingId === String(stageId)}
-                                                                    onChange={(e) => handleUploadProof(stageId, e.target.files?.[0])}
-                                                                />
-                                                            </label>
+                                                            <ImageUpload
+                                                                label="Ảnh kết quả"
+                                                                helperText="Tải ảnh lên hoặc dán URL ảnh hoàn thành."
+                                                                folder="stage-proofs"
+                                                                value={proofByStage[String(stageId)] || stage?.completionImageUrl || ''}
+                                                                onChange={(nextValue) => setProofByStage((prev) => ({ ...prev, [String(stageId)]: nextValue }))}
+                                                                disabled={submittingStageId === String(stageId)}
+                                                                nativeFileInputOnly
+                                                            />
                                                             <textarea
                                                                 rows="3"
                                                                 placeholder="Ghi chú hoàn thành"
@@ -252,7 +299,8 @@ const ArtisanOrderDetailPage = () => {
                                                             </button>
                                                         </div>
                                                     )}
-                                                    {pending && <p className="muted">Chờ giai đoạn trước hoàn thành</p>}
+
+                                                    {pending && <p className="muted">Chờ giai đoạn trước hoàn thành.</p>}
                                                 </div>
                                             </div>
                                         );
@@ -262,36 +310,76 @@ const ArtisanOrderDetailPage = () => {
                         </section>
 
                         <aside className="right-col">
-                            <article className="card-box">
+                            <article className="card-box side-card">
                                 <h3>Thông tin khách hàng</h3>
-                                <div className="customer-box">
-                                    <div className="avatar">{String(order?.customerName || 'C').charAt(0).toUpperCase()}</div>
+                                <div className="person-row">
+                                    <span className="person-icon"><FiUser /></span>
                                     <div>
                                         <strong>{order?.customerName || 'Khách hàng'}</strong>
-                                        <p>{order?.customerEmail || '—'}</p>
+                                        <p><FiMail /> {order?.customerEmail || '—'}</p>
                                     </div>
                                 </div>
                             </article>
 
-                            <article className="card-box">
+                            <article className="card-box side-card">
                                 <h3>Thông tin nghệ nhân</h3>
-                                <p><strong>{order?.artisanName || '—'}</strong></p>
-                                <p>{order?.artisanEmail || '—'}</p>
-                                <p>{order?.artisanPhone || '—'}</p>
+                                <p><FiUser /> <strong>{order?.artisanName || '—'}</strong></p>
+                                <p><FiMail /> {order?.artisanEmail || '—'}</p>
+                                <p><FiPhone /> {order?.artisanPhone || '—'}</p>
                             </article>
 
-                            <article className="card-box">
-                                <h3>Doanh thu đơn</h3>
-                                <p>Tổng đơn: <strong>{formatCurrency(order?.totalPrice)}</strong></p>
-                                <p>Đã thanh toán: <strong>{order?.fullyPaid ? 'Có' : 'Chưa'}</strong></p>
-                                <p>Trạng thái: <strong>{order?.status || '—'}</strong></p>
-                                <p>Đang xử lý: <strong>{activeStage?.stageName || '—'}</strong></p>
-                                <p>Doanh thu hiện tại: <strong>{formatCurrency(revenueCurrent)}</strong></p>
-                                <p>Đã nhận: <strong>{formatCurrency(completedRevenue)}</strong></p>
-                                <p>Còn lại: <strong>{formatCurrency(expectedRemain)}</strong></p>
+                            <article className="card-box side-card">
+                                <h3>Doanh thu dự kiến</h3>
+                                <p><span>Tổng đơn:</span> <strong>{formatCurrency(order?.totalPrice)}</strong></p>
+                                <p><span>Đã thanh toán:</span> <strong>{order?.fullyPaid ? 'Có' : 'Chưa'}</strong></p>
+                                <p><span>Hiện tại:</span> <strong>{formatCurrency(revenueCurrent)}</strong></p>
+                                <p><span>Đã nhận:</span> <strong>{formatCurrency(completedRevenue)}</strong></p>
+                                <p><span>Còn lại:</span> <strong>{formatCurrency(expectedRemain)}</strong></p>
+                            </article>
+
+                            <article className="card-box side-card">
+                                <h3>Ghi chú nhanh</h3>
+                                <p className="muted"><FiFileText /> Khi hoàn thành giai đoạn, vui lòng cập nhật ảnh minh chứng rõ ràng để khách hàng duyệt nhanh hơn.</p>
                             </article>
                         </aside>
                     </div>
+
+                    {status !== 'COMPLETED' && status !== 'CANCELLED' && (
+                        <section className="danger-zone">
+                            <div className="danger-copy">
+                                <h3>Thao tác nguy hiểm</h3>
+                                <p>Hủy đơn sẽ dừng toàn bộ quy trình của đơn tùy chỉnh này.</p>
+                            </div>
+                            <button type="button" className="btn btn-danger" onClick={openCancelModal}>Hủy đơn</button>
+                        </section>
+                    )}
+
+                    {cancelModalOpen && (
+                        <div className="cancel-modal-overlay" onClick={() => setCancelModalOpen(false)} aria-hidden="true">
+                            <div className="cancel-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+                                <h3>Xác nhận hủy đơn</h3>
+                                <p>Để xác nhận, vui lòng nhập chính xác <strong>Hủy đơn</strong> vào ô bên dưới.</p>
+                                <input
+                                    type="text"
+                                    className="form-input"
+                                    placeholder="Nhập: Hủy đơn"
+                                    value={cancelConfirmText}
+                                    onChange={(e) => setCancelConfirmText(e.target.value)}
+                                />
+                                <div className="cancel-modal-actions">
+                                    <button type="button" className="btn btn-outline" onClick={() => setCancelModalOpen(false)} disabled={cancelling}>Đóng</button>
+                                    <button
+                                        type="button"
+                                        className="btn btn-danger"
+                                        onClick={handleCancelOrder}
+                                        disabled={cancelConfirmText.trim() !== 'Hủy đơn' || cancelling}
+                                    >
+                                        {cancelling ? 'Đang hủy...' : 'Hủy đơn'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </main>
         </div>

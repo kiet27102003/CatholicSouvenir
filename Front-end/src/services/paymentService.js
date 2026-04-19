@@ -53,20 +53,19 @@ export const callbackPayment = async (gateway, queryObject) => {
     try {
         const normalizedGateway = String(gateway || 'VNPAY').toLowerCase();
         const endpoint = normalizedGateway === 'vnpay'
-            ? '/stage-payments/vnpay/callback'
-            : `/stage-payments/${encodeURIComponent(normalizedGateway)}/callback`;
+            ? '/payments/vnpay/ipn'
+            : `/payments/${encodeURIComponent(normalizedGateway)}/ipn`;
 
         const response = await api.get(endpoint, { params: queryObject || {} });
         const payload = normalizeResponse(response);
         if (payload.code !== 200 && payload.code !== 201) {
-            return { success: false, error: payload.message || 'Xử lý callback thanh toán thất bại.' };
+            return { success: false, error: payload.message || 'Xử lý IPN thanh toán thất bại.' };
         }
         return { success: true, data: payload.data ?? {} };
     } catch (error) {
-        return { success: false, error: mapError(error, 'Xử lý callback thanh toán thất bại.') };
+        return { success: false, error: mapError(error, 'Xử lý IPN thanh toán thất bại.') };
     }
 };
-
 export const refundPayment = async (paymentId, reason) => {
     try {
         const response = await api.post(`/payments/${paymentId}/refund`, null, {

@@ -1,9 +1,27 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { appToast } from '../lib/appToast';
 import LoginForm from '../components/LoginForm/LoginForm';
+import logo from '../assets/logo.png';
 import './LoginPage.css';
 
 const LoginPage = () => {
+    const [searchParams] = useSearchParams();
+
+    useEffect(() => {
+        const verified = searchParams.get('verified');
+        const message = searchParams.get('message');
+
+        if (!verified) return;
+
+        if (verified === 'success') {
+            appToast.success('Xác minh email thành công', message || 'Tài khoản của bạn đã được xác minh. Bạn có thể đăng nhập ngay bây giờ.');
+            return;
+        }
+
+        appToast.error('Xác minh email thất bại', message || 'Không thể xác minh email. Vui lòng thử lại.');
+    }, [searchParams]);
+
     return (
         <div className="login-page">
             <div className="login-container">
@@ -12,11 +30,7 @@ const LoginPage = () => {
                     <div className="login-overlay"></div>
                     <div className="login-image-content">
                         <Link to="/" className="login-logo">
-                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
+                            <img src={logo} alt="Sanctus logo" className="login-logo-image" />
                             <span>Sanctus</span>
                         </Link>
                         <div className="login-image-text">

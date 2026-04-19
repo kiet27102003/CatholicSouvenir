@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import authService from '../../services/authService';
 import { appToast } from '../../lib/appToast';
 import ArtisanRegisterForm from '../ArtisanRegisterForm/ArtisanRegisterForm';
+import logo from '../../assets/logo.png';
 import './RegisterForm.css';
 
 const STEPS = [
@@ -124,11 +125,7 @@ const RegisterForm = () => {
                     <div className="register-overlay" />
                     <div className="register-image-content">
                         <Link to="/" className="register-logo">
-                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
+                            <img src={logo} alt="Sanctus logo" className="register-logo-image" />
                             <span>Sanctus</span>
                         </Link>
                         <div className="register-image-text">

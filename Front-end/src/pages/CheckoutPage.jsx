@@ -338,7 +338,7 @@ const CheckoutPage = () => {
             const paymentResult = await paymentService.initiateOrderGroupPayment({
                 orderGroupId,
                 method: 'VNPAY',
-                returnUrl: `${window.location.origin}/payment/success`,
+                returnUrl: import.meta.env.VITE_PAYMENT_RETURN_URL || `${window.location.origin}/payment/success`,
             });
 
             if (!paymentResult.success) {

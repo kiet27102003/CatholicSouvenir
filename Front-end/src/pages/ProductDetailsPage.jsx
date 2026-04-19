@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { FiImage, FiArrowLeft } from 'react-icons/fi';
+import React, { useState, useEffect, useMemo } from 'react';
+import { FiImage, FiArrowLeft, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import { useParams, useNavigate } from 'react-router-dom';
 import Header from '../components/Header/Header';
 import Footer from '../components/Footer/Footer';
@@ -32,7 +32,7 @@ const ProductDetailsPage = () => {
     const [loading, setLoading] = useState(true);
     const [quantity, setQuantity] = useState(1);
     const [imageBroken, setImageBroken] = useState(false);
-    const [selectedImageUrl, setSelectedImageUrl] = useState('');
+    const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
     useEffect(() => {
         window.scrollTo(0, 0);
@@ -52,6 +52,7 @@ const ProductDetailsPage = () => {
                 if (result.success && result.data) {
                     setProduct(result.data);
                     setImageBroken(false);
+                    setSelectedImageIndex(0);
                 } else {
                     setProduct(null);
                     const msg = result.error != null ? String(result.error) : 'Vui lòng thử lại';
@@ -70,8 +71,7 @@ const ProductDetailsPage = () => {
     }, [id]);
 
     useEffect(() => {
-        const firstImage = getProductImage(product);
-        setSelectedImageUrl(firstImage || '');
+        setSelectedImageIndex(0);
     }, [product]);
 
     const handleAddToCart = () => {
@@ -99,8 +99,13 @@ const ProductDetailsPage = () => {
         appToast.success('Đã thêm vào giỏ hàng');
     };
 
-    const productImages = Array.isArray(product?.images) ? product.images : [];
-    const mainImage = selectedImageUrl || getProductImage(product);
+    const productImages = useMemo(
+        () => (Array.isArray(product?.images) ? product.images.map((img) => img?.image_url).filter(Boolean) : []),
+        [product],
+    );
+    const activeImageCount = productImages.length;
+    const mainImage = productImages[selectedImageIndex] || getProductImage(product);
+    const showImageControls = activeImageCount > 1;
     const productPrice = product?.productPrice ?? product?.price ?? 0;
     const productName = product?.productName ?? product?.title ?? '—';
     const artisanName = product?.artisanName ?? product?.artisan ?? '—';
@@ -159,13 +164,45 @@ const ProductDetailsPage = () => {
                                     <FiImage size={52} strokeWidth={1.5} />
                                 </div>
                             )}
+
+                            {showImageControls && (
+                                <div className="gallery-overlay-controls">
+                                    <button
+                                        type="button"
+                                        className="gallery-arrow-btn"
+                                        aria-label="Xem ảnh trước"
+                                        onClick={() => {
+                                            setImageBroken(false);
+                                            setSelectedImageIndex((prev) => (prev - 1 + activeImageCount) % activeImageCount);
+                                        }}
+                                    >
+                                        <FiChevronLeft />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="gallery-arrow-btn"
+                                        aria-label="Xem ảnh sau"
+                                        onClick={() => {
+                                            setImageBroken(false);
+                                            setSelectedImageIndex((prev) => (prev + 1) % activeImageCount);
+                                        }}
+                                    >
+                                        <FiChevronRight />
+                                    </button>
+                                </div>
+                            )}
+
+                            {showImageControls && (
+                                <div className="gallery-badge">
+                                    {selectedImageIndex + 1} / {activeImageCount}
+                                </div>
+                            )}
                         </div>
 
                         <div className="thumb-list">
                             {productImages.length > 0 ? (
-                                productImages.map((img, index) => {
-                                    const url = img?.image_url || '';
-                                    const active = url === mainImage;
+                                productImages.map((url, index) => {
+                                    const active = index === selectedImageIndex;
                                     return (
                                         <button
                                             key={`${url}-${index}`}
@@ -173,7 +210,7 @@ const ProductDetailsPage = () => {
                                             className={`thumb-item ${active ? 'active' : ''}`}
                                             onClick={() => {
                                                 setImageBroken(false);
-                                                setSelectedImageUrl(url);
+                                                setSelectedImageIndex(index);
                                             }}
                                         >
                                             {url ? <img src={url} alt={`${productName}-${index + 1}`} /> : <FiImage />}
@@ -187,11 +224,31 @@ const ProductDetailsPage = () => {
                     </div>
 
                     <div className="info-column">
+                        <div className="product-meta">
+                            <span className="product-category-pill">{categoryName}</span>
+                            <span className="product-artist-pill">Nghệ nhân: {artisanName}</span>
+                        </div>
+
                         <h1 className="product-title-large">{productName}</h1>
 
                         <div className="product-price-row">
                             <span className="product-price-main">{formatCurrency(productPrice)}</span>
                             <span className="price-label">Giá sản phẩm</span>
+                        </div>
+
+                        <div className="product-highlights">
+                            <div className="highlight-card">
+                                <span className="highlight-label">Ảnh</span>
+                                <strong>{activeImageCount || 1}</strong>
+                            </div>
+                            <div className="highlight-card">
+                                <span className="highlight-label">Đánh giá</span>
+                                <strong>{productReviews.length}</strong>
+                            </div>
+                            <div className="highlight-card">
+                                <span className="highlight-label">Còn lại</span>
+                                <strong>{product.quantity != null ? product.quantity : 'Liên hệ'}</strong>
+                            </div>
                         </div>
 
                         <div className="purchase-row">

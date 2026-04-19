@@ -66,12 +66,12 @@ export const updateCartItem = async (cartItemId, quantity) => {
     }
 };
 
-export const removeCartItem = async (productId) => {
+export const removeCartItem = async (cartItemId) => {
     try {
-        const response = await api.delete(`/cart/${productId}`);
+        const response = await api.delete(`/cart/items/${cartItemId}`);
         const payload = normalizeResponse(response);
         if (response.status >= 200 && response.status < 300 && (payload.code == null || payload.code === 200)) {
-            return { success: true };
+            return { success: true, data: payload.data ?? {} };
         }
         return { success: false, error: payload.message || 'Không thể xóa sản phẩm khỏi giỏ.' };
     } catch (error) {
@@ -84,7 +84,7 @@ export const clearCart = async () => {
         const response = await api.delete('/cart');
         const payload = normalizeResponse(response);
         if (response.status >= 200 && response.status < 300 && (payload.code == null || payload.code === 200)) {
-            return { success: true };
+            return { success: true, data: payload.data ?? {} };
         }
         return { success: false, error: payload.message || 'Không thể xóa toàn bộ giỏ hàng.' };
     } catch (error) {

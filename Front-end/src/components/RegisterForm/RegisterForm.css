@@ -68,6 +68,13 @@
     transition: opacity 0.2s ease;
 }
 
+.register-logo-image {
+    width: 2.5rem;
+    height: 2.5rem;
+    object-fit: contain;
+    display: block;
+}
+
 .register-logo:hover {
     color: var(--color-text-white);
     opacity: 0.9;

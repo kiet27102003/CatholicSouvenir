@@ -1,102 +1,172 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-    FiSearch,
     FiBell,
-    FiSettings,
-    FiGrid,
-    FiUsers,
-    FiClipboard,
     FiCheckCircle,
-    FiTruck,
-    FiAlertTriangle,
-    FiMail,
+    FiClipboard,
     FiEdit3,
+    FiMail,
+    FiSearch,
+    FiSettings,
     FiTrendingUp,
+    FiTruck,
+    FiUsers,
 } from 'react-icons/fi';
+import api from '../../cofig/api';
 import './admin-common.css';
 import './AdminDashboard.css';
 
-const KPI_ITEMS = [
-    {
-        id: 'revenue',
-        title: 'Tổng doanh thu',
-        value: '1.062.520.000 VNĐ',
-        trend: '↑ 12.5%',
-        trendClass: 'up',
-        icon: <FiTrendingUp />,
-        iconClass: 'orange',
-    },
-    {
-        id: 'artisan-requests',
-        title: 'Đơn đăng ký đang chờ',
-        value: '14',
-        trend: '+ 3 mới',
-        trendClass: 'up',
-        icon: <FiUsers />,
-        iconClass: 'amber',
-    },
-    {
-        id: 'orders',
-        title: 'Đơn hàng đặt riêng',
-        value: '28',
-        trend: '↓ 2%',
-        trendClass: 'down',
-        icon: <FiTruck />,
-        iconClass: 'blue',
-    },
-    {
-        id: 'incidents',
-        title: 'Sự cố được báo cáo',
-        value: '5',
-        trend: 'Ổn định',
-        trendClass: 'flat',
-        icon: <FiAlertTriangle />,
-        iconClass: 'red',
-    },
-];
+const DASHBOARD_DAYS = 30;
 
-const RECENT_ACTIVITIES = [
-    {
-        id: 1,
-        icon: <FiUsers />,
-        iconClass: 'green',
-        title: 'Đăng ký Nghệ nhân mới',
-        description: 'St. Joseph Woodworks (Maria Rossi) đã gửi một đơn đăng ký mới từ Ý.',
-        time: '24 phút trước',
-    },
-    {
-        id: 2,
-        icon: <FiClipboard />,
-        iconClass: 'blue',
-        title: 'Niêm yết sản phẩm mới',
-        description: 'Tràng hạt gỗ Olive chạm tay được niêm yết bởi Bethlehem Crafts. Cần duyệt.',
-        time: '1 giờ trước',
-    },
-    {
-        id: 3,
-        icon: <FiCheckCircle />,
-        iconClass: 'orange',
-        title: 'Đơn hàng đã hoàn tất',
-        description: 'Đơn hàng #ORD-9022 gồm 10x Quà tặng Rửa tội đã được đánh dấu là đã gửi.',
-        time: '3 giờ trước',
-    },
-    {
-        id: 4,
-        icon: <FiUsers />,
-        iconClass: 'green',
-        title: 'Người dùng mới đăng ký',
-        description: 'Thomas Miller đã tạo một tài khoản khách hàng mới.',
-        time: '5 giờ trước',
-    },
-];
+const formatCurrency = (value) => `${new Intl.NumberFormat('vi-VN').format(Number(value || 0))} VNĐ`;
+const formatNumber = (value) => new Intl.NumberFormat('vi-VN').format(Number(value || 0));
 
-const QUICK_ACTIONS = [
-    { id: 1, label: 'Duyệt 14 đơn đăng ký', icon: <FiCheckCircle /> },
-    { id: 2, label: 'Phê duyệt sản phẩm', icon: <FiEdit3 /> },
-    { id: 3, label: 'Email cho tất cả nghệ nhân', icon: <FiMail /> },
-];
+const emptyDashboard = {
+    summary: { totalOrders: 0, totalRevenue: 0 },
+    customerStats: { activeCustomers: 0, newCustomers: 0, totalCustomers: 0 },
+    artisanStats: { activeArtisans: 0, pendingArtisans: 0, totalArtisans: 0 },
+    customOrderStats: { averageOrderValue: 0, conversionRate: 0, totalOrders: 0, totalRequests: 0 },
+    complaintStats: { approvedComplaints: 0, pendingComplaints: 0, rejectedComplaints: 0, totalComplaints: 0, totalRefundAmount: 0 },
+    revenueBreakdown: { productRevenue: 0, templateRevenue: 0, customRevenue: 0, totalCommission: 0 },
+    productAnalytics: { approvedProducts: 0, averagePrice: 0, pendingProducts: 0, totalProducts: 0 },
+    orderStatus: {},
+    topArtisans: [],
+    topCustomers: [],
+    topProducts: [],
+    revenueChart: [],
+};
 
 const AdminDashboard = () => {
+    const [dashboard, setDashboard] = useState(emptyDashboard);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const loadDashboard = async () => {
+            setLoading(true);
+            setError('');
+
+            try {
+                const response = await api.get('/admin/dashboard', { params: { days: DASHBOARD_DAYS } });
+                const payload = response?.data?.data ?? response?.data ?? {};
+
+                if (!isMounted) return;
+
+                const merged = {
+                    ...emptyDashboard,
+                    ...payload,
+                    summary: { ...emptyDashboard.summary, ...(payload.summary || {}) },
+                    customerStats: { ...emptyDashboard.customerStats, ...(payload.customerStats || {}) },
+                    artisanStats: { ...emptyDashboard.artisanStats, ...(payload.artisanStats || {}) },
+                    customOrderStats: { ...emptyDashboard.customOrderStats, ...(payload.customOrderStats || {}) },
+                    complaintStats: { ...emptyDashboard.complaintStats, ...(payload.complaintStats || {}) },
+                    revenueBreakdown: { ...emptyDashboard.revenueBreakdown, ...(payload.revenueBreakdown || {}) },
+                    productAnalytics: { ...emptyDashboard.productAnalytics, ...(payload.productAnalytics || {}) },
+                    orderStatus: payload.orderStatus || {},
+                    topArtisans: Array.isArray(payload.topArtisans) ? payload.topArtisans : [],
+                    topCustomers: Array.isArray(payload.topCustomers) ? payload.topCustomers : [],
+                    topProducts: Array.isArray(payload.topProducts) ? payload.topProducts : [],
+                    revenueChart: Array.isArray(payload.revenueChart) ? payload.revenueChart : [],
+                };
+
+                setDashboard(merged);
+                console.info('[AdminDashboard] Loaded dashboard data', {
+                    days: DASHBOARD_DAYS,
+                    summary: merged.summary,
+                    artisanStats: merged.artisanStats,
+                    customerStats: merged.customerStats,
+                    productAnalytics: merged.productAnalytics,
+                    topArtisans: merged.topArtisans.length,
+                    topCustomers: merged.topCustomers.length,
+                    topProducts: merged.topProducts.length,
+                    revenueChartPoints: merged.revenueChart.length,
+                });
+            } catch (err) {
+                if (!isMounted) return;
+                const message = err?.response?.data?.message || err?.message || 'Không tải được dashboard.';
+                setError(message);
+                console.error('[AdminDashboard] Failed to load dashboard data', err);
+            } finally {
+                if (isMounted) {
+                    setLoading(false);
+                }
+            }
+        };
+
+        loadDashboard();
+        return () => {
+            isMounted = false;
+        };
+    }, []);
+
+    const kpis = useMemo(() => ([
+        {
+            id: 'revenue',
+            title: 'Tổng doanh thu',
+            value: formatCurrency(dashboard.summary.totalRevenue),
+            trend: `Trong ${DASHBOARD_DAYS} ngày gần nhất`,
+            trendClass: 'up',
+            icon: <FiTrendingUp />,
+            iconClass: 'orange',
+        },
+        {
+            id: 'customers',
+            title: 'Khách hàng mới',
+            value: formatNumber(dashboard.customerStats.newCustomers),
+            trend: `${formatNumber(dashboard.customerStats.activeCustomers)} đang hoạt động`,
+            trendClass: 'up',
+            icon: <FiUsers />,
+            iconClass: 'amber',
+        },
+        {
+            id: 'orders',
+            title: 'Đơn hàng',
+            value: formatNumber(dashboard.summary.totalOrders),
+            trend: `Custom: ${formatNumber(dashboard.customOrderStats.totalOrders)} | Requests: ${formatNumber(dashboard.customOrderStats.totalRequests)}`,
+            trendClass: 'flat',
+            icon: <FiTruck />,
+            iconClass: 'blue',
+        },
+        {
+            id: 'complaints',
+            title: 'Khiếu nại',
+            value: formatNumber(dashboard.complaintStats.totalComplaints),
+            trend: `${formatNumber(dashboard.complaintStats.pendingComplaints)} chờ xử lý`,
+            trendClass: 'down',
+            icon: <FiCheckCircle />,
+            iconClass: 'red',
+        },
+    ]), [dashboard]);
+
+    const recentActivities = useMemo(() => {
+        const topCustomers = dashboard.topCustomers.slice(0, 4).map((customer, index) => ({
+            id: `customer-${customer.customerId || index}`,
+            icon: <FiUsers />,
+            iconClass: 'green',
+            title: `Khách hàng ${customer.customerName}`,
+            description: `${customer.email} • ${formatNumber(customer.totalOrders)} đơn • ${formatCurrency(customer.totalSpent)}`,
+            time: `Top #${index + 1}`,
+        }));
+
+        const topProducts = dashboard.topProducts.slice(0, 4).map((product, index) => ({
+            id: `product-${product.productId || index}`,
+            icon: <FiClipboard />,
+            iconClass: 'blue',
+            title: `Sản phẩm ${product.productName}`,
+            description: `${formatNumber(product.sold)} đã bán • ${formatCurrency(product.revenue)}`,
+            time: `Top #${index + 1}`,
+        }));
+
+        return [...topCustomers, ...topProducts].slice(0, 4);
+    }, [dashboard.topCustomers, dashboard.topProducts]);
+
+    const quickActions = useMemo(() => [
+        { id: 1, label: `Duyệt ${formatNumber(dashboard.artisanStats.pendingArtisans)} đơn đăng ký`, icon: <FiCheckCircle /> },
+        { id: 2, label: `Sản phẩm chờ duyệt: ${formatNumber(dashboard.productAnalytics.pendingProducts)}`, icon: <FiEdit3 /> },
+        { id: 3, label: `Khiếu nại chờ xử lý: ${formatNumber(dashboard.complaintStats.pendingComplaints)}`, icon: <FiMail /> },
+    ], [dashboard.artisanStats.pendingArtisans, dashboard.complaintStats.pendingComplaints, dashboard.productAnalytics.pendingProducts]);
+
     return (
         <div className="admin-dashboard-page">
             <header className="dashboard-topbar">
@@ -122,18 +192,19 @@ const AdminDashboard = () => {
             <div className="dashboard-body admin-page">
                 <section className="dashboard-heading">
                     <h1>Tổng quan Thị trường</h1>
-                    <p>Trạng thái và hiệu suất của Thị trường Quà tặng Công giáo hôm nay.</p>
+                    <p>Trạng thái và hiệu suất của Thị trường Quà tặng Công giáo trong {DASHBOARD_DAYS} ngày gần nhất.</p>
+                    {error && <p className="dashboard-error">{error}</p>}
                 </section>
 
                 <section className="dashboard-kpis">
-                    {KPI_ITEMS.map((item) => (
+                    {kpis.map((item) => (
                         <article className="dashboard-kpi-card" key={item.id}>
                             <div className="dashboard-kpi-top">
                                 <div className={`kpi-icon ${item.iconClass}`}>{item.icon}</div>
                                 <span className={`kpi-trend ${item.trendClass}`}>{item.trend}</span>
                             </div>
                             <p className="kpi-title">{item.title}</p>
-                            <h3 className="kpi-value">{item.value}</h3>
+                            <h3 className="kpi-value">{loading ? 'Đang tải...' : item.value}</h3>
                         </article>
                     ))}
                 </section>
@@ -146,7 +217,7 @@ const AdminDashboard = () => {
                         </header>
 
                         <div className="activity-list">
-                            {RECENT_ACTIVITIES.map((item) => (
+                            {recentActivities.length > 0 ? recentActivities.map((item) => (
                                 <div className="activity-item" key={item.id}>
                                     <div className={`activity-icon ${item.iconClass}`}>{item.icon}</div>
                                     <div className="activity-content">
@@ -157,7 +228,9 @@ const AdminDashboard = () => {
                                         <p>{item.description}</p>
                                     </div>
                                 </div>
-                            ))}
+                            )) : (
+                                <p>Chưa có dữ liệu hoạt động gần đây từ API.</p>
+                            )}
                         </div>
                     </article>
 
@@ -165,7 +238,7 @@ const AdminDashboard = () => {
                         <article className="admin-card quick-actions-card">
                             <h3>THAO TÁC NHANH</h3>
                             <div className="quick-actions-list">
-                                {QUICK_ACTIONS.map((action) => (
+                                {quickActions.map((action) => (
                                     <button type="button" className="quick-action-item" key={action.id}>
                                         <span className="quick-action-icon">{action.icon}</span>
                                         <span>{action.label}</span>
@@ -177,17 +250,17 @@ const AdminDashboard = () => {
                         <article className="admin-card system-status-card">
                             <h3>Trạng thái hệ thống</h3>
                             <div className="status-row">
-                                <span>Tải máy chủ</span>
-                                <strong>24%</strong>
+                                <span>Nghệ nhân đang hoạt động</span>
+                                <strong>{formatNumber(dashboard.artisanStats.activeArtisans)}/{formatNumber(dashboard.artisanStats.totalArtisans)}</strong>
                             </div>
                             <div className="status-row">
-                                <span>Cổng thanh toán</span>
-                                <strong className="status-ok">Đang hoạt động</strong>
+                                <span>Sản phẩm đang hoạt động</span>
+                                <strong>{formatNumber(dashboard.productAnalytics.approvedProducts)}/{formatNumber(dashboard.productAnalytics.totalProducts)}</strong>
                             </div>
                             <div className="status-progress">
-                                <span style={{ width: '76%' }} />
+                                <span style={{ width: `${Math.min(100, dashboard.customerStats.totalCustomers ? (dashboard.customerStats.activeCustomers / dashboard.customerStats.totalCustomers) * 100 : 0)}%` }} />
                             </div>
-                            <p>Sao lưu lần cuối: 12 phút trước</p>
+                            <p>{loading ? 'Đang tải dữ liệu dashboard...' : `Tỷ lệ khách hàng active: ${dashboard.customerStats.totalCustomers ? ((dashboard.customerStats.activeCustomers / dashboard.customerStats.totalCustomers) * 100).toFixed(1) : '0.0'}%`}</p>
                         </article>
                     </aside>
                 </section>

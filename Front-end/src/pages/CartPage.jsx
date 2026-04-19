@@ -125,7 +125,7 @@ const CartPage = () => {
                                 </div>
 
                                 {items.map((item) => (
-                                    <div key={`${item.productId}-${item.productName}`} className="cart-row">
+                                    <div key={item.cartItemId || `${item.productId}-${item.productName}`} className="cart-row">
                                         <div className="product-cell">
                                             <input
                                                 type="checkbox"
@@ -159,7 +159,7 @@ const CartPage = () => {
                                         </div>
                                         <div className="line-price">{formatVnd(item.totalPrice)}</div>
                                         <div>
-                                            <button type="button" className="icon-btn" onClick={() => handleRemove(item.productId)}>
+                                            <button type="button" className="icon-btn" onClick={() => handleRemove(item.cartItemId || item.productId)}>
                                                 <FiTrash2 />
                                             </button>
                                         </div>

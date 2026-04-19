@@ -99,6 +99,58 @@ export const authService = {
         }
     },
 
+    async verifyEmail(token) {
+        try {
+            const response = await api.get('/authen/verify', { params: { token } });
+            const code = response.data?.code;
+            if (code !== undefined && code !== 200) {
+                return {
+                    success: false,
+                    error: response.data?.message || 'Xác minh email thất bại.',
+                };
+            }
+            return {
+                success: true,
+                message: response.data?.message || 'Xác minh email thành công.',
+            };
+        } catch (error) {
+            const message =
+                error.response?.data?.message ??
+                error.message ??
+                'Xác minh email thất bại. Vui lòng thử lại.';
+            return {
+                success: false,
+                error: typeof message === 'string' ? message : 'Xác minh email thất bại. Vui lòng thử lại.',
+            };
+        }
+    },
+
+    async resendVerification(email) {
+        try {
+            const response = await api.post('/authen/resend-verification', null, { params: { email } });
+            const code = response.data?.code;
+            if (code !== undefined && code !== 200) {
+                return {
+                    success: false,
+                    error: response.data?.message || 'Gửi lại email xác minh thất bại.',
+                };
+            }
+            return {
+                success: true,
+                message: response.data?.message || 'Đã gửi lại email xác minh.',
+            };
+        } catch (error) {
+            const message =
+                error.response?.data?.message ??
+                error.message ??
+                'Gửi lại email xác minh thất bại. Vui lòng thử lại.';
+            return {
+                success: false,
+                error: typeof message === 'string' ? message : 'Gửi lại email xác minh thất bại. Vui lòng thử lại.',
+            };
+        }
+    },
+
     async registerArtisan(payload) {
         try {
             const response = await api.post('/artisan-applications/register', payload);

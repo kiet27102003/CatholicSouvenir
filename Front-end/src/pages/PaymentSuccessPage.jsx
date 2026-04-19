@@ -29,6 +29,12 @@ const PaymentSuccessPage = () => {
         const params = new URLSearchParams(location.search);
         const obj = {};
         params.forEach((value, key) => { obj[key] = value; });
+
+        // Normalize common aliases so backend can always receive VNPay-style keys.
+        if (obj.txnRef && !obj.vnp_TxnRef) obj.vnp_TxnRef = obj.txnRef;
+        if (obj.code && !obj.vnp_ResponseCode) obj.vnp_ResponseCode = obj.code;
+        if (obj.amount && !obj.vnp_Amount) obj.vnp_Amount = obj.amount;
+
         return obj;
     }, [location.search]);
 

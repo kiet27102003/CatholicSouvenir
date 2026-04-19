@@ -225,9 +225,10 @@ export const CartProvider = ({ children }) => {
         }
     };
 
-    const removeItem = async (productId) => {
-        dispatch({ type: 'REMOVE_ITEM', payload: productId });
-        const result = await cartService.removeCartItem(productId);
+    const removeItem = async (cartItemId) => {
+        const targetItem = state.items.find((it) => it.cartItemId === cartItemId || it.productId === cartItemId);
+        dispatch({ type: 'REMOVE_ITEM', payload: targetItem?.productId ?? cartItemId });
+        const result = await cartService.removeCartItem(targetItem?.cartItemId ?? cartItemId);
         if (!result.success) {
             appToast.error('Lưu giỏ hàng thất bại, sẽ thử lại sau');
         }

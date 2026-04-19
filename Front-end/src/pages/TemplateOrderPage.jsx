@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { FiArrowLeft, FiCheck, FiShoppingBag, FiStar } from 'react-icons/fi';
+import { FiArrowLeft, FiCheck, FiCopy, FiLoader, FiShoppingBag, FiStar, FiX } from 'react-icons/fi';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Header from '../components/Header/Header';
 import Footer from '../components/Footer/Footer';
 import templateService from '../services/templateService';
+import { recommendScripture } from '../services/aiService';
 import { useCart } from '../context/CartContext';
 import { appToast } from '../lib/appToast';
 import './TemplateOrderPage.css';
@@ -29,6 +30,13 @@ const TemplateOrderPage = () => {
     const [template, setTemplate] = useState(null);
     const [zoneValues, setZoneValues] = useState({});
     const [selectedImage, setSelectedImage] = useState('');
+    const [aiOpen, setAiOpen] = useState(false);
+    const [aiLoading, setAiLoading] = useState(false);
+    const [aiForm, setAiForm] = useState({ purpose: '', theme: '', language: 'vi', maxResults: 5 });
+    const [aiRecommendations, setAiRecommendations] = useState([]);
+    const [aiMessage, setAiMessage] = useState('');
+
+    const textZones = useMemo(() => (template?.zones || []).filter((zone) => String(zone.inputType || 'TEXT').toUpperCase() === 'TEXT'), [template]);
 
     useEffect(() => {
         window.scrollTo(0, 0);
@@ -95,6 +103,65 @@ const TemplateOrderPage = () => {
         loadTemplate();
         return () => { cancelled = true; };
     }, [templateId]);
+
+    const openAiModal = (zone = null) => {
+        setAiForm((prev) => ({
+            ...prev,
+            purpose: prev.purpose || (zone?.zoneName || template?.name || ''),
+            theme: prev.theme || (zone?.zoneDescription || template?.style || template?.categoryName || ''),
+        }));
+        setAiMessage('');
+        setAiOpen(true);
+    };
+
+    const handleOpenZoneAi = (zone) => {
+        openAiModal(zone);
+    };
+
+    const handleAiRecommend = async () => {
+        if (!template) return;
+        setAiLoading(true);
+        setAiMessage('');
+        try {
+            const result = await recommendScripture({
+                purpose: aiForm.purpose || textZones[0]?.zoneName || template.name,
+                productName: template.name,
+                theme: aiForm.theme || template.style || template.categoryName || '',
+                language: aiForm.language || 'vi',
+                maxResults: Number(aiForm.maxResults || 5),
+            });
+
+            if (!result.success) {
+                setAiRecommendations([]);
+                setAiMessage(result.error || 'Không lấy được gợi ý AI.');
+                return;
+            }
+
+            const payload = result.data || {};
+            const recommendations = Array.isArray(payload.recommendations) ? payload.recommendations : [];
+            setAiRecommendations(recommendations);
+            setAiMessage(payload.message || (recommendations.length ? 'Đã tạo gợi ý AI.' : 'Chưa có gợi ý phù hợp.'));
+        } finally {
+            setAiLoading(false);
+        }
+    };
+
+    const handleCopyRecommendation = async (rec) => {
+        const text = [
+            rec?.verse ? `${rec.verse}` : '',
+            rec?.text ? `${rec.text}` : '',
+            rec?.translation ? `(${rec.translation})` : '',
+            rec?.reason ? `Lý do: ${rec.reason}` : '',
+            rec?.occasion ? `Hoàn cảnh: ${rec.occasion}` : '',
+        ].filter(Boolean).join('\n');
+
+        try {
+            await navigator.clipboard.writeText(text);
+            appToast.success('Đã copy gợi ý');
+        } catch {
+            appToast.error('Không thể copy', 'Trình duyệt đã chặn thao tác sao chép.');
+        }
+    };
 
     const extraPriceTotal = useMemo(() => {
         return (template?.zones || []).reduce((sum, zone) => {
@@ -223,6 +290,9 @@ const TemplateOrderPage = () => {
                         </div>
 
                         <div className="template-order-actions">
+                            <button type="button" className="btn btn-secondary btn-large template-order-ai-btn" onClick={openAiModal} disabled={!textZones.length}>
+                                <FiStar /> Gợi ý bằng AI
+                            </button>
                             <button type="button" className="btn btn-primary btn-large" onClick={handleAddToCart} disabled={submitting}>
                                 <FiShoppingBag /> {submitting ? 'Đang thêm...' : 'Thêm vào giỏ hàng'}
                             </button>
@@ -238,45 +308,59 @@ const TemplateOrderPage = () => {
                         </div>
 
                         <div className="template-order-zones">
-                            {(template.zones || []).map((zone) => (
-                                <label key={zone.zoneId} className="template-order-zone-field">
-                                    <div className="zone-head">
-                                        <span className="zone-name">{zone.zoneName}{zone.isRequired ? ' *' : ''}</span>
-                                        <span className="zone-extra">+ {formatCurrency(zone.extraPrice)}</span>
-                                    </div>
-                                    <span className="zone-description">{zone.zoneDescription || 'Nhập thông tin theo yêu cầu của template.'}</span>
-                                    {zone.inputType === 'COLOR' ? (
-                                        <input
-                                            type="color"
-                                            value={zoneValues[zone.zoneId] || '#1B4332'}
-                                            onChange={(e) => setZoneValues((prev) => ({ ...prev, [zone.zoneId]: e.target.value }))}
-                                        />
-                                    ) : zone.inputType === 'NUMBER' ? (
-                                        <input
-                                            type="number"
-                                            className="template-order-zone-input"
-                                            value={zoneValues[zone.zoneId]}
-                                            onChange={(e) => setZoneValues((prev) => ({ ...prev, [zone.zoneId]: e.target.value }))}
-                                        />
-                                    ) : zone.inputType === 'IMAGE' ? (
-                                        <input
-                                            type="url"
-                                            className="template-order-zone-input"
-                                            placeholder="Dán URL ảnh..."
-                                            value={zoneValues[zone.zoneId]}
-                                            onChange={(e) => setZoneValues((prev) => ({ ...prev, [zone.zoneId]: e.target.value }))}
-                                        />
-                                    ) : (
-                                        <input
-                                            type="text"
-                                            className="template-order-zone-input"
-                                            placeholder="Nhập dữ liệu..."
-                                            value={zoneValues[zone.zoneId]}
-                                            onChange={(e) => setZoneValues((prev) => ({ ...prev, [zone.zoneId]: e.target.value }))}
-                                        />
-                                    )}
-                                </label>
-                            ))}
+                            {(template.zones || []).map((zone) => {
+                                const isTextZone = String(zone.inputType || 'TEXT').toUpperCase() === 'TEXT';
+                                return (
+                                    <label key={zone.zoneId} className="template-order-zone-field">
+                                        <div className="zone-head">
+                                            <span className="zone-name">{zone.zoneName}{zone.isRequired ? ' *' : ''}</span>
+                                            <span className="zone-extra">+ {formatCurrency(zone.extraPrice)}</span>
+                                        </div>
+                                        <span className="zone-description">{zone.zoneDescription || 'Nhập thông tin theo yêu cầu của template.'}</span>
+                                        {zone.inputType === 'COLOR' ? (
+                                            <input
+                                                type="color"
+                                                value={zoneValues[zone.zoneId] || '#1B4332'}
+                                                onChange={(e) => setZoneValues((prev) => ({ ...prev, [zone.zoneId]: e.target.value }))}
+                                            />
+                                        ) : zone.inputType === 'NUMBER' ? (
+                                            <div className="template-order-zone-input-row">
+                                                <input
+                                                    type="number"
+                                                    className="template-order-zone-input"
+                                                    value={zoneValues[zone.zoneId]}
+                                                    onChange={(e) => setZoneValues((prev) => ({ ...prev, [zone.zoneId]: e.target.value }))}
+                                                />
+                                            </div>
+                                        ) : zone.inputType === 'IMAGE' ? (
+                                            <div className="template-order-zone-input-row">
+                                                <input
+                                                    type="url"
+                                                    className="template-order-zone-input"
+                                                    placeholder="Dán URL ảnh..."
+                                                    value={zoneValues[zone.zoneId]}
+                                                    onChange={(e) => setZoneValues((prev) => ({ ...prev, [zone.zoneId]: e.target.value }))}
+                                                />
+                                            </div>
+                                        ) : (
+                                            <div className="template-order-zone-input-row">
+                                                <input
+                                                    type="text"
+                                                    className="template-order-zone-input"
+                                                    placeholder="Nhập dữ liệu..."
+                                                    value={zoneValues[zone.zoneId]}
+                                                    onChange={(e) => setZoneValues((prev) => ({ ...prev, [zone.zoneId]: e.target.value }))}
+                                                />
+                                                {isTextZone ? (
+                                                    <button type="button" className="template-order-zone-ai-btn" onClick={() => handleOpenZoneAi(zone)}>
+                                                        <FiStar /> AI
+                                                    </button>
+                                                ) : null}
+                                            </div>
+                                        )}
+                                    </label>
+                                );
+                            })}
                         </div>
 
                         <div className="template-order-note">
@@ -285,6 +369,68 @@ const TemplateOrderPage = () => {
                     </div>
                 </section>
             </main>
+
+            {aiOpen ? (
+                <div className="template-order-ai-modal-overlay" onClick={() => setAiOpen(false)}>
+                    <div className="template-order-ai-modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="template-order-ai-modal-header">
+                            <div>
+                                <div className="template-order-ai-modal-badge"><FiStar /> Gợi ý bằng AI</div>
+                                <h3>Nhận các câu Kinh Thánh phù hợp</h3>
+                                <p>Nhập mục đích, chủ đề và ngôn ngữ để AI gợi ý nội dung cho zone TEXT.</p>
+                            </div>
+                            <button type="button" className="template-order-ai-close" onClick={() => setAiOpen(false)}><FiX /></button>
+                        </div>
+
+                        <div className="template-order-ai-form">
+                            <label>
+                                <span>Mục đích</span>
+                                <input value={aiForm.purpose} onChange={(e) => setAiForm((prev) => ({ ...prev, purpose: e.target.value }))} placeholder="Ví dụ: lời chúc phúc, trang trí bàn thờ..." />
+                            </label>
+                            <label>
+                                <span>Chủ đề</span>
+                                <input value={aiForm.theme} onChange={(e) => setAiForm((prev) => ({ ...prev, theme: e.target.value }))} placeholder="Ví dụ: tình yêu, hy vọng, bình an..." />
+                            </label>
+                            <div className="template-order-ai-grid">
+                                <label>
+                                    <span>Ngôn ngữ</span>
+                                    <select value={aiForm.language} onChange={(e) => setAiForm((prev) => ({ ...prev, language: e.target.value }))}>
+                                        <option value="vi">Tiếng Việt</option>
+                                        <option value="en">English</option>
+                                        <option value="la">Latin</option>
+                                    </select>
+                                </label>
+                                <label>
+                                    <span>Số kết quả</span>
+                                    <input type="number" min="1" max="10" value={aiForm.maxResults} onChange={(e) => setAiForm((prev) => ({ ...prev, maxResults: e.target.value }))} />
+                                </label>
+                            </div>
+                            <button type="button" className="btn btn-primary template-order-ai-submit" onClick={handleAiRecommend} disabled={aiLoading}>
+                                {aiLoading ? <FiLoader className="spin" /> : <FiStar />} {aiLoading ? 'Đang gợi ý...' : 'Tạo gợi ý'}
+                            </button>
+                            {aiMessage ? <div className="template-order-ai-message">{aiMessage}</div> : null}
+                        </div>
+
+                        <div className="template-order-ai-results">
+                            {aiRecommendations.length > 0 ? aiRecommendations.map((rec, idx) => (
+                                <article key={`${rec?.verse || 'rec'}-${idx}`} className="template-order-ai-result">
+                                    <div className="template-order-ai-result-head">
+                                        <strong>{rec?.verse || '—'}</strong>
+                                        <button type="button" className="template-order-ai-copy" onClick={() => handleCopyRecommendation(rec)}><FiCopy /> Copy</button>
+                                    </div>
+                                    <p className="template-order-ai-verse">{rec?.text || '—'}</p>
+                                    {rec?.translation ? <p className="template-order-ai-translation">{rec.translation}</p> : null}
+                                    <div className="template-order-ai-meta">
+                                        {rec?.reason ? <span><strong>Lý do:</strong> {rec.reason}</span> : null}
+                                        {rec?.occasion ? <span><strong>Hoàn cảnh:</strong> {rec.occasion}</span> : null}
+                                    </div>
+                                </article>
+                            )) : <div className="template-order-ai-empty">Chưa có gợi ý nào. Hãy bấm “Tạo gợi ý”.</div>}
+                        </div>
+                    </div>
+                </div>
+            ) : null}
+
             <Footer />
         </div>
     );

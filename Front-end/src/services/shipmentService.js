@@ -1,5 +1,6 @@
 import api from '../cofig/api';
 
+
 const normalizeResponse = (response) => {
     if (response?.data?.code != null) {
         return {
@@ -40,6 +41,57 @@ const handleResponse = (response, fallback) => {
     };
 };
 
+const GHN_BASE_URL = 'https://dev-online-gateway.ghn.vn/shiip/public-api/v2';
+const GHN_TOKEN = import.meta.env.VITE_GHN_TOKEN || '';
+
+const ghnRequest = async (path, params = {}) => {
+    const url = new URL(`${GHN_BASE_URL}${path}`);
+    Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') url.searchParams.set(key, String(value));
+    });
+
+    const response = await fetch(url.toString(), {
+        headers: {
+            'Content-Type': 'application/json',
+            ...(GHN_TOKEN ? { Token: GHN_TOKEN } : {}),
+        },
+    });
+    const data = await response.json();
+    return data;
+};
+
+export const getGhnProvinces = async () => {
+    try {
+        const data = await ghnRequest('/master-data/province');
+        const list = Array.isArray(data?.data) ? data.data : [];
+        return { success: true, data: list };
+    } catch (error) {
+        return { success: false, error: mapError(error, 'Không tải được danh sách tỉnh/thành GHN.'), data: [] };
+    }
+};
+
+export const getGhnDistricts = async (provinceId) => {
+    if (!provinceId) return { success: true, data: [] };
+    try {
+        const data = await ghnRequest('/master-data/district', { province_id: provinceId });
+        const list = Array.isArray(data?.data) ? data.data : [];
+        return { success: true, data: list };
+    } catch (error) {
+        return { success: false, error: mapError(error, 'Không tải được danh sách quận/huyện GHN.'), data: [] };
+    }
+};
+
+export const getGhnWards = async (districtId) => {
+    if (!districtId) return { success: true, data: [] };
+    try {
+        const data = await ghnRequest('/master-data/ward', { district_id: districtId });
+        const list = Array.isArray(data?.data) ? data.data : [];
+        return { success: true, data: list };
+    } catch (error) {
+        return { success: false, error: mapError(error, 'Không tải được danh sách phường/xã GHN.'), data: [] };
+    }
+};
+
 export const createShipment = async (payload) => {
     try {
         const response = await api.post('/shipments', {
@@ -48,6 +100,7 @@ export const createShipment = async (payload) => {
             recipientName: payload.recipientName || '',
             recipientPhone: payload.recipientPhone || '',
             deliveryAddress: payload.deliveryAddress || '',
+            toProvinceId: payload.toProvinceId || '',
             toDistrictId: Number(payload.toDistrictId || 0),
             toWardCode: payload.toWardCode || '',
             orderValue: Number(payload.orderValue || 0),

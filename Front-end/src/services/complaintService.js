@@ -172,6 +172,20 @@ export const getAdminComplaintDetail = async (id) => {
     }
 };
 
+export const getOrderById = async (orderId) => {
+    if (!orderId) return { success: false, error: 'Thiếu mã đơn hàng.' };
+    try {
+        const response = await api.get(`/order/${orderId}`);
+        const normalized = normalizeResponse(response);
+        if (!isSuccessCode(normalized.code)) {
+            return { success: false, error: normalized.message || 'Không tải được thông tin đơn hàng.' };
+        }
+        return { success: true, data: normalized.data ?? null };
+    } catch (error) {
+        return { success: false, error: mapError(error, 'Không tải được thông tin đơn hàng. Vui lòng thử lại.') };
+    }
+};
+
 export const approveAdminComplaint = async (id, body) => {
     if (!id) return { success: false, error: 'Thiếu mã khiếu nại.' };
     try {
@@ -252,6 +266,7 @@ export default {
     confirmReturnShipment,
     getAdminComplaints,
     getAdminComplaintDetail,
+    getOrderById,
     approveAdminComplaint,
     rejectAdminComplaint,
     retryAdminRefundTransaction,

@@ -1,14 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink, Outlet, Navigate, useLocation } from 'react-router-dom';
-import { FiUser, FiShield, FiBell, FiCreditCard, FiTruck, FiAlertCircle } from 'react-icons/fi';
+import { FiUser, FiShield, FiBell, FiCreditCard, FiTruck, FiAlertCircle, FiChevronDown, FiChevronRight } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import Header from '../../components/Header/Header';
 import Footer from '../../components/Footer/Footer';
 import './CustomerLayout.css';
 
 const CustomerLayout = () => {
-    const { user, logout, isAuthenticated } = useAuth();
+    const { user, isAuthenticated } = useAuth();
     const location = useLocation();
+    const [supportOpen, setSupportOpen] = useState(location.pathname === '/complaint-history' || location.pathname === '/refund-support');
 
     const role = String(user?.role || '').toUpperCase();
     if (!isAuthenticated || role !== 'CUSTOMER') {
@@ -21,7 +22,9 @@ const CustomerLayout = () => {
     const isSecurityActive = isProfile && activeTab === 'security';
     const isNotificationsActive = isProfile && activeTab === 'notifications';
     const isPaymentActive = isProfile && activeTab === 'payment';
-    const isComplaintActive = location.pathname === '/complaints' || location.pathname === '/complaint-history';
+    const isComplaintActive = location.pathname === '/complaint-history';
+    const isRefundActive = location.pathname === '/refund-support';
+    const isSupportActive = isComplaintActive || isRefundActive;
 
     return (
         <div className="customer-layout">
@@ -49,10 +52,23 @@ const CustomerLayout = () => {
                             <FiTruck size={20} strokeWidth={2} />
                             Đơn hàng của tôi
                         </NavLink>
-                        <NavLink to="/complaint-history" className={`sidebar-link ${isComplaintActive ? 'active' : ''}`}>
-                            <FiAlertCircle size={20} strokeWidth={2} />
-                            Khiếu nại
-                        </NavLink>
+
+                        <button type="button" className={`sidebar-link sidebar-link--group ${isSupportActive ? 'active' : ''}`} onClick={() => setSupportOpen((prev) => !prev)} aria-expanded={supportOpen}>
+                            <span className="sidebar-link-group-left">
+                                <FiAlertCircle size={20} strokeWidth={2} />
+                                Dịch vụ &amp; hỗ trợ
+                            </span>
+                            {supportOpen ? <FiChevronDown size={18} /> : <FiChevronRight size={18} />}
+                        </button>
+                        <div className={`sidebar-submenu ${supportOpen ? 'open' : ''}`}>
+                            <NavLink to="/complaint-history" className={`sidebar-sublink ${isComplaintActive ? 'active' : ''}`}>
+                                Khiếu nại
+                            </NavLink>
+                            <NavLink to="/refund-support" className={`sidebar-sublink ${isRefundActive ? 'active' : ''}`}>
+                                Hoàn tiền
+                            </NavLink>
+                        </div>
+
                         <NavLink to="/messages" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
                             <FiBell size={20} strokeWidth={2} />
                             Tin nhắn
@@ -63,7 +79,7 @@ const CustomerLayout = () => {
                     <div className="sidebar-support">
                         <h4 className="sidebar-support-title">Cần hỗ trợ?</h4>
                         <p className="sidebar-support-desc">Liên hệ với đội ngũ CSKH của chúng tôi 24/7.</p>
-                        <button type="button" className="btn sidebar-support-btn">Gửi yêu cầu</button>
+                        <button type="button" className="btn sidebar-support-btn" onClick={() => setSupportOpen(true)}>Mở dịch vụ &amp; hỗ trợ</button>
                     </div>
                 </aside>
 

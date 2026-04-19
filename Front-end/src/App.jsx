@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { AuthProvider, useAuth } from './context/AuthContext'
+import { useAuth } from './context/AuthContext'
 import { AppToastContainer } from './lib/appToast'
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
@@ -31,6 +31,7 @@ import OrderTrackingPage from './pages/customer/OrderTrackingPage'
 import WalletPage from './pages/customer/WalletPage'
 import ComplaintCenterPage from './pages/customer/ComplaintCenterPage'
 import ComplaintHistoryPage from './pages/customer/ComplaintHistoryPage'
+import RefundSupportPage from './pages/customer/RefundSupportPage'
 import CartDrawer from './components/CartDrawer/CartDrawer'
 
 import AdminLayout from './pages/admin/AdminLayout'
@@ -49,7 +50,6 @@ import AdminComingSoon from './pages/admin/AdminComingSoon'
 import CommissionManagement from './pages/admin/CommissionManagement'
 import AdminComplaintManagementPage from './pages/admin/AdminComplaintManagementPage'
 import ShipmentDemoStatusPage from './pages/admin/ShipmentDemoStatusPage'
-import ShipmentManagementPage from './pages/artisan/ShipmentManagementPage'
 
 function ArtisanOnlyRoute({ children }) {
   const { user, loading } = useAuth()
@@ -83,7 +83,7 @@ function WalletAccessRoute({ children }) {
 
 function App() {
   return (
-    <AuthProvider>
+    <>
       <AppToastContainer />
       <CartDrawer />
       <Routes>
@@ -105,13 +105,14 @@ function App() {
 
         <Route path="/artisan" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
         <Route path="/artisan/templates" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
+        <Route path="/artisan/portfolio" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
         <Route path="/artisan/requests" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
         <Route path="/artisan/wallet" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
         <Route path="/artisan/messages" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
         <Route path="/artisan/requests/:id/custom-order" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
         <Route path="/artisan/orders" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
         <Route path="/artisan/complaints" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
-        <Route path="/artisan/shipments" element={<ArtisanOnlyRoute><ShipmentManagementPage /></ArtisanOnlyRoute>} />
+        <Route path="/artisan/shipments" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
         <Route path="/artisan/orders/:id" element={<ArtisanOnlyRoute><ArtisanOrderDetailPage /></ArtisanOnlyRoute>} />
 
         <Route path="/admin" element={<AdminLayout />}>
@@ -136,6 +137,7 @@ function App() {
         <Route path="/wallet" element={<WalletAccessRoute><WalletPage /></WalletAccessRoute>} />
         <Route path="/complaints" element={<ComplaintCenterPage />} />
         <Route path="/complaint-history" element={<ComplaintHistoryPage />} />
+        <Route path="/refund-support" element={<RefundSupportPage />} />
         <Route path="/messages" element={<WalletAccessRoute><ChatPage /></WalletAccessRoute>} />
         <Route path="/custom-order" element={<CustomRequestPage />} />
         <Route path="/templates" element={<TemplateCatalogPage />} />
@@ -150,7 +152,7 @@ function App() {
           <Route path="/orders/:orderId/tracking" element={<OrderTrackingPage />} />
         </Route>
       </Routes>
-    </AuthProvider>
+    </>
   )
 }
 

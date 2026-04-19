@@ -1,12 +1,25 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { FiAlertCircle, FiCheckCircle, FiExternalLink, FiPackage, FiRefreshCw, FiTruck, FiXCircle } from 'react-icons/fi';
+import { FiAlertCircle, FiCheckCircle, FiExternalLink, FiPackage, FiRefreshCw, FiTruck } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import { appToast } from '../../lib/appToast';
 import { getOrdersByArtisan } from '../../services/orderService';
-import { cancelShipment, createShipment, getShipmentByOrderId, updateDemoShipmentStatus, webhookGhn } from '../../services/shipmentService';
+import {
+    cancelShipment,
+    createShipment,
+    getGhnDistricts,
+    getGhnProvinces,
+    getGhnWards,
+    getShipmentByOrderId,
+    webhookGhn,
+} from '../../services/shipmentService';
 import './ShipmentManagementPage.css';
 
 const formatCurrency = (value) => `${new Intl.NumberFormat('vi-VN').format(Number(value || 0))} đ`;
+const formatInputMoney = (value) => {
+    const digits = String(value ?? '').replace(/\D/g, '');
+    return digits ? new Intl.NumberFormat('vi-VN').format(Number(digits)) : '';
+};
+const parseInputMoney = (value) => String(value ?? '').replace(/\D/g, '');
 const formatDateTime = (value) => {
     if (!value) return '—';
     try {
@@ -24,6 +37,28 @@ const STATUS_LABELS = {
     CANCELLED: 'Đã huỷ',
 };
 
+const mapLocationItem = (item) => ({
+    code: String(item?.ProvinceID ?? item?.DistrictID ?? item?.WardCode ?? item?.code ?? item?.id ?? ''),
+    name: item?.ProvinceName || item?.DistrictName || item?.WardName || item?.Name || item?.name || '',
+});
+
+const defaultShipmentForm = {
+    recipientName: '',
+    recipientPhone: '',
+    deliveryAddress: '',
+    provinceCode: '',
+    districtCode: '',
+    wardCode: '',
+    orderValue: '',
+    weight: '1000',
+    length: '20',
+    width: '20',
+    height: '20',
+    note: '',
+    serviceTypeId: '2',
+    paymentTypeId: '1',
+};
+
 const ShipmentManagementPage = ({ user, embedded = false }) => {
     const navigate = useNavigate();
     const artisanId = user?.id || user?.artisanId || user?.artisanUuid;
@@ -35,21 +70,17 @@ const ShipmentManagementPage = ({ user, embedded = false }) => {
     const [creating, setCreating] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
     const [actioningId, setActioningId] = useState('');
-    const [form, setForm] = useState({
-        recipientName: '',
-        recipientPhone: '',
-        deliveryAddress: '',
-        toDistrictId: '',
-        toWardCode: '',
-        orderValue: '',
-        weight: '1000',
-        length: '20',
-        width: '20',
-        height: '20',
-        note: '',
-        serviceTypeId: '2',
-        paymentTypeId: '1',
-    });
+    const [shipmentFormOpen, setShipmentFormOpen] = useState(false);
+    const [shippingSubmitting, setShippingSubmitting] = useState(false);
+    const [provinces, setProvinces] = useState([]);
+    const [districts, setDistricts] = useState([]);
+    const [wards, setWards] = useState([]);
+    const [locationLoading, setLocationLoading] = useState({ provinces: false, districts: false, wards: false });
+    const [shipmentForm, setShipmentForm] = useState(defaultShipmentForm);
+    const [form, setForm] = useState(defaultShipmentForm);
+    const cityOptions = provinces;
+    const availableDistricts = districts;
+    const availableWards = wards;
 
     const loadShipments = async () => {
         if (!artisanId) return;
@@ -78,16 +109,14 @@ const ShipmentManagementPage = ({ user, embedded = false }) => {
         setLoading(false);
     };
 
-    useEffect(() => {
-        loadShipments();
-    }, [artisanId]);
+    useEffect(() => { loadShipments(); }, [artisanId]);
 
     const selectedOrder = useMemo(() => orders.find((order) => String(order?.orderId || order?.id) === String(selectedOrderId)) || null, [orders, selectedOrderId]);
     const selectedShipment = selectedOrder ? shipments[selectedOrder.orderId || selectedOrder.id] : null;
 
     useEffect(() => {
         if (!selectedOrder) return;
-        setForm((prev) => ({
+        setShipmentForm((prev) => ({
             ...prev,
             recipientName: prev.recipientName || selectedOrder.fullName || selectedOrder.customerName || '',
             recipientPhone: prev.recipientPhone || selectedOrder.phoneNumber || selectedOrder.customerPhone || '',
@@ -96,33 +125,118 @@ const ShipmentManagementPage = ({ user, embedded = false }) => {
         }));
     }, [selectedOrder]);
 
+    useEffect(() => {
+        const loadProvinces = async () => {
+            setLocationLoading((prev) => ({ ...prev, provinces: true }));
+            const res = await getGhnProvinces();
+            if (res.success) {
+                setProvinces((Array.isArray(res.data) ? res.data : []).map(mapLocationItem));
+            } else {
+                setProvinces([]);
+                appToast.error('Không tải được danh sách tỉnh/thành', res.error || 'Vui lòng thử lại');
+            }
+            setLocationLoading((prev) => ({ ...prev, provinces: false }));
+        };
+
+        if (shipmentFormOpen) loadProvinces();
+    }, [shipmentFormOpen]);
+
+    useEffect(() => {
+        const loadDistricts = async () => {
+            if (!shipmentForm.provinceCode) {
+                setDistricts([]);
+                setWards([]);
+                setShipmentForm((prev) => ({ ...prev, districtCode: '', wardCode: '' }));
+                return;
+            }
+            setLocationLoading((prev) => ({ ...prev, districts: true }));
+            const res = await getGhnDistricts(shipmentForm.provinceCode);
+            if (res.success) {
+                setDistricts((Array.isArray(res.data) ? res.data : []).map(mapLocationItem));
+                setWards([]);
+                setShipmentForm((prev) => ({ ...prev, districtCode: '', wardCode: '' }));
+            } else {
+                setDistricts([]);
+                setWards([]);
+                appToast.error('Không tải được danh sách quận/huyện', res.error || 'Vui lòng thử lại');
+            }
+            setLocationLoading((prev) => ({ ...prev, districts: false }));
+        };
+        loadDistricts();
+    }, [shipmentForm.provinceCode]);
+
+    useEffect(() => {
+        const loadWards = async () => {
+            if (!shipmentForm.districtCode) {
+                setWards([]);
+                setShipmentForm((prev) => ({ ...prev, wardCode: '' }));
+                return;
+            }
+            setLocationLoading((prev) => ({ ...prev, wards: true }));
+            const res = await getGhnWards(shipmentForm.districtCode);
+            if (res.success) {
+                setWards((Array.isArray(res.data) ? res.data : []).map(mapLocationItem));
+                setShipmentForm((prev) => ({ ...prev, wardCode: '' }));
+            } else {
+                setWards([]);
+                appToast.error('Không tải được danh sách phường/xã', res.error || 'Vui lòng thử lại');
+            }
+            setLocationLoading((prev) => ({ ...prev, wards: false }));
+        };
+        loadWards();
+    }, [shipmentForm.districtCode]);
+
+    const openShipmentForm = () => {
+        setShipmentFormOpen(true);
+        setShipmentForm((prev) => ({
+            ...prev,
+            recipientName: prev.recipientName || selectedOrder?.fullName || selectedOrder?.customerName || '',
+            recipientPhone: prev.recipientPhone || selectedOrder?.phoneNumber || selectedOrder?.customerPhone || '',
+            deliveryAddress: prev.deliveryAddress || selectedOrder?.shippingAddress || '',
+            orderValue: prev.orderValue || selectedOrder?.total || selectedOrder?.totalPrice || 0,
+        }));
+    };
+
+    const resetShipmentForm = () => {
+        setShipmentForm(defaultShipmentForm);
+    };
+
     const handleCreateShipment = async () => {
-        if (!selectedOrder || creating) return;
-        setCreating(true);
+        if (!selectedOrder?.orderId || shippingSubmitting) return;
+        if (!shipmentForm.recipientName.trim() || !shipmentForm.recipientPhone.trim() || !shipmentForm.deliveryAddress.trim()) {
+            appToast.error('Thiếu thông tin giao hàng', 'Vui lòng nhập đầy đủ người nhận, số điện thoại và địa chỉ.');
+            return;
+        }
+
+        setShippingSubmitting(true);
         const res = await createShipment({
-            orderId: selectedOrder.orderId || selectedOrder.id,
-            recipientName: form.recipientName,
-            recipientPhone: form.recipientPhone,
-            deliveryAddress: form.deliveryAddress,
-            toDistrictId: form.toDistrictId,
-            toWardCode: form.toWardCode,
-            orderValue: form.orderValue,
-            weight: form.weight,
-            length: form.length,
-            width: form.width,
-            height: form.height,
-            note: form.note,
-            serviceTypeId: form.serviceTypeId,
-            paymentTypeId: form.paymentTypeId,
+            orderId: selectedOrder.orderId,
+            customOrderId: selectedOrder?.customOrderId || selectedOrder?.id || undefined,
+            recipientName: shipmentForm.recipientName.trim(),
+            recipientPhone: shipmentForm.recipientPhone.trim(),
+            deliveryAddress: shipmentForm.deliveryAddress.trim(),
+            toProvinceId: shipmentForm.provinceCode,
+            toDistrictId: shipmentForm.districtCode,
+            toWardCode: shipmentForm.wardCode,
+            orderValue: parseInputMoney(shipmentForm.orderValue) || selectedOrder?.totalPrice || 0,
+            weight: shipmentForm.weight,
+            length: shipmentForm.length,
+            width: shipmentForm.width,
+            height: shipmentForm.height,
+            note: shipmentForm.note.trim(),
+            serviceTypeId: shipmentForm.serviceTypeId,
+            paymentTypeId: shipmentForm.paymentTypeId,
         });
-        setCreating(false);
+        setShippingSubmitting(false);
 
         if (!res.success) {
             appToast.error('Tạo vận đơn thất bại', res.error || 'Vui lòng thử lại');
             return;
         }
 
-        appToast.success('Đã tạo vận đơn');
+        setShipmentFormOpen(false);
+        resetShipmentForm();
+        appToast.success('Đã tạo vận đơn thành công');
         await loadShipments();
     };
 
@@ -135,26 +249,6 @@ const ShipmentManagementPage = ({ user, embedded = false }) => {
             return;
         }
         appToast.success('Đã gửi webhook GHN');
-    };
-
-    const handleDemoUpdate = async () => {
-        if (!selectedShipment?.shipmentId && !selectedShipment?.id) {
-            appToast.info('Chưa có vận đơn', 'Hãy tạo vận đơn trước.');
-            return;
-        }
-        setActioningId(String(selectedShipment.shipmentId || selectedShipment.id));
-        const res = await updateDemoShipmentStatus({
-            additionalProp1: 'demo',
-            additionalProp2: String(selectedShipment.shipmentId || selectedShipment.id),
-            additionalProp3: 'IN_TRANSIT',
-        });
-        setActioningId('');
-        if (!res.success) {
-            appToast.error('Cập nhật demo thất bại', res.error || 'Vui lòng thử lại');
-            return;
-        }
-        appToast.success('Đã cập nhật trạng thái demo');
-        await loadShipments();
     };
 
     const handleCancel = async () => {
@@ -253,27 +347,80 @@ const ShipmentManagementPage = ({ user, embedded = false }) => {
 
                             <div className="shipment-form-card">
                                 <h3>Tạo vận đơn</h3>
+                                <p className="muted">Điền thông tin người nhận và thông số kiện hàng để gửi sang hệ thống vận chuyển.</p>
                                 <div className="shipment-form-grid">
-                                    <input className="form-input" placeholder="Tên người nhận" value={form.recipientName} onChange={(e) => setForm((prev) => ({ ...prev, recipientName: e.target.value }))} />
-                                    <input className="form-input" placeholder="Số điện thoại" value={form.recipientPhone} onChange={(e) => setForm((prev) => ({ ...prev, recipientPhone: e.target.value }))} />
-                                    <input className="form-input shipment-span-2" placeholder="Địa chỉ giao hàng" value={form.deliveryAddress} onChange={(e) => setForm((prev) => ({ ...prev, deliveryAddress: e.target.value }))} />
-                                    <input className="form-input" placeholder="Mã quận" value={form.toDistrictId} onChange={(e) => setForm((prev) => ({ ...prev, toDistrictId: e.target.value }))} />
-                                    <input className="form-input" placeholder="Mã phường" value={form.toWardCode} onChange={(e) => setForm((prev) => ({ ...prev, toWardCode: e.target.value }))} />
-                                    <input className="form-input" placeholder="Giá trị đơn" value={form.orderValue} onChange={(e) => setForm((prev) => ({ ...prev, orderValue: e.target.value }))} />
-                                    <input className="form-input" placeholder="Cân nặng (gram)" value={form.weight} onChange={(e) => setForm((prev) => ({ ...prev, weight: e.target.value }))} />
-                                    <input className="form-input" placeholder="Dài" value={form.length} onChange={(e) => setForm((prev) => ({ ...prev, length: e.target.value }))} />
-                                    <input className="form-input" placeholder="Rộng" value={form.width} onChange={(e) => setForm((prev) => ({ ...prev, width: e.target.value }))} />
-                                    <input className="form-input" placeholder="Cao" value={form.height} onChange={(e) => setForm((prev) => ({ ...prev, height: e.target.value }))} />
-                                    <input className="form-input" placeholder="Service Type ID" value={form.serviceTypeId} onChange={(e) => setForm((prev) => ({ ...prev, serviceTypeId: e.target.value }))} />
-                                    <input className="form-input" placeholder="Payment Type ID" value={form.paymentTypeId} onChange={(e) => setForm((prev) => ({ ...prev, paymentTypeId: e.target.value }))} />
-                                    <textarea className="form-input shipment-span-2" rows="3" placeholder="Ghi chú" value={form.note} onChange={(e) => setForm((prev) => ({ ...prev, note: e.target.value }))} />
+                                    <label className="shipment-field">
+                                        <span>Tên người nhận</span>
+                                        <input className="form-input" placeholder="Nhập tên người nhận" value={shipmentForm.recipientName} onChange={(e) => setShipmentForm((prev) => ({ ...prev, recipientName: e.target.value }))} />
+                                    </label>
+                                    <label className="shipment-field">
+                                        <span>Số điện thoại</span>
+                                        <input className="form-input" placeholder="Nhập số điện thoại" value={shipmentForm.recipientPhone} onChange={(e) => setShipmentForm((prev) => ({ ...prev, recipientPhone: e.target.value }))} />
+                                    </label>
+                                    <label className="shipment-field shipment-span-2">
+                                        <span>Địa chỉ giao hàng</span>
+                                        <input className="form-input" placeholder="Nhập địa chỉ giao hàng" value={shipmentForm.deliveryAddress} onChange={(e) => setShipmentForm((prev) => ({ ...prev, deliveryAddress: e.target.value }))} />
+                                    </label>
+                                    <label className="shipment-field">
+                                        <span>Tỉnh / thành phố</span>
+                                        <select className="form-input" value={shipmentForm.provinceCode} onChange={(e) => setShipmentForm((prev) => ({ ...prev, provinceCode: e.target.value }))} disabled={locationLoading.provinces}>
+                                            <option value="">Chọn tỉnh/thành</option>
+                                            {cityOptions.map((item) => (
+                                                <option key={item.code} value={item.code}>{item.name}</option>
+                                            ))}
+                                        </select>
+                                    </label>
+                                    <label className="shipment-field">
+                                        <span>Quận / huyện</span>
+                                        <select className="form-input" value={shipmentForm.districtCode} onChange={(e) => setShipmentForm((prev) => ({ ...prev, districtCode: e.target.value }))} disabled={!shipmentForm.provinceCode || locationLoading.districts}>
+                                            <option value="">Chọn quận/huyện</option>
+                                            {availableDistricts.map((item) => (
+                                                <option key={item.code} value={item.code}>{item.name}</option>
+                                            ))}
+                                        </select>
+                                    </label>
+                                    <label className="shipment-field">
+                                        <span>Phường / xã</span>
+                                        <select className="form-input" value={shipmentForm.wardCode} onChange={(e) => setShipmentForm((prev) => ({ ...prev, wardCode: e.target.value }))} disabled={!shipmentForm.districtCode || locationLoading.wards}>
+                                            <option value="">Chọn phường/xã</option>
+                                            {availableWards.map((item) => (
+                                                <option key={item.code} value={item.code}>{item.name}</option>
+                                            ))}
+                                        </select>
+                                    </label>
+                                    <label className="shipment-field">
+                                        <span>Giá trị đơn hàng</span>
+                                        <input
+                                            className="form-input"
+                                            placeholder="Nhập giá trị đơn hàng"
+                                            value={shipmentForm.orderValue ? `${formatInputMoney(shipmentForm.orderValue)} đ` : ''}
+                                            onChange={(e) => setShipmentForm((prev) => ({ ...prev, orderValue: parseInputMoney(e.target.value) }))}
+                                        />
+                                    </label>
+                                    <label className="shipment-field">
+                                        <span>Cân nặng (gram)</span>
+                                        <input className="form-input" placeholder="Nhập cân nặng" value={shipmentForm.weight} onChange={(e) => setShipmentForm((prev) => ({ ...prev, weight: e.target.value }))} />
+                                    </label>
+                                    <label className="shipment-field">
+                                        <span>Dài (cm)</span>
+                                        <input className="form-input" placeholder="Nhập chiều dài" value={shipmentForm.length} onChange={(e) => setShipmentForm((prev) => ({ ...prev, length: e.target.value }))} />
+                                    </label>
+                                    <label className="shipment-field">
+                                        <span>Rộng (cm)</span>
+                                        <input className="form-input" placeholder="Nhập chiều rộng" value={shipmentForm.width} onChange={(e) => setShipmentForm((prev) => ({ ...prev, width: e.target.value }))} />
+                                    </label>
+                                    <label className="shipment-field">
+                                        <span>Cao (cm)</span>
+                                        <input className="form-input" placeholder="Nhập chiều cao" value={shipmentForm.height} onChange={(e) => setShipmentForm((prev) => ({ ...prev, height: e.target.value }))} />
+                                    </label>
+                                    <label className="shipment-field shipment-span-2">
+                                        <span>Ghi chú</span>
+                                        <textarea className="form-input" rows="3" placeholder="Nhập ghi chú" value={shipmentForm.note} onChange={(e) => setShipmentForm((prev) => ({ ...prev, note: e.target.value }))} />
+                                    </label>
                                 </div>
                                 <div className="shipment-actions">
-                                    <button type="button" className="btn btn-primary" onClick={handleCreateShipment} disabled={creating}>
-                                        {creating ? 'Đang tạo...' : 'Tạo vận đơn'}
-                                    </button>
-                                    <button type="button" className="btn btn-outline" onClick={handleDemoUpdate} disabled={actioningId !== '' || !selectedShipment}>
-                                        Cập nhật demo
+                                    <button type="button" className="btn btn-primary" onClick={handleCreateShipment} disabled={shippingSubmitting}>
+                                        {shippingSubmitting ? 'Đang tạo...' : 'Tạo vận đơn'}
                                     </button>
                                     <button type="button" className="btn btn-danger" onClick={handleCancel} disabled={actioningId !== '' || !selectedShipment}>
                                         {actioningId ? 'Đang xử lý...' : 'Huỷ vận đơn'}
@@ -288,7 +435,6 @@ const ShipmentManagementPage = ({ user, embedded = false }) => {
     );
 
     if (embedded) return content;
-
     return content;
 };
 

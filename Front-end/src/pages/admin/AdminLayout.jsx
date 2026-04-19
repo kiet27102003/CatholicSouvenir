@@ -2,6 +2,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { Outlet, NavLink, useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { AdminLayoutContext } from './AdminLayoutContext';
+import logo from '../../assets/logo.png';
 import './AdminLayout.css';
 import {
     FiUsers,
@@ -14,7 +15,6 @@ import {
     FiHome,
     FiClipboard,
     FiDollarSign,
-    FiGift,
     FiCreditCard,
     FiRepeat,
     FiAlertTriangle,
@@ -87,7 +87,7 @@ const AdminLayout = () => {
                 <aside className={`admin-sidebar ${isSidebarOpen ? 'open' : 'closed'}`}>
                     <div className="sidebar-header">
                         <div className="logo">
-                            <span className="logo-icon"><FiGift /></span>
+                            <img src={logo} alt="Catholic Market" className="logo-image" />
                             <div>
                                 <strong>Catholic Market</strong>
                                 <p>CÔNG QUẢN TRỊ</p>

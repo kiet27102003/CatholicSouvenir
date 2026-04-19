@@ -118,24 +118,7 @@ const ShipmentDemoStatusPage = () => {
                     </div>
                 </section>
 
-                <section className="admin-card admin-response-card">
-                    <div className="admin-card-header">Kết quả demo</div>
-                    <div className="admin-card-body">
-                        <div className="demo-response-box">
-                            <p><strong>Order code:</strong> {orderCode || '—'}</p>
-                            <p><strong>Status:</strong> {status || '—'}</p>
-                            <p><strong>Endpoint:</strong> POST /api/shipments/demo/update-status</p>
-                        </div>
-                        {responseData ? (
-                            <pre className="demo-json">{JSON.stringify(responseData, null, 2)}</pre>
-                        ) : (
-                            <div className="admin-empty-state">
-                                <h4>Chưa có dữ liệu</h4>
-                                <p>Chọn trạng thái và bấm cập nhật để xem phản hồi API.</p>
-                            </div>
-                        )}
-                    </div>
-                </section>
+
             </div>
         </div>
     );

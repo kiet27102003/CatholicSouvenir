@@ -1,4 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
+import api from '../cofig/api';
 import { appToast } from '../lib/appToast';
 
 const AuthContext = createContext(null);
@@ -31,10 +32,20 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    const logout = () => {
+    const clearSession = () => {
         setUser(null);
         localStorage.removeItem('sanctus_user');
         sessionStorage.removeItem('sanctus_user');
+    };
+
+    const logout = async () => {
+        try {
+            await api.post('/authen/logout');
+        } catch {
+            // Always clear the client session even if the server logout fails.
+        } finally {
+            clearSession();
+        }
     };
 
     const updateUser = (newUserData) => {

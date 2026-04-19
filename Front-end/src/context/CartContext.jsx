@@ -1,6 +1,9 @@
 import React, { createContext, useContext, useEffect, useMemo, useReducer } from 'react';
 import { appToast } from '../lib/appToast';
+import { useAuth } from './AuthContext';
 import cartService from '../services/cartService';
+
+/* eslint-disable react-refresh/only-export-components */
 
 const CartContext = createContext();
 
@@ -136,13 +139,25 @@ const cartReducer = (state, action) => {
     }
 };
 
+const isValidCustomerSession = (user) => {
+    const role = String(user?.role || '').trim().toUpperCase();
+    const token = String(user?.token || '').trim();
+    return role === 'CUSTOMER' && token.length > 0;
+};
+
 export const CartProvider = ({ children }) => {
     const [state, dispatch] = useReducer(cartReducer, { items: [], isOpen: false });
+    const { user, loading: authLoading } = useAuth();
 
     useEffect(() => {
         let cancelled = false;
 
         const syncCart = async () => {
+            if (!isValidCustomerSession(user)) {
+                dispatch({ type: 'HYDRATE_ITEMS', payload: [] });
+                return;
+            }
+
             const result = await cartService.getCart();
             if (cancelled) return;
 
@@ -155,12 +170,14 @@ export const CartProvider = ({ children }) => {
             dispatch({ type: 'HYDRATE_ITEMS', payload: [] });
         };
 
-        syncCart();
+        if (!authLoading) {
+            syncCart();
+        }
 
         return () => {
             cancelled = true;
         };
-    }, []);
+    }, [authLoading, user]);
 
     const selectedItems = useMemo(() => state.items.filter((i) => i.selected), [state.items]);
     const subtotal = useMemo(() => {

@@ -424,7 +424,7 @@ const PortfolioView = ({ user }) => {
         <div className="portfolio-view">
             <header className="portfolio-header">
                 <div className="header-left">
-                    <h1 className="portfolio-title">Portfolio / Sản phẩm</h1>
+                    <h1 className="portfolio-title">Quản lí sản phẩm</h1>
                     <p className="portfolio-subtitle">Quản lý và thêm sản phẩm của bạn.</p>
                 </div>
                 <div className="header-right">

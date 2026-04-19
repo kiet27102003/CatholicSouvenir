@@ -12,6 +12,7 @@ import {
     FiMessageSquare,
     FiStar,
 } from 'react-icons/fi';
+import logo from '../../assets/logo.png';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -166,13 +167,7 @@ const Header = () => {
                     </button>
 
                     <Link to="/" className="header-logo" aria-label="Sanctus home">
-                        <span className="logo-mark" aria-hidden="true">
-                            <FiStar size={18} strokeWidth={2.2} />
-                        </span>
-                        <span className="logo-copy">
-                            <span className="logo-brand">Sanctus</span>
-                            <span className="logo-dot">.</span>
-                        </span>
+                        <img src={logo} alt="Sanctus" className="logo-image header-logo-image" />
                     </Link>
                 </div>
 

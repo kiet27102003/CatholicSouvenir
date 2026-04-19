@@ -165,7 +165,34 @@
 .shipment-form-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.65rem;
+    gap: 0.85rem;
+}
+
+.shipment-field {
+    display: grid;
+    gap: 0.35rem;
+}
+
+.shipment-field span {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #111827;
+}
+
+.shipment-field .form-input {
+    border: 1px solid rgba(15, 23, 42, 0.18);
+    background: #fff;
+    color: #111827;
+}
+
+.shipment-field .form-input::placeholder {
+    color: #9ca3af;
+}
+
+.shipment-field .form-input:focus {
+    border-color: rgba(15, 23, 42, 0.28);
+    box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.08);
+    outline: none;
 }
 
 .shipment-span-2 {

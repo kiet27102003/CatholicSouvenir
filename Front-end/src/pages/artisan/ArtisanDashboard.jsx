@@ -9,12 +9,14 @@ import ArtisanRequestsPage from './ArtisanRequestsPage';
 import ArtisanOrdersPage from './ArtisanOrdersPage';
 import ComplaintManagementPage from './ComplaintManagementPage';
 import ArtisanQuoteCreatePage from './ArtisanQuoteCreatePage';
+import ShipmentManagementPage from './ShipmentManagementPage';
 import WalletPage from '../customer/WalletPage';
 import ChatPage from '../customer/ChatPage';
 import './ArtisanDashboard.css';
 
 const getViewFromPath = (pathname) => {
     if (pathname === '/artisan/templates') return 'templates';
+    if (pathname === '/artisan/portfolio') return 'portfolio';
     if (pathname === '/artisan/requests') return 'requests';
     if (/^\/artisan\/requests\/[^/]+\/custom-order$/.test(pathname)) return 'customOrderCreate';
     if (pathname === '/artisan/orders') return 'customOrders';
@@ -27,6 +29,7 @@ const getViewFromPath = (pathname) => {
 
 const viewToPath = (view) => {
     if (view === 'templates') return '/artisan/templates';
+    if (view === 'portfolio') return '/artisan/portfolio';
     if (view === 'requests') return '/artisan/requests';
     if (view === 'customOrders') return '/artisan/orders';
     if (view === 'complaints') return '/artisan/complaints';
@@ -88,6 +91,7 @@ const ArtisanDashboard = () => {
                         {activeView === 'customOrderCreate' && <ArtisanQuoteCreatePage embedded />}
                         {activeView === 'customOrders' && <ArtisanOrdersPage embedded />}
                         {activeView === 'complaints' && <ComplaintManagementPage />}
+                        {activeView === 'shipments' && <ShipmentManagementPage user={user} embedded />}
                         {activeView === 'wallet' && <WalletPage embedded />}
                     </div>
                 )}

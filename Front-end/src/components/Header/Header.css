@@ -43,34 +43,12 @@
     text-decoration: none;
 }
 
-.logo-mark {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    background: #1a2e1a;
-    color: #86efac;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+.header-logo-image {
+    width: 30px;
+    height: 30px;
+    object-fit: contain;
     flex-shrink: 0;
-}
-
-.logo-copy {
-    display: inline-flex;
-    align-items: baseline;
-    font-size: 16px;
-    font-weight: 500;
-    letter-spacing: -0.3px;
-    color: var(--color-text-primary);
-}
-
-.logo-brand {
-    line-height: 1;
-}
-
-.logo-dot {
-    color: #2d5a3d;
-    line-height: 1;
+    display: block;
 }
 
 .header-nav {

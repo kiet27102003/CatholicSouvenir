@@ -7,10 +7,23 @@ import complaintService from '../../services/complaintService';
 import './AdminComplaintManagementPage.css';
 
 const PAGE_SIZE = 10;
-const COMPLAINT_STATUS_OPTIONS = ['PENDING', 'WAITING_RETURN', 'PROCESSING_REFUND', 'APPROVED', 'REJECTED'];
-const REFUND_STATUS_OPTIONS = ['PENDING', 'COMPLETED', 'FAILED'];
+const COMPLAINT_STATUS_LABELS = {
+    PENDING: 'Đang chờ xử lý',
+    WAITING_RETURN: 'Chờ khách hoàn hàng',
+    PROCESSING_REFUND: 'Đang xử lý hoàn tiền',
+    APPROVED: 'Đã duyệt',
+    REJECTED: 'Đã từ chối',
+};
+const REFUND_STATUS_LABELS = {
+    PENDING: 'Đang chờ',
+    COMPLETED: 'Hoàn tất',
+    FAILED: 'Thất bại',
+};
+const COMPLAINT_STATUS_OPTIONS = Object.keys(COMPLAINT_STATUS_LABELS);
+const REFUND_STATUS_OPTIONS = Object.keys(REFUND_STATUS_LABELS);
 
 const formatDateTime = (value) => (value ? dayjs(value).format('DD/MM/YYYY HH:mm') : '—');
+const translateStatus = (status, labels) => labels[String(status || '').toUpperCase()] || status || '—';
 
 const AdminComplaintManagementPage = () => {
     const { isAuthenticated, user } = useAuth();
@@ -29,10 +42,14 @@ const AdminComplaintManagementPage = () => {
     const [refundPage, setRefundPage] = useState(0);
     const [refundTotalPages, setRefundTotalPages] = useState(1);
     const [detailMode, setDetailMode] = useState(false);
+    const [modalAction, setModalAction] = useState('DETAIL');
     const [actionLoading, setActionLoading] = useState(false);
     const [refundAmount, setRefundAmount] = useState('');
     const [adminNote, setAdminNote] = useState('');
     const [rejectionReason, setRejectionReason] = useState('');
+    const [zoomedEvidence, setZoomedEvidence] = useState(null);
+    const [orderTotal, setOrderTotal] = useState(null);
+    const [orderLoading, setOrderLoading] = useState(false);
 
     const loadComplaints = async () => {
         setLoading(true);
@@ -76,20 +93,38 @@ const AdminComplaintManagementPage = () => {
 
     const filteredItems = useMemo(() => items, [items]);
 
-    const openDetail = async (item) => {
+    const openDetail = async (item, action = 'DETAIL') => {
         setSelected(item);
         setSelectedDetail(null);
+        setModalAction(action);
         setDetailMode(true);
+        setOrderTotal(null);
         const res = await complaintService.getAdminComplaintDetail(item.complaintId || item.id);
         if (!res.success) {
             appToast.error('Không tải được chi tiết', res.error || 'Vui lòng thử lại sau');
             return;
         }
-        setSelectedDetail(res.data || item);
-        setRefundAmount(String(res.data?.refundAmount ?? item.refundAmount ?? ''));
-        setAdminNote(res.data?.adminNote || '');
-        setRejectionReason(res.data?.rejectionReason || '');
+        const detailData = res.data || item;
+        setSelectedDetail(detailData);
+        setRefundAmount(String(detailData?.refundAmount ?? item.refundAmount ?? ''));
+        setAdminNote(detailData?.adminNote || '');
+        setRejectionReason(detailData?.rejectionReason || '');
+
+        const orderId = detailData?.orderId || item.orderId;
+        if (orderId) {
+            setOrderLoading(true);
+            const orderRes = await complaintService.getOrderById(orderId);
+            if (orderRes.success) {
+                setOrderTotal(orderRes.data?.total ?? null);
+            } else {
+                setOrderTotal(null);
+            }
+            setOrderLoading(false);
+        }
     };
+
+    const openApproveModal = (item) => openDetail(item, 'APPROVE');
+    const openRejectModal = (item) => openDetail(item, 'REJECT');
 
     const handleApprove = async () => {
         if (!selected?.complaintId) return;
@@ -135,28 +170,41 @@ const AdminComplaintManagementPage = () => {
                 </div>
             </div>
 
-            <div className="admin-complaint-toolbar">
-                <select value={statusFilter} onChange={(e) => { setPage(0); setStatusFilter(e.target.value); }}>
-                    <option value="">Tất cả trạng thái complaint</option>
-                    {COMPLAINT_STATUS_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
-                </select>
-                <select value={refundStatusFilter} onChange={(e) => { setRefundPage(0); setRefundStatusFilter(e.target.value); }}>
-                    <option value="">Tất cả trạng thái hoàn tiền</option>
-                    {REFUND_STATUS_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
-                </select>
-            </div>
-
             <section className="admin-complaint-section">
-                <h2>Danh sách khiếu nại</h2>
+                <div className="admin-section-head">
+                    <h2>Danh sách khiếu nại</h2>
+                    <select className="admin-filter-select inline" value={statusFilter} onChange={(e) => { setPage(0); setStatusFilter(e.target.value); }}>
+                        <option value="">Tất cả trạng thái khiếu nại</option>
+                        {COMPLAINT_STATUS_OPTIONS.map((option) => (
+                            <option key={option} value={option}>{translateStatus(option, COMPLAINT_STATUS_LABELS)}</option>
+                        ))}
+                    </select>
+                </div>
                 {loading ? <div className="admin-complaint-empty">Đang tải dữ liệu...</div> : filteredItems.length === 0 ? <div className="admin-complaint-empty">Chưa có khiếu nại nào</div> : (
                     <div className="admin-complaint-list">
                         {filteredItems.map((item) => (
-                            <button key={item.complaintId} type="button" className="admin-complaint-card" onClick={() => openDetail(item)}>
-                                <strong>#{String(item.complaintId || '').slice(0, 8)}</strong>
-                                <span>{item.status || '—'}</span>
-                                <p>{item.reason || '—'}</p>
+                            <article key={item.complaintId} className="admin-complaint-card">
+                                <div className="admin-complaint-card-header">
+                                    <div>
+                                        <strong>#{String(item.complaintId || '').slice(0, 8)}</strong>
+                                        <span className="admin-complaint-status">{translateStatus(item.status, COMPLAINT_STATUS_LABELS)}</span>
+                                    </div>
+                                    <span className="admin-complaint-chip">{item.requireReturn ? 'Yêu cầu hoàn hàng' : 'Không hoàn hàng'}</span>
+                                </div>
+                                <p className="admin-complaint-reason">{item.reason || '—'}</p>
                                 <small>{item.customerName || '—'} • {item.artisanName || '—'}</small>
-                            </button>
+                                <div className="admin-complaint-card-actions">
+                                    <button type="button" className="admin-btn admin-btn-secondary" onClick={() => openDetail(item, 'DETAIL')}>
+                                        Xem chi tiết
+                                    </button>
+                                    <button type="button" className="admin-btn admin-btn-success" onClick={() => openApproveModal(item)}>
+                                        Phê duyệt
+                                    </button>
+                                    <button type="button" className="admin-btn admin-btn-danger" onClick={() => openRejectModal(item)}>
+                                        Từ chối
+                                    </button>
+                                </div>
+                            </article>
                         ))}
                     </div>
                 )}
@@ -168,16 +216,24 @@ const AdminComplaintManagementPage = () => {
             </section>
 
             <section className="admin-complaint-section">
-                <h2>Giao dịch hoàn tiền</h2>
+                <div className="admin-section-head">
+                    <h2>Giao dịch hoàn tiền</h2>
+                    <select className="admin-filter-select inline" value={refundStatusFilter} onChange={(e) => { setRefundPage(0); setRefundStatusFilter(e.target.value); }}>
+                        <option value="">Tất cả trạng thái hoàn tiền</option>
+                        {REFUND_STATUS_OPTIONS.map((option) => (
+                            <option key={option} value={option}>{translateStatus(option, REFUND_STATUS_LABELS)}</option>
+                        ))}
+                    </select>
+                </div>
                 {refundItems.length === 0 ? <div className="admin-complaint-empty">Chưa có giao dịch hoàn tiền nào</div> : (
                     <div className="admin-refund-list">
                         {refundItems.map((item) => (
                             <div key={item.refundTransactionId} className="admin-refund-card">
-                                <strong>{item.status || '—'}</strong>
+                                <strong>{translateStatus(item.status, REFUND_STATUS_LABELS)}</strong>
                                 <p>Số tiền: {item.amount ?? 0}</p>
                                 <p>{item.fromWalletOwnerName || '—'} → {item.toWalletOwnerName || '—'}</p>
                                 <small>{formatDateTime(item.createdAt)}</small>
-                                {item.status === 'FAILED' && (
+                                {String(item.status || '').toUpperCase() === 'FAILED' && (
                                     <button type="button" onClick={() => handleRetryRefund(item.refundTransactionId)} disabled={actionLoading}>
                                         Thử lại
                                     </button>
@@ -193,29 +249,131 @@ const AdminComplaintManagementPage = () => {
                 </div>
             </section>
 
+            {zoomedEvidence && (
+                <div className="admin-evidence-modal-backdrop" onClick={() => setZoomedEvidence(null)} role="presentation">
+                    <button type="button" className="admin-evidence-modal-close" onClick={() => setZoomedEvidence(null)} aria-label="Đóng hình">
+                        ×
+                    </button>
+                    <img src={zoomedEvidence} alt="Bằng chứng phóng to" className="admin-evidence-modal-image" onClick={(e) => e.stopPropagation()} />
+                </div>
+            )}
+
             {detailMode && selected && (
                 <div className="admin-complaint-modal-backdrop" onClick={() => setDetailMode(false)} role="presentation">
-                    <div className="admin-complaint-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
-                        <h2>Chi tiết khiếu nại</h2>
-                        <p><strong>Mã:</strong> {selectedDetail?.complaintId || selected.complaintId}</p>
-                        <p><strong>Trạng thái:</strong> {selectedDetail?.status || selected.status}</p>
-                        <p><strong>Khách hàng:</strong> {selectedDetail?.customerName || '—'}</p>
-                        <p><strong>Artisan:</strong> {selectedDetail?.artisanName || '—'}</p>
-                        <p><strong>Lý do:</strong> {selectedDetail?.reason || selected.reason}</p>
-                        <p><strong>Bằng chứng:</strong> {(selectedDetail?.evidenceImages || []).length}</p>
-                        <p><strong>Trả hàng:</strong> {selectedDetail?.requireReturn ? 'Có' : 'Không'}</p>
-                        <p><strong>Phản hồi artisan:</strong> {selectedDetail?.artisanResponse || '—'}</p>
+                    <div className="admin-complaint-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="complaint-detail-title">
+                        <div className="admin-complaint-modal-header">
+                            <div>
+                                <p className="admin-complaint-modal-kicker">Chi tiết khiếu nại</p>
+                                <h2 id="complaint-detail-title">#{String(selectedDetail?.complaintId || selected.complaintId || '').slice(0, 8)}</h2>
+                                <p className="admin-complaint-modal-subtitle">Xem toàn bộ thông tin để xử lý phê duyệt hoặc từ chối.</p>
+                            </div>
+                            <button type="button" className="admin-complaint-modal-close" onClick={() => setDetailMode(false)} aria-label="Đóng">×</button>
+                        </div>
 
-                        <div className="admin-complaint-form-grid">
-                            <input value={refundAmount} onChange={(e) => setRefundAmount(e.target.value)} placeholder="Số tiền hoàn" />
-                            <input value={adminNote} onChange={(e) => setAdminNote(e.target.value)} placeholder="Ghi chú admin" />
-                            <textarea value={rejectionReason} onChange={(e) => setRejectionReason(e.target.value)} placeholder="Lý do từ chối" />
+                        <div className="admin-complaint-modal-body">
+                            <aside className="admin-complaint-summary-card">
+                                <div className="admin-complaint-summary-row">
+                                    <span>Trạng thái</span>
+                                    <strong>{translateStatus(selectedDetail?.status || selected.status, COMPLAINT_STATUS_LABELS)}</strong>
+                                </div>
+                                <div className="admin-complaint-summary-row">
+                                    <span>Trả hàng</span>
+                                    <strong>{selectedDetail?.requireReturn ? 'Có' : 'Không'}</strong>
+                                </div>
+                                <div className="admin-complaint-summary-row">
+                                    <span>Bằng chứng</span>
+                                    <strong>{(selectedDetail?.evidenceImages || []).length} ảnh</strong>
+                                </div>
+                                <div className="admin-complaint-summary-row">
+                                    <span>Ngày tạo</span>
+                                    <strong>{formatDateTime(selectedDetail?.createdAt)}</strong>
+                                </div>
+                                <div className="admin-complaint-summary-row">
+                                    <span>Cập nhật</span>
+                                    <strong>{formatDateTime(selectedDetail?.updatedAt)}</strong>
+                                </div>
+                                <div className="admin-complaint-summary-row">
+                                    <span>Tổng đơn hàng</span>
+                                    <strong>{orderLoading ? 'Đang tải...' : (orderTotal != null ? `${Number(orderTotal).toLocaleString('vi-VN')} đ` : '—')}</strong>
+                                </div>
+                            </aside>
+
+                            <div className="admin-complaint-details-grid">
+                                <section className="admin-complaint-detail-block">
+                                    <h3>Thông tin người gửi</h3>
+                                    <div className="admin-complaint-detail-list">
+                                        <div><span>Khách hàng</span><strong>{selectedDetail?.customerName || '—'}</strong></div>
+                                        <div><span>Email</span><strong>{selectedDetail?.customerEmail || '—'}</strong></div>
+                                        <div><span>Artisan</span><strong>{selectedDetail?.artisanName || '—'}</strong></div>
+                                    </div>
+                                </section>
+
+                                <section className="admin-complaint-detail-block">
+                                    <h3>Nội dung khiếu nại</h3>
+                                    <p className="admin-complaint-detail-text">{selectedDetail?.reason || selected.reason || '—'}</p>
+                                </section>
+
+                                <section className="admin-complaint-detail-block">
+                                    <h3>Bằng chứng đính kèm</h3>
+                                    {(selectedDetail?.evidenceImages || []).length > 0 ? (
+                                        <div className="admin-complaint-evidence-grid">
+                                            {(selectedDetail?.evidenceImages || []).map((image, index) => {
+                                                const isZoomed = zoomedEvidence === image;
+                                                return (
+                                                    <button
+                                                        key={`${image}-${index}`}
+                                                        type="button"
+                                                        className={`admin-complaint-evidence-item ${isZoomed ? 'is-zoomed' : ''}`}
+                                                        onClick={() => setZoomedEvidence(isZoomed ? null : image)}
+                                                        aria-label={isZoomed ? 'Thu nhỏ hình' : `Phóng to bằng chứng ${index + 1}`}
+                                                    >
+                                                        {!isZoomed ? (
+                                                            <img src={image} alt={`Bằng chứng ${index + 1}`} />
+                                                        ) : (
+                                                            <>
+                                                                <img src={image} alt={`Bằng chứng ${index + 1}`} />
+                                                                <span className="admin-complaint-evidence-close">×</span>
+                                                            </>
+                                                        )}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    ) : (
+                                        <div className="admin-complaint-empty inline">Chưa có ảnh bằng chứng</div>
+                                    )}
+                                </section>
+
+                                {modalAction !== 'DETAIL' && (
+                                    <section className="admin-complaint-detail-block">
+                                        <h3>Thông tin xử lý</h3>
+                                        <div className="admin-complaint-form-grid admin-complaint-modal-form">
+                                            {modalAction === 'APPROVE' ? (
+                                                <>
+                                                    <input value={refundAmount} onChange={(e) => setRefundAmount(e.target.value)} placeholder="Số tiền hoàn" />
+                                                    <input value={adminNote} onChange={(e) => setAdminNote(e.target.value)} placeholder="Ghi chú admin" />
+                                                </>
+                                            ) : (
+                                                <textarea value={rejectionReason} onChange={(e) => setRejectionReason(e.target.value)} placeholder="Lý do từ chối" />
+                                            )}
+                                        </div>
+                                    </section>
+                                )}
+                            </div>
                         </div>
 
                         <div className="admin-complaint-modal-actions">
-                            <button type="button" onClick={() => setDetailMode(false)}>Đóng</button>
-                            <button type="button" onClick={handleApprove} disabled={actionLoading}>Phê duyệt</button>
-                            <button type="button" onClick={handleReject} disabled={actionLoading}>Từ chối</button>
+                            <button type="button" className="admin-btn admin-btn-ghost" onClick={() => setDetailMode(false)}>Đóng</button>
+                            {modalAction === 'APPROVE' && (
+                                <button type="button" className="admin-btn admin-btn-success" onClick={handleApprove} disabled={actionLoading}>
+                                    Phê duyệt
+                                </button>
+                            )}
+                            {modalAction === 'REJECT' && (
+                                <button type="button" className="admin-btn admin-btn-danger" onClick={handleReject} disabled={actionLoading}>
+                                    Từ chối
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>

@@ -16,45 +16,46 @@ const normalizeResponse = (response) => {
     };
 };
 
+const isSuccessCode = (code) => code === 0 || code === 200 || code === 201;
+
 const mapError = (error, fallback) => {
-    const message =
-        error?.response?.data?.message ??
-        error?.response?.data?.error ??
-        error?.message ??
-        fallback;
+    const message = error?.response?.data?.message ?? error?.response?.data?.error ?? error?.message ?? fallback;
     return typeof message === 'string' ? message : fallback;
 };
 
-export const generateConceptImage = async ({ description }) => {
-    const body = {
-        description: String(description ?? '').trim(),
-    };
-
-    if (!body.description) {
-        return { success: false, error: 'Thiếu mô tả để tạo ảnh concept.' };
-    }
-
+export const recommendScripture = async ({ purpose, productName, theme, language, maxResults = 5 }) => {
     try {
-        const response = await api.post('/ai/generate-concept', body);
-        const normalized = normalizeResponse(response);
+        const response = await api.post('/ai/recommend-scripture', {
+            purpose,
+            productName,
+            theme,
+            language,
+            maxResults,
+        });
 
-        if (normalized.code !== 0 && normalized.code !== 200 && normalized.code !== 201) {
-            return {
-                success: false,
-                error: normalized.message || 'Tạo ảnh concept thất bại.',
-            };
+        const normalized = normalizeResponse(response);
+        if (!isSuccessCode(normalized.code)) {
+            return { success: false, error: normalized.message || 'Không lấy được gợi ý AI.' };
         }
 
-        return {
-            success: true,
-            data: normalized.data || {},
-        };
+        return { success: true, data: normalized.data ?? {} };
     } catch (error) {
-        return {
-            success: false,
-            error: mapError(error, 'Không thể kết nối tới dịch vụ AI.'),
-        };
+        return { success: false, error: mapError(error, 'Không lấy được gợi ý AI. Vui lòng thử lại.') };
     }
 };
 
-export default { generateConceptImage };
+export const generateConceptImage = async ({ description }) => {
+    try {
+        const response = await api.post('/ai/generate-concept-image', { description });
+        const normalized = normalizeResponse(response);
+        if (!isSuccessCode(normalized.code)) {
+            return { success: false, error: normalized.message || 'Không tạo được ảnh AI.' };
+        }
+
+        return { success: true, data: normalized.data ?? {} };
+    } catch (error) {
+        return { success: false, error: mapError(error, 'Không tạo được ảnh AI. Vui lòng thử lại.') };
+    }
+};
+
+export default { recommendScripture, generateConceptImage };

@@ -219,7 +219,10 @@ const HomePage = () => {
                                     const artisanName = realProduct?.artisanName || realProduct?.artisan?.name || realProduct?.artisan?.fullName || 'Nghệ nhân';
                                     const categoryName = realProduct?.categoryName || realProduct?.category?.name || 'Thủ công';
                                     return (
-                                        <article key={realProduct?.productId || realProduct?.id || `product-${index}`} className="product-card">
+                                        <article
+                                            key={`${realProduct?.productId || realProduct?.id || 'product'}-${index}`}
+                                            className="product-card"
+                                        >
                                             {loading ? (
                                                 <div className="skeleton skeleton-product-image" />
                                             ) : (

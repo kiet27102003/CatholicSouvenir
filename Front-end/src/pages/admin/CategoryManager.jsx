@@ -1,7 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-    FiChevronDown,
-    FiChevronRight,
+    FiArrowRight,
     FiEdit2,
     FiFolder,
     FiPlus,
@@ -16,42 +15,28 @@ import './CategoryManager.css';
 
 const EMPTY_TEXT = '—';
 
-const getSafeText = (value) => {
+const safeText = (value) => {
     if (value == null) return EMPTY_TEXT;
     const text = String(value).trim();
     return text === '' ? EMPTY_TEXT : text;
 };
 
-const truncate = (value, max = 40) => {
-    const text = getSafeText(value);
-    if (text === EMPTY_TEXT) return EMPTY_TEXT;
-    return text.length > max ? `${text.slice(0, max)}...` : text;
+const safeNumber = (value, fallback = 0) => {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : fallback;
 };
 
-const truncateId = (id) => {
-    const text = getSafeText(id);
-    if (text === EMPTY_TEXT || text.length <= 12) return text;
-    return `${text.slice(0, 6)}...${text.slice(-4)}`;
-};
-
-const inferCategoryId = (item) => item?.categoryId ?? item?.id ?? item?.categoryID ?? null;
-
-const inferParentId = (item) =>
-    item?.parentCategoryId ?? item?.parentId ?? item?.parent?.categoryId ?? item?.parent?.id ?? null;
-
-const normalizeCategory = (item = {}) => {
-    const categoryId = inferCategoryId(item);
-    return {
-        ...item,
-        categoryId,
-        parentCategoryId: inferParentId(item),
-        categoryName: item?.categoryName ?? item?.name ?? '',
-        description: item?.description ?? '',
-        iconUrl: item?.iconUrl ?? item?.icon ?? '',
-        sortOrder: Number.isFinite(Number(item?.sortOrder)) ? Number(item.sortOrder) : 0,
-        isActive: typeof item?.isActive === 'boolean' ? item.isActive : true,
-    };
-};
+const normalizeCategory = (item = {}) => ({
+    categoryId: item?.categoryId ?? item?.id ?? '',
+    categoryName: item?.categoryName ?? item?.name ?? '',
+    description: item?.description ?? '',
+    iconUrl: item?.iconUrl ?? '',
+    isActive: typeof item?.isActive === 'boolean' ? item.isActive : true,
+    sortOrder: safeNumber(item?.sortOrder, 0),
+    templateCount: safeNumber(item?.templateCount, 0),
+    createdAt: item?.createdAt ?? null,
+    updatedAt: item?.updatedAt ?? null,
+});
 
 const initialForm = {
     categoryName: '',
@@ -61,7 +46,7 @@ const initialForm = {
     isActive: true,
 };
 
-const CategoryFormModal = ({ open, mode, categoryId, loadingDetail, submitting, initialData, onClose, onSubmit }) => {
+const CategoryFormModal = ({ open, mode, loadingDetail, submitting, initialData, onClose, onSubmit }) => {
     const [form, setForm] = useState(initialForm);
 
     useEffect(() => {
@@ -71,7 +56,7 @@ const CategoryFormModal = ({ open, mode, categoryId, loadingDetail, submitting, 
                 categoryName: initialData.categoryName ?? '',
                 description: initialData.description ?? '',
                 iconUrl: initialData.iconUrl ?? '',
-                sortOrder: Number.isFinite(Number(initialData.sortOrder)) ? Number(initialData.sortOrder) : 0,
+                sortOrder: safeNumber(initialData.sortOrder, 0),
                 isActive: typeof initialData.isActive === 'boolean' ? initialData.isActive : true,
             });
         } else {
@@ -92,6 +77,7 @@ const CategoryFormModal = ({ open, mode, categoryId, loadingDetail, submitting, 
             appToast.warning('Thiếu thông tin', 'Tên danh mục không được để trống.');
             return;
         }
+
         onSubmit({
             categoryName: form.categoryName.trim(),
             description: form.description?.trim() || '',
@@ -105,20 +91,20 @@ const CategoryFormModal = ({ open, mode, categoryId, loadingDetail, submitting, 
         <div className="detail-overlay" role="presentation" onClick={onClose}>
             <div className="detail-modal category-form-modal" onClick={(e) => e.stopPropagation()}>
                 <div className="detail-modal-header">
-                    <h3>{mode === 'create' ? 'Thêm danh mục' : 'Cập nhật danh mục'}</h3>
+                    <h3>{mode === 'create' ? 'Thêm danh mục' : 'Chỉnh sửa danh mục'}</h3>
                     <button type="button" className="detail-close" onClick={onClose} disabled={submitting} aria-label="Đóng">
                         &times;
                     </button>
                 </div>
 
-                <form className="detail-modal-body" onSubmit={handleSubmit}>
+                <form className="detail-modal-body category-form-body" onSubmit={handleSubmit}>
                     {mode === 'edit' && loadingDetail ? (
-                        <div className="category-inline-loading">
-                            <FiRefreshCw className="spin" /> Đang tải dữ liệu danh mục...
+                        <div className="category-inline-loading category-form-loading">
+                            <FiRefreshCw className="spin" /> Đang tải thông tin danh mục...
                         </div>
                     ) : (
                         <>
-                            <div className="detail-row">
+                            <div className="detail-row form-card form-card-full">
                                 <label className="detail-label" htmlFor="categoryName">
                                     Tên danh mục <span className="required">*</span>
                                 </label>
@@ -134,12 +120,28 @@ const CategoryFormModal = ({ open, mode, categoryId, loadingDetail, submitting, 
                                 />
                             </div>
 
-                            <div className="detail-row">
-                                <label className="detail-label" htmlFor="description">Mô tả</label>
+                            <div className="detail-row form-card form-card-full">
+                                <label className="detail-label" htmlFor="sortOrder">
+                                    Thứ tự
+                                </label>
+                                <input
+                                    id="sortOrder"
+                                    className="detail-edit-input"
+                                    type="number"
+                                    min={0}
+                                    value={form.sortOrder}
+                                    onChange={handleChange('sortOrder')}
+                                />
+                            </div>
+
+                            <div className="detail-row form-card form-card-full">
+                                <label className="detail-label" htmlFor="description">
+                                    Mô tả
+                                </label>
                                 <textarea
                                     id="description"
                                     className="detail-edit-input"
-                                    rows={4}
+                                    rows={5}
                                     value={form.description}
                                     onChange={handleChange('description')}
                                     placeholder="Mô tả danh mục"
@@ -147,8 +149,10 @@ const CategoryFormModal = ({ open, mode, categoryId, loadingDetail, submitting, 
                                 />
                             </div>
 
-                            <div className="detail-row">
-                                <label className="detail-label" htmlFor="iconUrl">Icon URL</label>
+                            <div className="detail-row form-card form-card-full">
+                                <label className="detail-label" htmlFor="iconUrl">
+                                    Icon URL
+                                </label>
                                 <input
                                     id="iconUrl"
                                     className="detail-edit-input"
@@ -158,7 +162,7 @@ const CategoryFormModal = ({ open, mode, categoryId, loadingDetail, submitting, 
                                     placeholder="https://..."
                                 />
                                 <div className="icon-preview-wrap">
-                                    <span>Preview:</span>
+                                    <span>Xem trước:</span>
                                     {form.iconUrl ? (
                                         <img
                                             className="icon-preview"
@@ -174,39 +178,29 @@ const CategoryFormModal = ({ open, mode, categoryId, loadingDetail, submitting, 
                                 </div>
                             </div>
 
-                            <div className="detail-row">
-                                <label className="detail-label" htmlFor="sortOrder">Thứ tự</label>
-                                <input
-                                    id="sortOrder"
-                                    className="detail-edit-input"
-                                    type="number"
-                                    min={0}
-                                    value={form.sortOrder}
-                                    onChange={handleChange('sortOrder')}
-                                />
+                            <div className="detail-row form-card form-card-full form-card-toggle">
+                                <label className="detail-label">Đang hoạt động</label>
+                                <button
+                                    type="button"
+                                    className={`toggle-switch ${form.isActive ? 'is-on' : 'is-off'}`}
+                                    onClick={() => setForm((prev) => ({ ...prev, isActive: !prev.isActive }))}
+                                    aria-pressed={form.isActive}
+                                    aria-label="Bật tắt trạng thái hoạt động"
+                                >
+                                    <span className="toggle-switch-track">
+                                        <span className="toggle-switch-thumb" />
+                                    </span>
+                                    <span className="toggle-switch-text">{form.isActive ? 'Bật' : 'Tắt'}</span>
+                                </button>
                             </div>
-
-                            <label className="category-toggle-row" htmlFor="isActive">
-                                <input
-                                    id="isActive"
-                                    type="checkbox"
-                                    checked={form.isActive}
-                                    onChange={handleChange('isActive')}
-                                />
-                                <span>Đang hoạt động</span>
-                            </label>
                         </>
                     )}
 
-                    <div className="detail-modal-footer">
+                    <div className="detail-modal-footer category-form-footer">
                         <button type="button" className="btn btn-outline" onClick={onClose} disabled={submitting}>
                             Hủy
                         </button>
-                        <button
-                            type="submit"
-                            className="btn btn-primary"
-                            disabled={submitting || (mode === 'edit' && loadingDetail) || (mode === 'edit' && !categoryId)}
-                        >
+                        <button type="submit" className="btn btn-primary" disabled={submitting || (mode === 'edit' && loadingDetail)}>
                             {submitting ? 'Đang lưu...' : mode === 'create' ? 'Tạo danh mục' : 'Lưu thay đổi'}
                         </button>
                     </div>
@@ -229,8 +223,8 @@ const DeleteConfirmModal = ({ category, loading, onCancel, onConfirm }) => {
                     </button>
                 </div>
                 <div className="detail-modal-body">
-                    <p style={{ margin: 0, lineHeight: 1.6 }}>
-                        Bạn có chắc muốn xóa danh mục <strong>{getSafeText(category?.categoryName)}</strong>?
+                    <p className="confirm-text">
+                        Bạn có chắc muốn xóa danh mục <strong>{safeText(category?.categoryName)}</strong>?
                         <br />
                         Hành động này không thể hoàn tác.
                     </p>
@@ -250,224 +244,119 @@ const DeleteConfirmModal = ({ category, loading, onCancel, onConfirm }) => {
 
 const CategoryManager = () => {
     const [categories, setCategories] = useState([]);
-    const [rootCategories, setRootCategories] = useState([]);
     const [loading, setLoading] = useState(true);
-
     const [searchInput, setSearchInput] = useState('');
-    const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
-    const [typeFilter, setTypeFilter] = useState('all');
-
-    const [expanded, setExpanded] = useState({});
-    const [childrenMap, setChildrenMap] = useState({});
-    const [childrenLoadingMap, setChildrenLoadingMap] = useState({});
-
-    const [formModal, setFormModal] = useState({ open: false, mode: 'create', categoryId: null });
-    const [formSubmitting, setFormSubmitting] = useState(false);
+    const [selectedCategory, setSelectedCategory] = useState(null);
+    const [detailOpen, setDetailOpen] = useState(false);
     const [detailLoading, setDetailLoading] = useState(false);
-    const [editingCategory, setEditingCategory] = useState(null);
-
+    const [formModal, setFormModal] = useState({ open: false, mode: 'create' });
+    const [formSubmitting, setFormSubmitting] = useState(false);
     const [deleteTarget, setDeleteTarget] = useState(null);
     const [deleteLoading, setDeleteLoading] = useState(false);
 
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setSearchTerm(searchInput.trim());
-        }, 400);
-        return () => clearTimeout(timer);
-    }, [searchInput]);
-
-    const fetchBaseData = useCallback(async () => {
+    const fetchCategories = async () => {
         setLoading(true);
         try {
-            const [allRes, rootRes] = await Promise.all([
-                categoryService.getCategories(),
-                categoryService.getRootCategories(),
-            ]);
-
-            if (!allRes.success) {
-                appToast.error('Không tải được', allRes.error || 'Không tải được danh mục');
+            const res = await categoryService.getCategories();
+            if (!res.success) {
+                appToast.error('Không tải được', res.error || 'Không tải được danh mục');
                 setCategories([]);
-            } else {
-                setCategories((allRes.data || []).map(normalizeCategory));
+                return;
             }
-
-            if (!rootRes.success) {
-                appToast.error('Không tải được', rootRes.error || 'Không tải được danh mục gốc');
-                setRootCategories([]);
-            } else {
-                setRootCategories((rootRes.data || []).map(normalizeCategory));
-            }
+            setCategories((res.data || []).map(normalizeCategory));
         } finally {
             setLoading(false);
         }
-    }, []);
-
-    useEffect(() => {
-        fetchBaseData();
-    }, [fetchBaseData]);
-
-    const rootIdSet = useMemo(() => {
-        const ids = new Set();
-        rootCategories.forEach((item) => {
-            if (item?.categoryId) ids.add(String(item.categoryId));
-        });
-        return ids;
-    }, [rootCategories]);
-
-    const isRootCategory = useCallback(
-        (item) => {
-            if (!item) return false;
-            const id = item.categoryId ? String(item.categoryId) : null;
-            if (id && rootIdSet.has(id)) return true;
-            return !item.parentCategoryId;
-        },
-        [rootIdSet]
-    );
-
-    const activeCount = useMemo(
-        () => categories.filter((item) => item?.isActive === true).length,
-        [categories]
-    );
-
-    const filteredRows = useMemo(() => {
-        let rows = [...categories];
-
-        if (statusFilter !== 'all') {
-            const wantActive = statusFilter === 'active';
-            rows = rows.filter((item) => !!item?.isActive === wantActive);
-        }
-
-        if (typeFilter !== 'all') {
-            rows = rows.filter((item) => {
-                const root = isRootCategory(item);
-                return typeFilter === 'root' ? root : !root;
-            });
-        }
-
-        rows.sort((a, b) => {
-            const aRoot = isRootCategory(a);
-            const bRoot = isRootCategory(b);
-            if (aRoot !== bRoot) return aRoot ? -1 : 1;
-            if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
-            return getSafeText(a.categoryName).localeCompare(getSafeText(b.categoryName), 'vi');
-        });
-
-        return rows;
-    }, [categories, statusFilter, typeFilter, isRootCategory]);
-
-    const displayedRows = useMemo(() => {
-        if (!searchTerm) {
-            return filteredRows;
-        }
-
-        const foundByName = filteredRows.filter((item) =>
-            String(item.categoryName || '').toLowerCase().includes(searchTerm.toLowerCase())
-        );
-
-        return foundByName;
-    }, [filteredRows, searchTerm]);
-
-    useEffect(() => {
-        if (!searchTerm) return;
-
-        let cancelled = false;
-        const search = async () => {
-            const res = await categoryService.searchCategoriesByName(searchTerm);
-            if (cancelled) return;
-
-            if (!res.success) {
-                appToast.error('Không tìm được', res.error || 'Không tìm được danh mục');
-                return;
-            }
-
-            const remoteData = (res.data || []).map(normalizeCategory);
-            setCategories((prev) => {
-                const map = new Map(prev.map((item) => [String(item.categoryId), item]));
-                remoteData.forEach((item) => {
-                    if (item?.categoryId) map.set(String(item.categoryId), item);
-                });
-                return Array.from(map.values());
-            });
-        };
-
-        search();
-
-        return () => {
-            cancelled = true;
-        };
-    }, [searchTerm]);
-
-    const fetchSubcategories = useCallback(async (parentId) => {
-        if (!parentId) return;
-        setChildrenLoadingMap((prev) => ({ ...prev, [parentId]: true }));
-        try {
-            const res = await categoryService.getSubcategories(parentId);
-            if (!res.success) {
-                appToast.error('Không tải được', res.error || 'Không tải được danh mục con');
-                setChildrenMap((prev) => ({ ...prev, [parentId]: [] }));
-                return;
-            }
-            const rows = (res.data || []).map(normalizeCategory);
-            setChildrenMap((prev) => ({ ...prev, [parentId]: rows }));
-        } finally {
-            setChildrenLoadingMap((prev) => ({ ...prev, [parentId]: false }));
-        }
-    }, []);
-
-    const toggleExpand = async (item) => {
-        const id = item?.categoryId;
-        if (!id) return;
-        const idText = String(id);
-
-        if (expanded[idText]) {
-            setExpanded((prev) => ({ ...prev, [idText]: false }));
-            return;
-        }
-
-        setExpanded((prev) => ({ ...prev, [idText]: true }));
-
-        if (!childrenMap[idText]) {
-            await fetchSubcategories(idText);
-        }
     };
 
-    const openCreateModal = () => {
-        setEditingCategory(null);
-        setFormModal({ open: true, mode: 'create', categoryId: null });
-    };
+    useEffect(() => {
+        fetchCategories();
+    }, []);
 
-    const openEditModal = async (item) => {
+    const filteredCategories = useMemo(() => {
+        const keyword = searchInput.trim().toLowerCase();
+        return [...categories]
+            .filter((item) => {
+                if (!keyword) return true;
+                return [item.categoryName, item.description, item.categoryId].some((field) =>
+                    String(field || '').toLowerCase().includes(keyword)
+                );
+            })
+            .filter((item) => {
+                if (statusFilter === 'active') return item.isActive;
+                if (statusFilter === 'inactive') return !item.isActive;
+                return true;
+            })
+            .sort((a, b) => {
+                if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
+                return safeText(a.categoryName).localeCompare(safeText(b.categoryName), 'vi');
+            });
+    }, [categories, searchInput, statusFilter]);
+
+    const activeCount = useMemo(() => categories.filter((item) => item.isActive).length, [categories]);
+    const inactiveCount = categories.length - activeCount;
+    const totalTemplates = useMemo(() => categories.reduce((sum, item) => sum + safeNumber(item.templateCount, 0), 0), [categories]);
+
+    const openDetail = async (item) => {
         const id = item?.categoryId;
         if (!id) return;
-
-        setFormModal({ open: true, mode: 'edit', categoryId: id });
+        setDetailOpen(true);
         setDetailLoading(true);
         try {
             const res = await categoryService.getCategoryById(id);
             if (!res.success) {
                 appToast.error('Không tải được', res.error || 'Không tải được chi tiết danh mục');
-                setFormModal({ open: false, mode: 'edit', categoryId: null });
+                setDetailOpen(false);
                 return;
             }
-            setEditingCategory(normalizeCategory(res.data));
+            setSelectedCategory(normalizeCategory(res.data));
         } finally {
             setDetailLoading(false);
         }
     };
 
-    const closeFormModal = () => {
-        if (formSubmitting) return;
-        setFormModal({ open: false, mode: 'create', categoryId: null });
-        setEditingCategory(null);
+    const closeDetail = () => {
+        if (detailLoading) return;
+        setDetailOpen(false);
+        setSelectedCategory(null);
     };
 
-    const handleSubmitCategory = async (payload) => {
+    const openCreate = () => {
+        setSelectedCategory(null);
+        setFormModal({ open: true, mode: 'create' });
+    };
+
+    const openEdit = async (item) => {
+        const id = item?.categoryId;
+        if (!id) return;
+        setFormModal({ open: true, mode: 'edit' });
+        setDetailLoading(true);
+        try {
+            const res = await categoryService.getCategoryById(id);
+            if (!res.success) {
+                appToast.error('Không tải được', res.error || 'Không tải được chi tiết danh mục');
+                setFormModal({ open: false, mode: 'edit' });
+                return;
+            }
+            setSelectedCategory(normalizeCategory(res.data));
+        } finally {
+            setDetailLoading(false);
+        }
+    };
+
+    const closeForm = () => {
+        if (formSubmitting) return;
+        setFormModal({ open: false, mode: 'create' });
+        setSelectedCategory(null);
+    };
+
+    const handleSubmit = async (payload) => {
         setFormSubmitting(true);
         try {
-            const isEdit = formModal.mode === 'edit' && formModal.categoryId;
+            const isEdit = formModal.mode === 'edit' && selectedCategory?.categoryId;
             const res = isEdit
-                ? await categoryService.updateCategory(formModal.categoryId, payload)
+                ? await categoryService.updateCategory(selectedCategory.categoryId, payload)
                 : await categoryService.createCategory(payload);
 
             if (!res.success) {
@@ -476,8 +365,8 @@ const CategoryManager = () => {
             }
 
             appToast.success('Thành công', isEdit ? 'Đã cập nhật danh mục' : 'Đã tạo danh mục');
-            closeFormModal();
-            await fetchBaseData();
+            closeForm();
+            await fetchCategories();
         } finally {
             setFormSubmitting(false);
         }
@@ -496,60 +385,34 @@ const CategoryManager = () => {
             }
             appToast.success('Thành công', 'Đã xóa danh mục');
             setDeleteTarget(null);
-            await fetchBaseData();
+            await fetchCategories();
         } finally {
             setDeleteLoading(false);
         }
     };
 
-    const renderCategoryCell = (item, isChild = false) => {
-        const id = item?.categoryId ? String(item.categoryId) : '';
-        const isExpandable = !isChild && isRootCategory(item);
-        const expandedState = expanded[id];
-        const loadingChildren = childrenLoadingMap[id];
-
-        return (
-            <div className={`category-cell ${isChild ? 'is-child' : ''}`}>
-                {isExpandable ? (
-                    <button
-                        type="button"
-                        className="expand-btn"
-                        onClick={() => toggleExpand(item)}
-                        title={expandedState ? 'Thu gọn danh mục con' : 'Xem danh mục con'}
-                    >
-                        {loadingChildren ? <FiRefreshCw className="spin" /> : expandedState ? <FiChevronDown /> : <FiChevronRight />}
-                    </button>
-                ) : (
-                    <span className="expand-btn-placeholder" />
-                )}
-
-                {item?.iconUrl ? (
-                    <img className="category-icon" src={item.iconUrl} alt={getSafeText(item.categoryName)} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                ) : (
-                    <span className="category-icon category-icon-fallback">📁</span>
-                )}
-
-                <div className="category-main-info">
-                    <span className="category-name">{getSafeText(item?.categoryName)}</span>
-                    <span className="category-id" title={id || EMPTY_TEXT}>{truncateId(id)}</span>
-                </div>
-            </div>
-        );
-    };
-
-    const rootRows = displayedRows.filter((item) => isRootCategory(item));
+    const detailCategory = detailOpen ? selectedCategory : null;
 
     return (
         <>
             <div className="admin-page category-manager-page">
-                <div className="admin-page-header category-manager-header">
+                <div className="category-hero admin-card">
                     <div>
+                        <p className="eyebrow">Danh mục</p>
                         <h1 className="admin-page-title">Quản lý danh mục</h1>
-                        <p className="admin-page-subtitle">Quản lý danh mục sản phẩm và danh mục con</p>
+                        <p className="admin-page-subtitle">
+                            Xem nhanh số liệu, tìm kiếm linh hoạt và quản trị danh mục bằng giao diện gọn, rõ ràng hơn.
+                        </p>
                     </div>
-                    <button type="button" className="btn btn-primary" onClick={openCreateModal}>
-                        <FiPlus /> Thêm danh mục
-                    </button>
+                    <div className="hero-actions">
+                        <button type="button" className="btn btn-outline" onClick={fetchCategories} disabled={loading}>
+                            <FiRefreshCw className={loading ? 'spin' : ''} />
+                            Làm mới
+                        </button>
+                        <button type="button" className="btn btn-primary" onClick={openCreate}>
+                            <FiPlus /> Thêm danh mục
+                        </button>
+                    </div>
                 </div>
 
                 <div className="stats-row">
@@ -558,23 +421,27 @@ const CategoryManager = () => {
                         <h3>{categories.length}</h3>
                     </div>
                     <div className="admin-card stat-card">
-                        <p>Danh mục gốc</p>
-                        <h3>{rootCategories.length}</h3>
-                    </div>
-                    <div className="admin-card stat-card">
                         <p>Đang hoạt động</p>
                         <h3>{activeCount}</h3>
                     </div>
+                    <div className="admin-card stat-card">
+                        <p>Đã tắt</p>
+                        <h3>{inactiveCount}</h3>
+                    </div>
+                    <div className="admin-card stat-card">
+                        <p>Tổng mẫu liên quan</p>
+                        <h3>{totalTemplates}</h3>
+                    </div>
                 </div>
 
-                <div className="controls-bar">
-                    <div className="search-box">
+                <div className="controls-bar admin-card">
+                    <div className="search-box category-search-box">
                         <FiSearch className="control-icon" />
                         <input
                             type="text"
                             value={searchInput}
                             onChange={(e) => setSearchInput(e.target.value)}
-                            placeholder="Tìm danh mục theo tên..."
+                            placeholder="Tìm theo tên, mô tả hoặc mã danh mục..."
                         />
                     </div>
 
@@ -582,33 +449,28 @@ const CategoryManager = () => {
                         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
                             <option value="all">Tất cả trạng thái</option>
                             <option value="active">Đang hoạt động</option>
-                            <option value="inactive">Tắt</option>
+                            <option value="inactive">Đã tắt</option>
                         </select>
                     </div>
-
-                    <div className="filter-box">
-                        <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
-                            <option value="all">Tất cả loại</option>
-                            <option value="root">Danh mục gốc</option>
-                            <option value="child">Danh mục con</option>
-                        </select>
-                    </div>
-
-                    <button type="button" className="btn btn-outline btn-sm" onClick={fetchBaseData} disabled={loading}>
-                        <FiRefreshCw className={loading ? 'spin' : ''} />
-                        {loading ? 'Đang tải...' : 'Làm mới'}
-                    </button>
                 </div>
 
-                <div className="admin-card table-card">
+                <div className="admin-card table-card category-table-card">
+                    <div className="table-header-row">
+                        <div>
+                            <h2>Danh sách danh mục</h2>
+                            <p>Hiển thị kết quả phù hợp với bộ lọc hiện tại.</p>
+                        </div>
+                        <span className="table-count-pill">{filteredCategories.length} mục</span>
+                    </div>
+
                     <div className="table-responsive">
-                        <table className="admin-table">
+                        <table className="admin-table category-table">
                             <thead>
                                 <tr>
                                     <th>DANH MỤC</th>
-                                    <th>LOẠI</th>
                                     <th>MÔ TẢ</th>
                                     <th>THỨ TỰ</th>
+                                    <th>MẪU</th>
                                     <th>TRẠNG THÁI</th>
                                     <th className="text-center">HÀNH ĐỘNG</th>
                                 </tr>
@@ -623,111 +485,67 @@ const CategoryManager = () => {
                                             </div>
                                         </td>
                                     </tr>
-                                ) : rootRows.length === 0 ? (
+                                ) : filteredCategories.length === 0 ? (
                                     <tr>
                                         <td colSpan="6" className="empty-state">
                                             <div className="admin-empty-state">
                                                 <FiFolder style={{ fontSize: '2rem' }} />
-                                                <p>Chưa có danh mục nào</p>
+                                                <p>Không tìm thấy danh mục phù hợp</p>
                                             </div>
                                         </td>
                                     </tr>
                                 ) : (
-                                    rootRows.map((item) => {
-                                        const id = String(item.categoryId);
-                                        const children = childrenMap[id] || [];
-                                        const showChildren = expanded[id] && children.length > 0;
-
-                                        return (
-                                            <React.Fragment key={id}>
-                                                <tr>
-                                                    <td>{renderCategoryCell(item)}</td>
-                                                    <td>
-                                                        <span className="status-badge badge-root">Gốc</span>
-                                                    </td>
-                                                    <td title={getSafeText(item.description)}>{truncate(item.description, 40)}</td>
-                                                    <td>
-                                                        <span className="sort-pill">{item.sortOrder ?? 0}</span>
-                                                    </td>
-                                                    <td>
-                                                        <span className={`status-badge ${item.isActive ? 'badge-success' : 'badge-muted'}`}>
-                                                            {item.isActive ? 'Hoạt động' : 'Tắt'}
+                                    filteredCategories.map((item) => (
+                                        <tr key={item.categoryId}>
+                                            <td>
+                                                <div className="category-cell">
+                                                    {item.iconUrl ? (
+                                                        <img
+                                                            className="category-icon"
+                                                            src={item.iconUrl}
+                                                            alt={safeText(item.categoryName)}
+                                                            onError={(e) => {
+                                                                e.currentTarget.style.display = 'none';
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        <span className="category-icon category-icon-fallback">📁</span>
+                                                    )}
+                                                    <div className="category-main-info">
+                                                        <span className="category-name">{safeText(item.categoryName)}</span>
+                                                        <span className="category-id" title={item.categoryId || EMPTY_TEXT}>
+                                                            {safeText(item.categoryId)}
                                                         </span>
-                                                    </td>
-                                                    <td className="text-center">
-                                                        <div className="action-buttons">
-                                                            <button
-                                                                type="button"
-                                                                className="btn-action view"
-                                                                onClick={() => toggleExpand(item)}
-                                                                title="Xem danh mục con"
-                                                            >
-                                                                <FiChevronDown />
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                className="btn-action edit"
-                                                                onClick={() => openEditModal(item)}
-                                                                title="Sửa"
-                                                            >
-                                                                <FiEdit2 />
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                className="btn-action delete"
-                                                                onClick={() => setDeleteTarget(item)}
-                                                                title="Xóa"
-                                                            >
-                                                                <FiTrash2 />
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-
-                                                {showChildren &&
-                                                    children.map((child) => {
-                                                        const childId = String(child.categoryId);
-                                                        return (
-                                                            <tr key={`${id}-${childId}`} className="subcategory-row">
-                                                                <td>{renderCategoryCell(child, true)}</td>
-                                                                <td>
-                                                                    <span className="status-badge badge-child">Con</span>
-                                                                </td>
-                                                                <td title={getSafeText(child.description)}>{truncate(child.description, 40)}</td>
-                                                                <td>
-                                                                    <span className="sort-pill">{child.sortOrder ?? 0}</span>
-                                                                </td>
-                                                                <td>
-                                                                    <span className={`status-badge ${child.isActive ? 'badge-success' : 'badge-muted'}`}>
-                                                                        {child.isActive ? 'Hoạt động' : 'Tắt'}
-                                                                    </span>
-                                                                </td>
-                                                                <td className="text-center">
-                                                                    <div className="action-buttons">
-                                                                        <button
-                                                                            type="button"
-                                                                            className="btn-action edit"
-                                                                            onClick={() => openEditModal(child)}
-                                                                            title="Sửa"
-                                                                        >
-                                                                            <FiEdit2 />
-                                                                        </button>
-                                                                        <button
-                                                                            type="button"
-                                                                            className="btn-action delete"
-                                                                            onClick={() => setDeleteTarget(child)}
-                                                                            title="Xóa"
-                                                                        >
-                                                                            <FiTrash2 />
-                                                                        </button>
-                                                                    </div>
-                                                                </td>
-                                                            </tr>
-                                                        );
-                                                    })}
-                                            </React.Fragment>
-                                        );
-                                    })
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td title={safeText(item.description)}>{safeText(item.description)}</td>
+                                            <td>
+                                                <span className="sort-pill">{item.sortOrder ?? 0}</span>
+                                            </td>
+                                            <td>
+                                                <span className="template-pill">{item.templateCount ?? 0}</span>
+                                            </td>
+                                            <td>
+                                                <span className={`status-badge ${item.isActive ? 'badge-success' : 'badge-muted'}`}>
+                                                    {item.isActive ? 'Hoạt động' : 'Đã tắt'}
+                                                </span>
+                                            </td>
+                                            <td className="text-center">
+                                                <div className="action-buttons">
+                                                    <button type="button" className="btn-action view" onClick={() => openDetail(item)} title="Xem chi tiết">
+                                                        <FiArrowRight />
+                                                    </button>
+                                                    <button type="button" className="btn-action edit" onClick={() => openEdit(item)} title="Sửa">
+                                                        <FiEdit2 />
+                                                    </button>
+                                                    <button type="button" className="btn-action delete" onClick={() => setDeleteTarget(item)} title="Xóa">
+                                                        <FiTrash2 />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
                                 )}
                             </tbody>
                         </table>
@@ -735,15 +553,75 @@ const CategoryManager = () => {
                 </div>
             </div>
 
+            {detailCategory && (
+                <div className="detail-overlay" role="presentation" onClick={closeDetail}>
+                    <aside className="detail-panel category-detail-panel" onClick={(e) => e.stopPropagation()}>
+                        <div className="detail-panel-header">
+                            <div>
+                                <p className="eyebrow">Chi tiết danh mục</p>
+                                <h3>{detailLoading ? 'Đang tải...' : safeText(detailCategory.categoryName)}</h3>
+                            </div>
+                            <button type="button" className="detail-close" onClick={closeDetail} aria-label="Đóng">
+                                &times;
+                            </button>
+                        </div>
+
+                        <div className="detail-panel-body">
+                            {detailLoading ? (
+                                <div className="category-inline-loading">
+                                    <FiRefreshCw className="spin" /> Đang tải dữ liệu...
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="detail-summary-card">
+                                        <div className="summary-icon">{detailCategory.iconUrl ? '🖼️' : '📁'}</div>
+                                        <div>
+                                            <h4>{safeText(detailCategory.categoryName)}</h4>
+                                            <p>{safeText(detailCategory.description)}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="detail-info-grid">
+                                        <div>
+                                            <span>Mã danh mục</span>
+                                            <strong>{safeText(detailCategory.categoryId)}</strong>
+                                        </div>
+                                        <div>
+                                            <span>Thứ tự</span>
+                                            <strong>{detailCategory.sortOrder ?? 0}</strong>
+                                        </div>
+                                        <div>
+                                            <span>Trạng thái</span>
+                                            <strong>{detailCategory.isActive ? 'Hoạt động' : 'Đã tắt'}</strong>
+                                        </div>
+                                        <div>
+                                            <span>Số mẫu</span>
+                                            <strong>{detailCategory.templateCount ?? 0}</strong>
+                                        </div>
+                                        <div>
+                                            <span>Ngày tạo</span>
+                                            <strong>{safeText(detailCategory.createdAt)}</strong>
+                                        </div>
+                                        <div>
+                                            <span>Cập nhật gần nhất</span>
+                                            <strong>{safeText(detailCategory.updatedAt)}</strong>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </aside>
+                </div>
+            )}
+
             <CategoryFormModal
                 open={formModal.open}
                 mode={formModal.mode}
-                categoryId={formModal.categoryId}
                 loadingDetail={detailLoading}
                 submitting={formSubmitting}
-                initialData={editingCategory}
-                onClose={closeFormModal}
-                onSubmit={handleSubmitCategory}
+                initialData={selectedCategory}
+                onClose={closeForm}
+                onSubmit={handleSubmit}
             />
 
             <DeleteConfirmModal

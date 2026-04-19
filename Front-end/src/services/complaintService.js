@@ -16,18 +16,14 @@ const normalizeResponse = (response) => {
     };
 };
 
+const isSuccessCode = (code) => code === 0 || code === 200 || code === 201;
+
 const mapError = (error, fallback) => {
-    const message =
-        error?.response?.data?.message ??
-        error?.response?.data?.error ??
-        error?.message ??
-        fallback;
+    const message = error?.response?.data?.message ?? error?.response?.data?.error ?? error?.message ?? fallback;
     return typeof message === 'string' ? message : fallback;
 };
 
-const isSuccessCode = (code) => code === 0 || code === 200 || code === 201;
-
-const toArray = (payload) => {
+export const toArray = (payload) => {
     if (Array.isArray(payload)) return payload;
     if (Array.isArray(payload?.content)) return payload.content;
     if (Array.isArray(payload?.items)) return payload.items;
@@ -35,206 +31,229 @@ const toArray = (payload) => {
     return [];
 };
 
-const buildComplaintPayload = (payload) => ({
-    orderId: payload?.orderId || null,
-    customOrderId: payload?.customOrderId || null,
-    productId: payload?.productId || null,
-    reason: String(payload?.reason || '').trim(),
-    evidenceImages: Array.isArray(payload?.evidenceImages) ? payload.evidenceImages.filter(Boolean).slice(0, 5) : [],
-});
-
-export const createComplaint = async (payload) => {
-    const body = buildComplaintPayload(payload);
-
-    if (!body.orderId && !body.customOrderId) {
-        return { success: false, error: 'Thiếu orderId hoặc customOrderId.' };
-    }
-
-    if (body.reason.length < 20) {
-        return { success: false, error: 'Lý do khiếu nại phải từ 20 đến 1000 ký tự.' };
-    }
-
-    try {
-        const response = await api.post('/complaints', body);
-        const normalized = normalizeResponse(response);
-
-        if (!isSuccessCode(normalized.code)) {
-            return { success: false, error: normalized.message || 'Tạo khiếu nại thất bại.' };
-        }
-
-        return { success: true, data: normalized.data || {} };
-    } catch (error) {
-        return { success: false, error: mapError(error, 'Tạo khiếu nại thất bại.') };
-    }
-};
-
 export const getMyComplaints = async ({ page = 0, size = 10 } = {}) => {
-    try {
-        const response = await api.get('/complaints', { params: { page, size } });
-        const normalized = normalizeResponse(response);
+    const endpointsToTry = ['/complaints', '/complaints/customer/my-complaints', '/complaints/my-complaints'];
 
-        if (!isSuccessCode(normalized.code)) {
-            return { success: false, error: normalized.message || 'Không thể tải danh sách khiếu nại.', data: [] };
+    for (const endpoint of endpointsToTry) {
+        try {
+            const response = await api.get(endpoint, { params: { page, size } });
+            const normalized = normalizeResponse(response);
+            if (!isSuccessCode(normalized.code)) continue;
+            const raw = normalized.data ?? {};
+            return { success: true, data: { ...raw, content: toArray(raw) } };
+        } catch (error) {
+            if (endpoint !== endpointsToTry[endpointsToTry.length - 1]) continue;
+            return {
+                success: false,
+                error: mapError(error, 'Không tải được lịch sử khiếu nại. Vui lòng thử lại.'),
+                data: { content: [], totalElements: 0, totalPages: 0, number: page, size },
+            };
         }
-
-        return { success: true, data: normalized.data || [] };
-    } catch (error) {
-        return { success: false, error: mapError(error, 'Không thể tải danh sách khiếu nại.'), data: [] };
     }
+
+    return { success: false, error: 'Không tải được lịch sử khiếu nại.', data: { content: [], totalElements: 0, totalPages: 0, number: page, size } };
 };
 
 export const getComplaintDetail = async (complaintId) => {
-    if (!complaintId) return { success: false, error: 'Thiếu complaintId.' };
+    if (!complaintId) return { success: false, error: 'Thiếu mã khiếu nại.' };
 
-    try {
-        const response = await api.get(`/complaints/${complaintId}`);
-        const normalized = normalizeResponse(response);
+    const endpointsToTry = [`/complaints/${complaintId}`, `/complaints/detail/${complaintId}`, `/artisan/complaints/${complaintId}`];
 
-        if (!isSuccessCode(normalized.code)) {
-            return { success: false, error: normalized.message || 'Không thể tải chi tiết khiếu nại.' };
+    for (const endpoint of endpointsToTry) {
+        try {
+            const response = await api.get(endpoint);
+            const normalized = normalizeResponse(response);
+            if (!isSuccessCode(normalized.code)) continue;
+            return { success: true, data: normalized.data ?? null };
+        } catch (error) {
+            if (endpoint !== endpointsToTry[endpointsToTry.length - 1]) continue;
+            return { success: false, error: mapError(error, 'Không tải được chi tiết khiếu nại. Vui lòng thử lại.') };
         }
+    }
 
-        return { success: true, data: normalized.data || null };
+    return { success: false, error: 'Không tải được chi tiết khiếu nại.' };
+};
+
+export const createComplaint = async (payload) => {
+    try {
+        const response = await api.post('/complaints', {
+            orderId: payload.orderId,
+            customOrderId: payload.customOrderId,
+            productId: payload.productId,
+            reason: payload.reason,
+            evidenceImages: Array.isArray(payload.evidenceImages) ? payload.evidenceImages : [],
+        });
+
+        const normalized = normalizeResponse(response);
+        if (!isSuccessCode(normalized.code)) return { success: false, error: normalized.message || 'Gửi khiếu nại thất bại.' };
+        return { success: true, data: normalized.data ?? {} };
     } catch (error) {
-        return { success: false, error: mapError(error, 'Không thể tải chi tiết khiếu nại.') };
+        return { success: false, error: mapError(error, 'Gửi khiếu nại thất bại. Vui lòng thử lại.') };
     }
 };
 
-export const respondComplaint = async (complaintId, payload) => {
-    if (!complaintId) return { success: false, error: 'Thiếu complaintId.' };
-
+export const getArtisanComplaints = async ({ page = 0, size = 10 } = {}) => {
     try {
-        const response = await api.post(`/artisan/complaints/${complaintId}/respond`, {
-            response: String(payload?.response || '').trim(),
-            requireReturn: Boolean(payload?.requireReturn),
-        });
+        const response = await api.get('/artisan/complaints', { params: { page, size } });
         const normalized = normalizeResponse(response);
-
         if (!isSuccessCode(normalized.code)) {
-            return { success: false, error: normalized.message || 'Phản hồi khiếu nại thất bại.' };
+            return { success: false, error: normalized.message || 'Không tải được danh sách khiếu nại.', data: { content: [], totalElements: 0, totalPages: 0, number: page, size } };
         }
-
-        return { success: true, data: normalized.data || {} };
+        const raw = normalized.data ?? {};
+        return { success: true, data: { ...raw, content: toArray(raw) } };
     } catch (error) {
-        return { success: false, error: mapError(error, 'Phản hồi khiếu nại thất bại.') };
+        return { success: false, error: mapError(error, 'Không tải được danh sách khiếu nại. Vui lòng thử lại.'), data: { content: [], totalElements: 0, totalPages: 0, number: page, size } };
     }
 };
 
-export const approveComplaint = async (complaintId, payload) => {
-    if (!complaintId) return { success: false, error: 'Thiếu complaintId.' };
+export const getArtisanComplaintDetail = async (id) => getComplaintDetail(id);
 
+export const respondToComplaint = async (id, body) => {
+    if (!id) return { success: false, error: 'Thiếu mã khiếu nại.' };
     try {
-        const response = await api.post(`/admin/complaints/${complaintId}/approve`, {
-            refundAmount: Number(payload?.refundAmount || 0),
-            adminNote: String(payload?.adminNote || '').trim(),
+        const response = await api.post(`/artisan/complaints/${id}/respond`, {
+            response: body?.response || '',
+            requireReturn: Boolean(body?.requireReturn),
         });
         const normalized = normalizeResponse(response);
+        if (!isSuccessCode(normalized.code)) return { success: false, error: normalized.message || 'Phản hồi khiếu nại thất bại.' };
+        return { success: true, data: normalized.data ?? {} };
+    } catch (error) {
+        return { success: false, error: mapError(error, 'Phản hồi khiếu nại thất bại. Vui lòng thử lại.') };
+    }
+};
 
+export const confirmReturnShipment = async (id) => {
+    if (!id) return { success: false, error: 'Thiếu mã vận đơn.' };
+    try {
+        const response = await api.post(`/artisan/complaints/return-shipments/${id}/confirm`);
+        const normalized = normalizeResponse(response);
+        if (!isSuccessCode(normalized.code)) return { success: false, error: normalized.message || 'Xác nhận vận đơn thất bại.' };
+        return { success: true, data: normalized.data ?? {} };
+    } catch (error) {
+        return { success: false, error: mapError(error, 'Xác nhận vận đơn thất bại. Vui lòng thử lại.') };
+    }
+};
+
+export const getAdminComplaints = async ({ status, page = 0, size = 10 } = {}) => {
+    try {
+        const response = await api.get('/admin/complaints', { params: { status, page, size } });
+        const normalized = normalizeResponse(response);
+        if (!isSuccessCode(normalized.code)) {
+            return {
+                success: false,
+                error: normalized.message || 'Không tải được danh sách khiếu nại admin.',
+                data: { content: [], totalElements: 0, totalPages: 0, number: page, size },
+            };
+        }
+
+        const raw = normalized.data ?? {};
+        return { success: true, data: { ...raw, content: toArray(raw) } };
+    } catch (error) {
+        return {
+            success: false,
+            error: mapError(error, 'Không tải được danh sách khiếu nại admin. Vui lòng thử lại.'),
+            data: { content: [], totalElements: 0, totalPages: 0, number: page, size },
+        };
+    }
+};
+
+export const getAdminComplaintDetail = async (id) => {
+    if (!id) return { success: false, error: 'Thiếu mã khiếu nại.' };
+    try {
+        const response = await api.get(`/admin/complaints/${id}`);
+        const normalized = normalizeResponse(response);
+        if (!isSuccessCode(normalized.code)) {
+            return { success: false, error: normalized.message || 'Không tải được chi tiết khiếu nại admin.' };
+        }
+        return { success: true, data: normalized.data ?? null };
+    } catch (error) {
+        return { success: false, error: mapError(error, 'Không tải được chi tiết khiếu nại admin. Vui lòng thử lại.') };
+    }
+};
+
+export const approveAdminComplaint = async (id, body) => {
+    if (!id) return { success: false, error: 'Thiếu mã khiếu nại.' };
+    try {
+        const response = await api.post(`/admin/complaints/${id}/approve`, {
+            refundAmount: Number(body?.refundAmount ?? 0),
+            adminNote: body?.adminNote || '',
+        });
+        const normalized = normalizeResponse(response);
         if (!isSuccessCode(normalized.code)) {
             return { success: false, error: normalized.message || 'Phê duyệt khiếu nại thất bại.' };
         }
-
-        return { success: true, data: normalized.data || {} };
+        return { success: true, data: normalized.data ?? {} };
     } catch (error) {
-        return { success: false, error: mapError(error, 'Phê duyệt khiếu nại thất bại.') };
+        return { success: false, error: mapError(error, 'Phê duyệt khiếu nại thất bại. Vui lòng thử lại.') };
     }
 };
 
-export const rejectComplaint = async (complaintId, payload) => {
-    if (!complaintId) return { success: false, error: 'Thiếu complaintId.' };
-
+export const rejectAdminComplaint = async (id, body) => {
+    if (!id) return { success: false, error: 'Thiếu mã khiếu nại.' };
     try {
-        const response = await api.post(`/admin/complaints/${complaintId}/reject`, {
-            rejectionReason: String(payload?.rejectionReason || '').trim(),
+        const response = await api.post(`/admin/complaints/${id}/reject`, {
+            rejectionReason: body?.rejectionReason || '',
         });
         const normalized = normalizeResponse(response);
-
         if (!isSuccessCode(normalized.code)) {
             return { success: false, error: normalized.message || 'Từ chối khiếu nại thất bại.' };
         }
-
-        return { success: true, data: normalized.data || {} };
+        return { success: true, data: normalized.data ?? {} };
     } catch (error) {
-        return { success: false, error: mapError(error, 'Từ chối khiếu nại thất bại.') };
+        return { success: false, error: mapError(error, 'Từ chối khiếu nại thất bại. Vui lòng thử lại.') };
     }
 };
 
-export const getRefundTransactions = async ({ status, page = 0, size = 10 } = {}) => {
+export const retryAdminRefundTransaction = async (id) => {
+    if (!id) return { success: false, error: 'Thiếu mã giao dịch hoàn tiền.' };
     try {
-        const response = await api.get('/admin/complaints/refund-transactions', { params: { status, page, size } });
+        const response = await api.post(`/admin/complaints/refund-transactions/${id}/retry`);
         const normalized = normalizeResponse(response);
-
-        if (!isSuccessCode(normalized.code)) {
-            return { success: false, error: normalized.message || 'Không thể tải giao dịch hoàn tiền.', data: [] };
-        }
-
-        return { success: true, data: normalized.data || [] };
-    } catch (error) {
-        return { success: false, error: mapError(error, 'Không thể tải giao dịch hoàn tiền.'), data: [] };
-    }
-};
-
-export const retryRefundTransaction = async (refundTransactionId) => {
-    if (!refundTransactionId) return { success: false, error: 'Thiếu refundTransactionId.' };
-
-    try {
-        const response = await api.post(`/admin/complaints/refund-transactions/${refundTransactionId}/retry`);
-        const normalized = normalizeResponse(response);
-
         if (!isSuccessCode(normalized.code)) {
             return { success: false, error: normalized.message || 'Thử lại hoàn tiền thất bại.' };
         }
-
-        return { success: true, data: normalized.data || {} };
+        return { success: true, data: normalized.data ?? {} };
     } catch (error) {
-        return { success: false, error: mapError(error, 'Thử lại hoàn tiền thất bại.') };
+        return { success: false, error: mapError(error, 'Thử lại hoàn tiền thất bại. Vui lòng thử lại.') };
     }
 };
 
-export const createReturnShipment = async (complaintId, payload) => {
-    if (!complaintId) return { success: false, error: 'Thiếu complaintId.' };
-
+export const getAdminRefundTransactions = async ({ status, page = 0, size = 10 } = {}) => {
     try {
-        const response = await api.post(`/complaints/${complaintId}/return`, { ...payload });
+        const response = await api.get('/admin/complaints/refund-transactions', { params: { status, page, size } });
         const normalized = normalizeResponse(response);
-
         if (!isSuccessCode(normalized.code)) {
-            return { success: false, error: normalized.message || 'Tạo đơn trả hàng thất bại.' };
+            return {
+                success: false,
+                error: normalized.message || 'Không tải được danh sách hoàn tiền admin.',
+                data: { content: [], totalElements: 0, totalPages: 0, number: page, size },
+            };
         }
-
-        return { success: true, data: normalized.data || {} };
+        const raw = normalized.data ?? {};
+        return { success: true, data: { ...raw, content: toArray(raw) } };
     } catch (error) {
-        return { success: false, error: mapError(error, 'Tạo đơn trả hàng thất bại.') };
-    }
-};
-
-export const confirmReturnShipment = async (shipmentId) => {
-    if (!shipmentId) return { success: false, error: 'Thiếu shipmentId.' };
-
-    try {
-        const response = await api.post(`/artisan/return-shipments/${shipmentId}/confirm`);
-        const normalized = normalizeResponse(response);
-
-        if (!isSuccessCode(normalized.code)) {
-            return { success: false, error: normalized.message || 'Xác nhận trả hàng thất bại.' };
-        }
-
-        return { success: true, data: normalized.data || {} };
-    } catch (error) {
-        return { success: false, error: mapError(error, 'Xác nhận trả hàng thất bại.') };
+        return {
+            success: false,
+            error: mapError(error, 'Không tải được danh sách hoàn tiền admin. Vui lòng thử lại.'),
+            data: { content: [], totalElements: 0, totalPages: 0, number: page, size },
+        };
     }
 };
 
 export default {
-    createComplaint,
+    toArray,
     getMyComplaints,
     getComplaintDetail,
-    respondComplaint,
-    approveComplaint,
-    rejectComplaint,
-    getRefundTransactions,
-    retryRefundTransaction,
-    createReturnShipment,
+    createComplaint,
+    getArtisanComplaints,
+    getArtisanComplaintDetail,
+    respondToComplaint,
     confirmReturnShipment,
-    toArray,
+    getAdminComplaints,
+    getAdminComplaintDetail,
+    approveAdminComplaint,
+    rejectAdminComplaint,
+    retryAdminRefundTransaction,
+    getAdminRefundTransactions,
 };

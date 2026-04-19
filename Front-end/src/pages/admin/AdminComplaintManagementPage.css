@@ -1,0 +1,96 @@
+.admin-complaint-page {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    padding: 24px;
+}
+
+.admin-complaint-header h1,
+.admin-complaint-section h2 {
+    margin: 0 0 8px;
+}
+
+.admin-complaint-toolbar,
+.admin-complaint-form-grid,
+.admin-complaint-modal-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.admin-complaint-section {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 20px;
+}
+
+.admin-complaint-list,
+.admin-refund-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+}
+
+.admin-complaint-card,
+.admin-refund-card {
+    text-align: left;
+    border: 1px solid #e5e7eb;
+    background: #fafafa;
+    border-radius: 14px;
+    padding: 14px;
+}
+
+.admin-complaint-empty {
+    padding: 24px;
+    color: #6b7280;
+}
+
+.admin-complaint-pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 16px;
+}
+
+.admin-complaint-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    z-index: 50;
+}
+
+.admin-complaint-modal {
+    width: min(720px, 100%);
+    background: #fff;
+    border-radius: 18px;
+    padding: 24px;
+    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.18);
+}
+
+.admin-complaint-form-grid input,
+.admin-complaint-form-grid textarea,
+.admin-complaint-toolbar select {
+    flex: 1 1 220px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid #d1d5db;
+}
+
+.admin-complaint-form-grid textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+.admin-complaint-modal-actions button,
+.admin-refund-card button,
+.admin-complaint-pagination button {
+    border: 0;
+    border-radius: 10px;
+    padding: 10px 14px;
+    background: #111827;
+    color: #fff;
+}

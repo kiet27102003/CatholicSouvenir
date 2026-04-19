@@ -11,6 +11,7 @@ const PAGE_SIZE = 10;
 const ORDER_TABS = [
     { id: 'ALL', label: 'Tất cả' },
     { id: 'PENDING', label: 'Chờ thanh toán' },
+    { id: 'PAID', label: 'Đã thanh toán' },
     { id: 'SHIPPING', label: 'Đang giao' },
     { id: 'DELIVERED', label: 'Hoàn thành' },
     { id: 'CANCELLED', label: 'Đã huỷ' },
@@ -18,7 +19,7 @@ const ORDER_TABS = [
 
 const STATUS_META = {
     PENDING: { label: 'Chờ thanh toán', className: 'badge-pending' },
-    PAID: { label: 'Chờ lấy hàng', className: 'badge-paid' },
+    PAID: { label: 'Đã thanh toán', className: 'badge-paid' },
     SHIPPING: { label: 'Đang giao hàng', className: 'badge-shipping' },
     DELIVERED: { label: 'Hoàn thành', className: 'badge-delivered' },
     CANCELLED: { label: 'Đã huỷ', className: 'badge-cancelled' },
@@ -32,13 +33,14 @@ const shortenOrderCode = (orderId) => {
     return `#ORD-${tail || '----'}`;
 };
 
-const statusForTab = (status) => {
-    const s = String(status || '').toUpperCase();
-    if (s === 'PAID') return 'SHIPPING';
-    return s;
-};
+const statusForTab = (status) => String(status || '').toUpperCase();
 
-const getItemImage = (item) => item?.images?.[0]?.image_url || item?.thumbnail || 'https://via.placeholder.com/72x72?text=SP';
+const getItemImage = (item) =>
+    item?.image || item?.images?.[0]?.image_url || item?.thumbnail || 'https://via.placeholder.com/72x72?text=SP';
+
+const getItemName = (item) => item?.productName || item?.templateName || 'Sản phẩm tuỳ chỉnh';
+
+const getItemSubtotal = (item) => Number(item?.subTotal ?? item?.subtotal ?? item?.unitPrice ?? 0) * Number(item?.quantity || item?.qty || 1);
 
 const OrderHistoryPage = () => {
     const { user } = useAuth();
@@ -99,8 +101,13 @@ const OrderHistoryPage = () => {
         const query = search.trim().toLowerCase();
 
         return orders.filter((order) => {
-            const matchedTab = activeTab === 'ALL' || statusForTab(order.status) === activeTab;
-            const matchedSearch = !query || String(order.orderId || '').toLowerCase().includes(query);
+            const status = String(order.status || '').toUpperCase();
+            const matchedTab = activeTab === 'ALL' || statusForTab(status) === activeTab;
+            const matchedSearch =
+                !query ||
+                String(order.orderId || '').toLowerCase().includes(query) ||
+                String(order.fullName || '').toLowerCase().includes(query) ||
+                String(order.paymentMethod || '').toLowerCase().includes(query);
             return matchedTab && matchedSearch;
         });
     }, [orders, activeTab, search]);
@@ -148,7 +155,7 @@ const OrderHistoryPage = () => {
                     <input
                         type="text"
                         className="orders-v2-search"
-                        placeholder="Tìm theo mã đơn hàng"
+                        placeholder="Tìm theo mã, tên hoặc phương thức thanh toán"
                         value={search}
                         onChange={(event) => setSearch(event.target.value)}
                     />
@@ -182,6 +189,8 @@ const OrderHistoryPage = () => {
                             const orderDetails = Array.isArray(order.orderDetails) ? order.orderDetails : [];
                             const templateDetails = Array.isArray(order.templateDetails) ? order.templateDetails : [];
                             const allItems = [...orderDetails, ...templateDetails];
+                            const visibleItems = allItems.slice(0, 3);
+                            const hiddenCount = Math.max(0, allItems.length - visibleItems.length);
 
                             return (
                                 <article key={order.orderId} className="orders-v2-card">
@@ -194,11 +203,11 @@ const OrderHistoryPage = () => {
                                     </div>
 
                                     <div className="orders-v2-items">
-                                        {allItems.map((item, idx) => (
+                                        {visibleItems.map((item, idx) => (
                                             <div key={`${order.orderId}-${idx}`} className="orders-v2-item">
-                                                <img src={getItemImage(item)} alt={item.productName || item.templateName || 'Sản phẩm'} />
+                                                <img src={getItemImage(item)} alt={getItemName(item)} />
                                                 <div className="orders-v2-item-info">
-                                                    <h4>{item.productName || item.templateName || 'Sản phẩm tuỳ chỉnh'}</h4>
+                                                    <h4>{getItemName(item)}</h4>
                                                     {item.customizations && typeof item.customizations === 'object' && (
                                                         <div className="orders-v2-customize">
                                                             {Object.entries(item.customizations).map(([key, value]) => (
@@ -208,15 +217,17 @@ const OrderHistoryPage = () => {
                                                     )}
                                                     <p>x{item.quantity || item.qty || 1} · {formatCurrency(item.unitPrice)}</p>
                                                 </div>
-                                                <strong>{formatCurrency(item.subTotal)}</strong>
+                                                <strong>{formatCurrency(item.subTotal ?? item.subtotal ?? getItemSubtotal(item))}</strong>
                                             </div>
                                         ))}
+                                        {hiddenCount > 0 && <div className="orders-v2-more">+{hiddenCount} sản phẩm khác</div>}
                                     </div>
 
                                     <div className="orders-v2-card-foot">
                                         <div>
                                             <p>Tổng tiền: <strong>{formatCurrency(order.total)}</strong></p>
                                             <p>Thanh toán: {order.paymentMethod || '—'}</p>
+                                            <p>Khách hàng: {order.fullName || '—'}</p>
                                         </div>
 
                                         <div className="orders-v2-actions">

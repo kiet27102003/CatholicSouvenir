@@ -1,57 +1,33 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import dayjs from 'dayjs';
 import { useNavigate, useParams } from 'react-router-dom';
+import { FiArrowLeft, FiCalendar, FiCreditCard, FiHash, FiPackage, FiTruck, FiUser } from 'react-icons/fi';
 import { appToast } from '../../lib/appToast';
 import { getOrderById, updateOrderStatus } from '../../services/orderService';
 import paymentService from '../../services/paymentService';
 import shipmentService from '../../services/shipmentService';
-import complaintService from '../../services/complaintService';
 import ImageUpload from '../../components/ui/ImageUpload';
+import { createComplaint } from '../../services/complaintService';
 import './OrderTrackingPage.css';
 
 const formatCurrency = (value) => `${new Intl.NumberFormat('vi-VN').format(Number(value || 0))} đ`;
 const formatDateTime = (value) => (value ? dayjs(value).format('DD/MM/YYYY HH:mm') : '—');
 
 const STATUS_META = {
-    PENDING: { label: 'Chờ thanh toán', className: 'badge-pending' },
-    PAID: { label: 'Chờ lấy hàng', className: 'badge-paid' },
-    SHIPPING: { label: 'Đang giao hàng', className: 'badge-shipping' },
-    DELIVERED: { label: 'Hoàn thành', className: 'badge-delivered' },
-    CANCELLED: { label: 'Đã huỷ', className: 'badge-cancelled' },
+    PENDING: { label: 'Chờ thanh toán', className: 'status-pending' },
+    PAID: { label: 'Đã thanh toán', className: 'status-paid' },
+    SHIPPING: { label: 'Đang giao hàng', className: 'status-shipping' },
+    DELIVERED: { label: 'Hoàn thành', className: 'status-delivered' },
+    CANCELLED: { label: 'Đã huỷ', className: 'status-cancelled' },
 };
 
-const getItemImage = (item) => item?.images?.[0]?.image_url || item?.thumbnail || 'https://via.placeholder.com/80x80?text=SP';
-
-const normalizeTrackingText = (value) => String(value || '').toUpperCase();
-
-const hasTrackKeyword = (trackingList, keywords) => {
-    const normalizedKeywords = keywords.map((kw) => normalizeTrackingText(kw));
-    return trackingList.some((track) => {
-        const source = [track?.status, track?.description, track?.title, track?.event, track?.message]
-            .map((v) => normalizeTrackingText(v))
-            .join(' ');
-        return normalizedKeywords.some((kw) => source.includes(kw));
-    });
+const getStatusMeta = (status) => {
+    const key = String(status || '').toUpperCase();
+    return STATUS_META[key] || { label: key || 'Không xác định', className: 'status-unknown' };
 };
 
-const findTrackingEvent = (trackingList, keywords) => {
-    const normalizedKeywords = keywords.map((kw) => normalizeTrackingText(kw));
-    return trackingList.find((track) => {
-        const source = [track?.status, track?.description, track?.title, track?.event, track?.message]
-            .map((v) => normalizeTrackingText(v))
-            .join(' ');
-        return normalizedKeywords.some((kw) => source.includes(kw));
-    });
-};
-
-const normalizeTimeline = (timeline = []) => timeline.map((step) => ({
-    key: step?.status || step?.key || step?.label,
-    label: step?.label || step?.title || step?.status || '—',
-    description: step?.description || step?.note || '',
-    completed: Boolean(step?.completed),
-    current: Boolean(step?.current),
-    timestamp: step?.completedAt || step?.timestamp || step?.updatedAt || step?.createdAt,
-}));
+const getItemImage = (item) => item?.image || item?.images?.[0]?.image_url || item?.thumbnail || 'https://via.placeholder.com/96x96?text=SP';
+const getItemName = (item) => item?.productName || item?.templateName || 'Sản phẩm tuỳ chỉnh';
 
 const OrderTrackingPage = () => {
     const navigate = useNavigate();
@@ -60,15 +36,11 @@ const OrderTrackingPage = () => {
     const [loading, setLoading] = useState(true);
     const [order, setOrder] = useState(null);
     const [shipment, setShipment] = useState(null);
-    const [tracking, setTracking] = useState([]);
     const [payments, setPayments] = useState([]);
     const [cancelling, setCancelling] = useState(false);
-    const [refunding, setRefunding] = useState(false);
     const [complaintOpen, setComplaintOpen] = useState(false);
+    const [complaintForm, setComplaintForm] = useState({ reason: '', evidenceImages: [] });
     const [complaintSubmitting, setComplaintSubmitting] = useState(false);
-    const [complaintReason, setComplaintReason] = useState('');
-    const [complaintEvidenceImages, setComplaintEvidenceImages] = useState(['']);
-    const [timeline, setTimeline] = useState([]);
 
     useEffect(() => {
         if (!orderId) {
@@ -77,9 +49,9 @@ const OrderTrackingPage = () => {
         }
 
         let cancelled = false;
-        const fetchAll = async () => {
-            setLoading(true);
 
+        const load = async () => {
+            setLoading(true);
             const [orderRes, paymentRes, shipmentRes] = await Promise.all([
                 getOrderById(orderId),
                 paymentService.getPaymentsByOrder(orderId),
@@ -90,49 +62,21 @@ const OrderTrackingPage = () => {
 
             if (!orderRes.success) {
                 appToast.error('Không tải được đơn hàng', orderRes.error || 'Vui lòng thử lại');
-                setOrder(null);
                 setLoading(false);
                 return;
             }
 
             setOrder(orderRes.data || null);
             setPayments(paymentRes.success ? (paymentRes.data || []) : []);
-
-            if (shipmentRes.success && shipmentRes.data) {
-                setShipment(shipmentRes.data);
-                const trackingNumber = shipmentRes.data.trackingNumber;
-                if (trackingNumber) {
-                    const trackingRes = await shipmentService.getTrackingByNumber(trackingNumber);
-                    const timelineRes = await shipmentService.getShipmentTimeline(shipmentRes.data.shipmentId || shipmentRes.data.id);
-                    if (!cancelled) {
-                        setTracking(trackingRes.success ? (trackingRes.data || []) : []);
-                        setTimeline(timelineRes.success ? normalizeTimeline(timelineRes.data?.timeline || []) : []);
-                    }
-                } else {
-                    setTracking([]);
-                    setTimeline([]);
-                }
-            } else {
-                setShipment(null);
-                setTracking([]);
-                setTimeline([]);
-            }
-
+            setShipment(shipmentRes.success ? (shipmentRes.data || null) : null);
             setLoading(false);
         };
 
-        fetchAll();
-        return () => { cancelled = true; };
+        load();
+        return () => {
+            cancelled = true;
+        };
     }, [orderId]);
-
-    const latestPayment = useMemo(() => {
-        if (!payments.length) return null;
-        return [...payments].sort((a, b) => {
-            const ta = new Date(a.paidAt || a.createdAt || 0).getTime();
-            const tb = new Date(b.paidAt || b.createdAt || 0).getTime();
-            return tb - ta;
-        })[0];
-    }, [payments]);
 
     const allItems = useMemo(() => {
         const orderDetails = Array.isArray(order?.orderDetails) ? order.orderDetails : [];
@@ -140,46 +84,12 @@ const OrderTrackingPage = () => {
         return [...orderDetails, ...templateDetails];
     }, [order]);
 
-    const subTotal = useMemo(() => allItems.reduce((sum, item) => sum + Number(item.subTotal || 0), 0), [allItems]);
+    const latestPayment = useMemo(() => {
+        if (!payments.length) return null;
+        return [...payments].sort((a, b) => new Date(b.paidAt || b.createdAt || 0) - new Date(a.paidAt || a.createdAt || 0))[0];
+    }, [payments]);
 
-    const trackingSteps = useMemo(() => {
-        if (timeline.length) return timeline.map((step) => ({ ...step, state: step.completed ? 'done' : step.current ? 'active' : 'idle' }));
-        const paidDone = String(latestPayment?.status || '').toUpperCase() === 'SUCCESS';
-        const pickedEvent = findTrackingEvent(tracking, ['PICKED', 'PICKUP', 'LẤY HÀNG']);
-        const inTransitEvent = findTrackingEvent(tracking, ['IN_TRANSIT', 'ĐANG VẬN CHUYỂN']);
-        const deliveredEvent = findTrackingEvent(tracking, ['DELIVERED', 'GIAO THÀNH CÔNG']);
-
-        return [
-            { key: 'ORDERED', label: 'Đặt hàng thành công', state: 'done', time: order?.createAt || order?.createdAt || order?.orderDate, location: order?.shippingAddress },
-            { key: 'PAID', label: 'Đã thanh toán', state: paidDone ? 'done' : 'idle', time: latestPayment?.paidAt || latestPayment?.createdAt, location: null },
-            { key: 'PICKED', label: 'Đã lấy hàng', state: pickedEvent ? 'done' : 'idle', time: pickedEvent?.time || pickedEvent?.createdAt || pickedEvent?.updatedAt, location: pickedEvent?.location || pickedEvent?.hub },
-            { key: 'TRANSIT', label: 'Đang vận chuyển', state: inTransitEvent ? 'active' : hasTrackKeyword(tracking, ['IN_TRANSIT', 'ĐANG VẬN CHUYỂN']) ? 'active' : 'idle', time: inTransitEvent?.time || inTransitEvent?.createdAt || inTransitEvent?.updatedAt, location: inTransitEvent?.location || inTransitEvent?.hub },
-            { key: 'DELIVERED', label: 'Đã giao hàng', state: String(order?.status || '').toUpperCase() === 'DELIVERED' || deliveredEvent ? 'done' : 'idle', time: deliveredEvent?.time || deliveredEvent?.createdAt || deliveredEvent?.updatedAt, location: deliveredEvent?.location || deliveredEvent?.hub },
-        ];
-    }, [tracking, latestPayment, order, timeline]);
-
-    const refreshOrderData = async () => {
-        const [orderRes, paymentRes, shipmentRes] = await Promise.all([
-            getOrderById(orderId),
-            paymentService.getPaymentsByOrder(orderId),
-            shipmentService.getShipmentByOrderId(orderId),
-        ]);
-
-        if (orderRes.success) setOrder(orderRes.data || null);
-        if (paymentRes.success) setPayments(paymentRes.data || []);
-
-        if (shipmentRes.success && shipmentRes.data?.trackingNumber) {
-            setShipment(shipmentRes.data);
-            const trackRes = await shipmentService.getTrackingByNumber(shipmentRes.data.trackingNumber);
-            const timelineRes = await shipmentService.getShipmentTimeline(shipmentRes.data.shipmentId || shipmentRes.data.id);
-            setTracking(trackRes.success ? (trackRes.data || []) : []);
-            setTimeline(timelineRes.success ? normalizeTimeline(timelineRes.data?.timeline || []) : []);
-        } else {
-            setShipment(null);
-            setTracking([]);
-            setTimeline([]);
-        }
-    };
+    const statusMeta = useMemo(() => getStatusMeta(order?.status), [order?.status]);
 
     const handleCancelOrder = async () => {
         if (!order || cancelling) return;
@@ -196,252 +106,244 @@ const OrderTrackingPage = () => {
         }
 
         appToast.success('Huỷ đơn thành công');
-        await refreshOrderData();
+        const refreshed = await getOrderById(orderId);
+        if (refreshed.success) setOrder(refreshed.data || null);
     };
 
-    const handleRefundRequest = async () => {
-        if (!latestPayment?.paymentId || refunding) return;
-        const reason = window.prompt('Nhập lý do hoàn tiền:');
-        if (!reason || !reason.trim()) {
-            appToast.info('Chưa gửi yêu cầu', 'Vui lòng nhập lý do hoàn tiền.');
-            return;
-        }
-
-        setRefunding(true);
-        const res = await paymentService.refundPayment(latestPayment.paymentId, reason.trim());
-        setRefunding(false);
-
-        if (!res.success) {
-            appToast.error('Yêu cầu hoàn tiền thất bại', res.error || 'Vui lòng thử lại');
-            return;
-        }
-
-        appToast.success('Đã gửi yêu cầu hoàn tiền');
-        await refreshOrderData();
-    };
-
-    const normalizeComplaintImages = () => complaintEvidenceImages.map((url) => String(url || '').trim()).filter(Boolean).slice(0, 5);
-
-    const addComplaintImageField = () => {
-        setComplaintEvidenceImages((prev) => (prev.length >= 5 ? prev : [...prev, '']));
-    };
-
-    const removeComplaintImageField = (index) => {
-        setComplaintEvidenceImages((prev) => {
-            if (prev.length <= 1) return [''];
-            return prev.filter((_, idx) => idx !== index);
+    const openComplaintModal = () => {
+        setComplaintForm({
+            reason: '',
+            evidenceImages: [],
         });
+        setComplaintOpen(true);
     };
 
-    const submitComplaint = async () => {
-        if (!order?.orderId || complaintSubmitting) return;
-        const reason = complaintReason.trim();
-        if (reason.length < 20) {
-            appToast.error('Lý do quá ngắn', 'Vui lòng nhập ít nhất 20 ký tự');
+    const closeComplaintModal = () => {
+        if (complaintSubmitting) return;
+        setComplaintOpen(false);
+    };
+
+    const handleComplaintSubmit = async () => {
+        if (complaintSubmitting) return;
+        if (!complaintForm.reason.trim()) {
+            appToast.error('Thiếu thông tin khiếu nại', 'Vui lòng nhập nội dung khiếu nại.');
             return;
         }
+
+        const evidenceImages = Array.isArray(complaintForm.evidenceImages)
+            ? complaintForm.evidenceImages.filter(Boolean).slice(0, 10)
+            : [];
+
+        const complaintPayload = {
+            orderId: order?.orderId || orderId,
+            customOrderId: order?.customOrderId || order?.id || order?.orderId || orderId,
+            productId: order?.productId || order?.templateId || order?.orderDetails?.[0]?.productId || order?.templateDetails?.[0]?.templateId || null,
+            reason: complaintForm.reason.trim(),
+            evidenceImages,
+        };
 
         setComplaintSubmitting(true);
-        const res = await complaintService.createComplaint({
-            orderId: order.orderId,
-            reason,
-            evidenceImages: normalizeComplaintImages(),
-        });
-        setComplaintSubmitting(false);
+        try {
+            const res = await createComplaint(complaintPayload);
+            if (!res.success) {
+                appToast.error('Không gửi được khiếu nại', res.error || 'Vui lòng thử lại.');
+                return;
+            }
 
-        if (!res.success) {
-            appToast.error('Gửi khiếu nại thất bại', res.error || 'Vui lòng thử lại');
-            return;
+            appToast.success('Đã ghi nhận yêu cầu khiếu nại', 'Bộ phận CSKH sẽ liên hệ lại sớm nhất có thể.');
+            setComplaintOpen(false);
+            setComplaintForm({ reason: '', evidenceImages: [] });
+        } catch {
+            appToast.error('Không gửi được khiếu nại', 'Vui lòng thử lại.');
+        } finally {
+            setComplaintSubmitting(false);
         }
-
-        setComplaintOpen(false);
-        setComplaintReason('');
-        setComplaintEvidenceImages(['']);
-        appToast.success('Đã gửi khiếu nại');
     };
 
     if (loading) {
-        return (<div className="order-detail-page"><div className="order-detail-skeleton" /><div className="order-detail-skeleton" /></div>);
+        return (
+            <div className="order-tracking-page">
+                <div className="tracking-skeleton hero" />
+                <div className="tracking-skeleton content" />
+            </div>
+        );
     }
 
     if (!order) {
-        return (<div className="order-detail-page"><div className="order-detail-empty"><h3>Không tìm thấy đơn hàng</h3><button type="button" className="btn btn-outline" onClick={() => navigate('/orders')}>Quay lại đơn hàng</button></div></div>);
+        return (
+            <div className="order-tracking-page empty-state">
+                <h2>Không tìm thấy đơn hàng</h2>
+                <button type="button" className="btn btn-primary" onClick={() => navigate('/orders')}>
+                    Quay lại danh sách
+                </button>
+            </div>
+        );
     }
 
-    const status = String(order.status || '').toUpperCase();
-    const statusMeta = STATUS_META[status] || { label: status || 'Không xác định', className: '' };
-
     return (
-        <div className="order-detail-page">
-            <button type="button" className="order-back" onClick={() => navigate('/orders')}>← Quay lại đơn hàng</button>
+        <div className="order-tracking-page">
+            <div className="tracking-shell">
+                <button type="button" className="back-link" onClick={() => navigate('/orders')}>
+                    <FiArrowLeft /> Quay lại đơn hàng
+                </button>
 
-            <header className="order-detail-header">
-                <div>
-                    <h1>#{String(order.orderId || '').replace(/\s+/g, '')}</h1>
-                    <span className={`orders-v2-status ${statusMeta.className}`}>{statusMeta.label}</span>
-                </div>
-                {status === 'PENDING' && (
-                    <button type="button" className="btn btn-outline" onClick={handleCancelOrder} disabled={cancelling}>{cancelling ? 'Đang huỷ...' : 'Huỷ đơn'}</button>
-                )}
-            </header>
+                <section className="hero-card">
+                    <div>
+                        <div className={`status-pill ${statusMeta.className}`}>{statusMeta.label}</div>
+                        <h1>#{order.orderId}</h1>
+                        <p>Đơn hàng của <strong>{order.fullName || '—'}</strong> được tạo lúc {formatDateTime(order.orderDate || order.createAt)}</p>
+                    </div>
 
-            <div className="order-detail-grid">
-                <section className="order-detail-main">
-                    <article className="card-block">
-                        <h2>Sản phẩm đặt mua</h2>
-                        <div className="order-items-table">
-                            {allItems.map((item, index) => (
-                                <div key={`${item.id || index}`} className="order-row">
-                                    <img src={getItemImage(item)} alt={item.productName || item.templateName || 'Sản phẩm'} />
-                                    <div>
-                                        <h4>{item.productName || item.templateName || 'Sản phẩm tuỳ chỉnh'}</h4>
-                                        {item.customizations && typeof item.customizations === 'object' && (
-                                            <div className="orders-v2-customize">
-                                                {Object.entries(item.customizations).map(([key, value]) => (<span key={key}>{key}: {String(value)}</span>))}
-                                            </div>
-                                        )}
-                                        <p>x{item.quantity || item.qty || 1} · Đơn giá: {formatCurrency(item.unitPrice)}</p>
-                                    </div>
-                                    <strong>{formatCurrency(item.subTotal)}</strong>
-                                </div>
-                            ))}
-                        </div>
-                        <div className="totals">
-                            <p>Tạm tính <span>{formatCurrency(subTotal)}</span></p>
-                            <p>Phí vận chuyển <span>{formatCurrency(shipment?.shippingFee || 0)}</span></p>
-                            <p className="total">Tổng cộng <span>{formatCurrency(order.total)}</span></p>
-                        </div>
-                    </article>
-
-                    <article className="card-block">
-                        <h2>Thông tin giao hàng</h2>
-                        <p><strong>Người nhận:</strong> {order.fullName || '—'}</p>
-                        <p><strong>Số điện thoại:</strong> {order.phoneNumber || '—'}</p>
-                        <p><strong>Địa chỉ:</strong> {order.shippingAddress || '—'}</p>
-                        <p><strong>Ghi chú:</strong> {order.notes || '—'}</p>
-                    </article>
-
-                    <article className="card-block">
-                        <h2>Thông tin thanh toán</h2>
-                        {latestPayment ? (
-                            <>
-                                <p><strong>Phương thức:</strong> {latestPayment.paymentMethod || order.paymentMethod || '—'}</p>
-                                <p><strong>Mã giao dịch:</strong> <code>{latestPayment.transactionId || '—'}</code></p>
-                                <p><strong>Thời gian:</strong> {formatDateTime(latestPayment.paidAt || latestPayment.createdAt)}</p>
-                                <span className={`orders-v2-status ${String(latestPayment.status || '').toUpperCase() === 'SUCCESS' ? 'badge-delivered' : 'badge-pending'}`}>{latestPayment.status || 'PENDING'}</span>
-                            </>
-                        ) : (<p>Chưa có dữ liệu thanh toán.</p>)}
-                    </article>
+                    <div className="hero-summary">
+                        <div className="summary-chip"><FiPackage /><span>{allItems.length} sản phẩm</span></div>
+                        <div className="summary-chip"><FiCreditCard /><span>{order.paymentMethod || '—'}</span></div>
+                        <div className="summary-chip"><FiCalendar /><span>{formatDateTime(order.updateAt)}</span></div>
+                    </div>
                 </section>
 
-                <aside className="order-detail-side" id="tracking">
-                    <article className="card-block">
-                        <h2>Theo dõi vận chuyển</h2>
-                        {shipment?.trackingNumber ? (
-                            <>
-                                <p>Mã vận đơn: <code>{shipment.trackingNumber}</code></p>
-                                <div className="order-timeline-steps">
-                                    {trackingSteps.map((step) => (
-                                        <div key={step.key} className={`timeline-step ${step.state === 'done' ? 'completed' : step.state === 'active' ? 'active' : ''}`}>
-                                            <span className="timeline-dot" />
-                                            <div className="timeline-content">
-                                                <h4>{step.label}</h4>
-                                                {step.description ? <p>{step.description}</p> : null}
-                                                <p>{formatDateTime(step.timestamp || step.time)}</p>
-                                                {step.location ? <p>{step.location}</p> : null}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </>
-                        ) : (<p>Đơn hàng đang được chuẩn bị</p>)}
-                    </article>
+                <div className="tracking-grid">
+                    <main>
+                        <section className="panel">
+                            <div className="panel-head">
+                                <h2>Sản phẩm đặt mua</h2>
+                                <span>{formatCurrency(order.total)}</span>
+                            </div>
 
-                    <article className="card-block">
-                        <h2>Hỗ trợ</h2>
-                        <button type="button" className="btn btn-outline btn-full" onClick={() => appToast.info('Sắp ra mắt', 'Chức năng liên hệ nghệ nhân đang được phát triển.') }>
-                            Liên hệ nghệ nhân
-                        </button>
-                        <button type="button" className="btn btn-outline btn-full" onClick={() => navigate('/complaint-history')}>
-                            Xem lịch sử khiếu nại
-                        </button>
-                        <button type="button" className="btn btn-outline btn-full" onClick={() => setComplaintOpen(true)}>
-                            Gửi khiếu nại
-                        </button>
-                        {status === 'DELIVERED' && latestPayment?.paymentId && (
-                            <button type="button" className="btn btn-full" onClick={handleRefundRequest} disabled={refunding}>
-                                {refunding ? 'Đang gửi...' : 'Yêu cầu hoàn tiền'}
+                            <div className="items-list">
+                                {allItems.length > 0 ? allItems.map((item, idx) => (
+                                    <article key={`${item.id || idx}`} className="item-row">
+                                        <img src={getItemImage(item)} alt={getItemName(item)} />
+                                        <div className="item-info">
+                                            <h3>{getItemName(item)}</h3>
+                                            <p>x{item.quantity || 1} · Đơn giá: {formatCurrency(item.unitPrice)}</p>
+                                            {item.customizations && typeof item.customizations === 'object' && (
+                                                <div className="custom-tags">
+                                                    {Object.entries(item.customizations).map(([key, value]) => (
+                                                        <span key={key}>{key}: {String(value)}</span>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <strong>{formatCurrency(item.subTotal ?? item.subtotal ?? 0)}</strong>
+                                    </article>
+                                )) : (
+                                    <div className="empty-items">Đơn hàng chưa có sản phẩm chi tiết.</div>
+                                )}
+                            </div>
+                        </section>
+
+                        <section className="panel">
+                            <div className="panel-head">
+                                <h2>Thông tin giao hàng</h2>
+                            </div>
+                            <div className="info-grid">
+                                <div><FiUser /><span>Người nhận</span><strong>{order.fullName || '—'}</strong></div>
+                                <div><FiTruck /><span>Trạng thái</span><strong>{statusMeta.label}</strong></div>
+                                <div className="full"><FiHash /><span>Mã đơn</span><strong>{order.orderId}</strong></div>
+                                <div className="full"><FiTruck /><span>Địa chỉ</span><strong>{order.shippingAddress || '—'}</strong></div>
+                            </div>
+                        </section>
+
+                        <section className="panel">
+                            <div className="panel-head">
+                                <h2>Thanh toán</h2>
+                            </div>
+                            {latestPayment ? (
+                                <div className="payment-box">
+                                    <p><span>Phương thức</span><strong>{latestPayment.paymentMethod || order.paymentMethod || '—'}</strong></p>
+                                    <p><span>Mã giao dịch</span><strong>{latestPayment.transactionId || '—'}</strong></p>
+                                    <p><span>Thời gian</span><strong>{formatDateTime(latestPayment.paidAt || latestPayment.createdAt)}</strong></p>
+                                </div>
+                            ) : (
+                                <div className="empty-items">Chưa có dữ liệu thanh toán.</div>
+                            )}
+                        </section>
+                    </main>
+
+                    <aside>
+                        <section className="panel">
+                            <div className="panel-head">
+                                <h2>Tóm tắt đơn hàng</h2>
+                            </div>
+                            <div className="summary-box">
+                                <p><span>Tổng tiền</span><strong>{formatCurrency(order.total)}</strong></p>
+                                <p><span>Phí vận chuyển</span><strong>{formatCurrency(shipment?.shippingFee || 0)}</strong></p>
+                                <p><span>Khách hàng</span><strong>{order.fullName || '—'}</strong></p>
+                                <p><span>Thanh toán</span><strong>{order.paymentMethod || '—'}</strong></p>
+                            </div>
+                        </section>
+
+                        <section className="panel">
+                            <div className="panel-head">
+                                <h2>Vận chuyển</h2>
+                            </div>
+                            {shipment?.trackingNumber ? (
+                                <div className="summary-box">
+                                    <p><span>Mã vận đơn</span><strong>{shipment.trackingNumber}</strong></p>
+                                    <p><span>Trạng thái</span><strong>{shipment.status || '—'}</strong></p>
+                                </div>
+                            ) : (
+                                <div className="empty-items">Đơn hàng chưa có thông tin vận chuyển.</div>
+                            )}
+                        </section>
+
+                        <div className="action-stack">
+                            <button type="button" className="btn btn-outline btn-full" onClick={openComplaintModal}>
+                                Khiếu nại đơn hàng
                             </button>
-                        )}
-                    </article>
-                </aside>
+                            {String(order.status || '').toUpperCase() === 'PENDING' && (
+                                <button type="button" className="btn btn-outline btn-full" onClick={handleCancelOrder} disabled={cancelling}>
+                                    {cancelling ? 'Đang huỷ...' : 'Huỷ đơn'}
+                                </button>
+                            )}
+                        </div>
+                    </aside>
+                </div>
             </div>
 
             {complaintOpen && (
-                <div className="complaint-modal-backdrop" onClick={() => setComplaintOpen(false)} role="presentation">
-                    <div className="complaint-modal" onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="complaint-modal-title">
-                        <div className="complaint-modal-hero">
-                            <div className="complaint-modal-hero-badge">Complaint Center</div>
-                            <h2 id="complaint-modal-title">Gửi khiếu nại</h2>
-                            <p>Nhập lý do, bổ sung ảnh bằng chứng và gửi đến hệ thống để tiếp nhận xử lý.</p>
+                <div className="modal-overlay" onClick={closeComplaintModal}>
+                    <div className="complaint-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="complaint-title">
+                        <div className="modal-header">
+                            <div>
+                                <p className="modal-kicker">Hỗ trợ khách hàng</p>
+                                <h3 id="complaint-title">Gửi khiếu nại đơn hàng</h3>
+                            </div>
+                            <button type="button" className="modal-close" onClick={closeComplaintModal} disabled={complaintSubmitting}>
+                                ×
+                            </button>
                         </div>
 
-                        <button type="button" className="complaint-modal-close" onClick={() => setComplaintOpen(false)} aria-label="Đóng">
-                            ×
-                        </button>
-
-                        <div className="complaint-modal-body">
-                            <label className="complaint-field complaint-reason-field">
-                                <span>Lý do khiếu nại</span>
+                        <div className="modal-body">
+                            <label>
+                                <span>Nội dung khiếu nại</span>
                                 <textarea
-                                    value={complaintReason}
-                                    onChange={(e) => setComplaintReason(e.target.value)}
-                                    placeholder="Mô tả vấn đề bạn gặp phải, tối thiểu 20 ký tự"
                                     rows="5"
+                                    value={complaintForm.reason}
+                                    onChange={(e) => setComplaintForm((prev) => ({ ...prev, reason: e.target.value }))}
+                                    placeholder="Mô tả chi tiết vấn đề bạn gặp phải"
                                 />
                             </label>
 
-                            <section className="complaint-evidence-section">
-                                <div className="complaint-evidence-head">
-                                    <div>
-                                        <span className="complaint-section-label">Ảnh bằng chứng</span>
-                                        <p>Upload tối đa 5 ảnh bằng Supabase hoặc dán URL ảnh có sẵn.</p>
-                                    </div>
-                                    <button type="button" className="btn btn-outline btn-sm" onClick={addComplaintImageField} disabled={complaintEvidenceImages.length >= 5}>
-                                        + Thêm ảnh
-                                    </button>
-                                </div>
-
-                                <div className="complaint-evidence-list">
-                                    {complaintEvidenceImages.map((url, index) => (
-                                        <div key={`complaint-image-${index}`} className="complaint-evidence-item">
-                                            <div className="complaint-evidence-item-head">
-                                                <strong>Ảnh bằng chứng {index + 1}</strong>
-                                                {complaintEvidenceImages.length > 1 && (
-                                                    <button type="button" className="complaint-remove-btn" onClick={() => removeComplaintImageField(index)}>
-                                                        Xoá
-                                                    </button>
-                                                )}
-                                            </div>
-
-                                            <ImageUpload
-                                                value={url}
-                                                onChange={(nextValue) => setComplaintEvidenceImages((prev) => prev.map((item, idx) => (idx === index ? nextValue : item)))}
-                                                label=""
-                                                helperText="Tải ảnh lên Supabase hoặc dán URL ảnh đã có"
-                                                folder="complaints"
-                                            />
-                                        </div>
-                                    ))}
-                                </div>
-                            </section>
+                            <ImageUpload
+                                label="Ảnh minh chứng"
+                                helperText="Tải ảnh lên Supabase hoặc dán link ảnh có sẵn."
+                                folder="complaints"
+                                value={complaintForm.evidenceImages[0] || ''}
+                                onChange={(nextValue) =>
+                                    setComplaintForm((prev) => ({
+                                        ...prev,
+                                        evidenceImages: nextValue ? [nextValue] : [],
+                                    }))
+                                }
+                            />
                         </div>
 
-                        <div className="complaint-modal-footer">
-                            <button type="button" className="btn btn-outline" onClick={() => setComplaintOpen(false)} disabled={complaintSubmitting}>
+                        <div className="modal-actions">
+                            <button type="button" className="btn btn-outline" onClick={closeComplaintModal} disabled={complaintSubmitting}>
                                 Huỷ
                             </button>
-                            <button type="button" className="btn btn-primary" onClick={submitComplaint} disabled={complaintSubmitting}>
+                            <button type="button" className="btn btn-primary" onClick={handleComplaintSubmit} disabled={complaintSubmitting}>
                                 {complaintSubmitting ? 'Đang gửi...' : 'Gửi khiếu nại'}
                             </button>
                         </div>

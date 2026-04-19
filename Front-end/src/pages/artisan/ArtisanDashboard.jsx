@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
@@ -7,6 +7,7 @@ import PortfolioView from './components/PortfolioView';
 import TemplatesView from './components/TemplatesView';
 import ArtisanRequestsPage from './ArtisanRequestsPage';
 import ArtisanOrdersPage from './ArtisanOrdersPage';
+import ComplaintManagementPage from './ComplaintManagementPage';
 import ArtisanQuoteCreatePage from './ArtisanQuoteCreatePage';
 import WalletPage from '../customer/WalletPage';
 import ChatPage from '../customer/ChatPage';
@@ -17,6 +18,7 @@ const getViewFromPath = (pathname) => {
     if (pathname === '/artisan/requests') return 'requests';
     if (/^\/artisan\/requests\/[^/]+\/custom-order$/.test(pathname)) return 'customOrderCreate';
     if (pathname === '/artisan/orders') return 'customOrders';
+    if (pathname === '/artisan/complaints') return 'complaints';
     if (pathname === '/artisan/wallet') return 'wallet';
     if (pathname === '/artisan/shipments') return 'shipments';
     if (pathname === '/artisan/messages') return 'messages';
@@ -27,6 +29,7 @@ const viewToPath = (view) => {
     if (view === 'templates') return '/artisan/templates';
     if (view === 'requests') return '/artisan/requests';
     if (view === 'customOrders') return '/artisan/orders';
+    if (view === 'complaints') return '/artisan/complaints';
     if (view === 'wallet') return '/artisan/wallet';
     if (view === 'shipments') return '/artisan/shipments';
     if (view === 'messages') return '/artisan/messages';
@@ -37,21 +40,8 @@ const ArtisanDashboard = () => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
-    const [activeView, setActiveView] = useState(getViewFromPath(location.pathname));
     const [sidebarOpen, setSidebarOpen] = useState(false);
-
-    useEffect(() => {
-        setActiveView(getViewFromPath(location.pathname));
-    }, [location.pathname]);
-
-    useEffect(() => {
-        if (!user || String(user.role || '').toUpperCase() !== 'ARTISAN') return;
-
-        console.log('ENV:', {
-            url: import.meta.env.VITE_SUPABASE_URL,
-            key: import.meta.env.VITE_SUPABASE_ANON_KEY,
-        });
-    }, [user]);
+    const activeView = getViewFromPath(location.pathname);
 
     if (!user || String(user.role || '').toUpperCase() !== 'ARTISAN') {
         navigate('/');
@@ -59,7 +49,6 @@ const ArtisanDashboard = () => {
     }
 
     const handleChangeView = (view) => {
-        setActiveView(view);
         setSidebarOpen(false);
         const nextPath = viewToPath(view);
         if (location.pathname !== nextPath) navigate(nextPath);
@@ -98,6 +87,7 @@ const ArtisanDashboard = () => {
                         {activeView === 'requests' && <ArtisanRequestsPage embedded />}
                         {activeView === 'customOrderCreate' && <ArtisanQuoteCreatePage embedded />}
                         {activeView === 'customOrders' && <ArtisanOrdersPage embedded />}
+                        {activeView === 'complaints' && <ComplaintManagementPage />}
                         {activeView === 'wallet' && <WalletPage embedded />}
                     </div>
                 )}

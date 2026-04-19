@@ -17,6 +17,7 @@ import {
     FiGift,
     FiCreditCard,
     FiRepeat,
+    FiAlertTriangle,
 } from 'react-icons/fi';
 
 const AdminLayout = () => {
@@ -57,12 +58,18 @@ const AdminLayout = () => {
             ],
         },
         {
+            title: 'Dịch vụ & hỗ trợ',
+            items: [
+                { path: '/admin/complaints', name: 'Khiếu nại', icon: <FiAlertTriangle /> },
+            ],
+        },
+        {
             title: 'Danh mục & sản phẩm',
             items: [
                 { path: '/admin/products', name: 'Duyệt sản phẩm', icon: <FiPackage /> },
                 { path: '/admin/categories', name: 'Danh mục', icon: <FiGrid /> },
             ],
-        },
+        }, 
     ];
 
     const handleLogout = () => {

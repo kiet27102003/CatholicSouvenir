@@ -19,6 +19,7 @@ const Sidebar = ({ user, activeView, setActiveView, onLogout, isOpen = false, on
         { id: 'templates', icon: 'templates', label: 'Mẫu thiết kế', badge: null },
         { id: 'requests', icon: 'request', label: 'Yêu cầu từ khách', badge: null },
         { id: 'customOrders', icon: 'orders', label: 'Đơn tùy chỉnh', badge: null },
+        { id: 'complaints', icon: 'request', label: 'Khiếu nại', badge: null },
         { id: 'shipments', icon: 'shipments', label: 'Vận đơn', badge: null },
         { id: 'wallet', icon: 'money', label: 'Ví của tôi', badge: null },
     ];

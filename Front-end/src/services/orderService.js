@@ -72,7 +72,7 @@ export const createOrder = async (payload) => {
 
 /**
  * Lấy danh sách đơn hàng của người dùng hiện tại có phân trang.
- * GET /api/order?page=&size=&sortBy=&sortDirection=
+ * GET /api/order/account?page=&size=&sortBy=&sortDirection=
  *
  * Lưu ý: giữ tên hàm getOrdersByAccount để tương thích code cũ.
  * accountId hiện không còn dùng vì BE lấy theo token đăng nhập.
@@ -87,7 +87,7 @@ export const getOrdersByAccount = async (
     } = {},
 ) => {
     try {
-        const response = await api.get('/order', {
+        const response = await api.get('/order/account', {
             params: { page, size, sortBy, sortDirection },
         });
 

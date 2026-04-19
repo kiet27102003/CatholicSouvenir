@@ -47,6 +47,7 @@ import CategoryManager from './pages/admin/CategoryManager'
 import ArtisanApplications from './pages/admin/ArtisanApplications'
 import AdminComingSoon from './pages/admin/AdminComingSoon'
 import CommissionManagement from './pages/admin/CommissionManagement'
+import AdminComplaintManagementPage from './pages/admin/AdminComplaintManagementPage'
 import ShipmentDemoStatusPage from './pages/admin/ShipmentDemoStatusPage'
 import ShipmentManagementPage from './pages/artisan/ShipmentManagementPage'
 
@@ -109,6 +110,7 @@ function App() {
         <Route path="/artisan/messages" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
         <Route path="/artisan/requests/:id/custom-order" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
         <Route path="/artisan/orders" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
+        <Route path="/artisan/complaints" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
         <Route path="/artisan/shipments" element={<ArtisanOnlyRoute><ShipmentManagementPage /></ArtisanOnlyRoute>} />
         <Route path="/artisan/orders/:id" element={<ArtisanOnlyRoute><ArtisanOrderDetailPage /></ArtisanOnlyRoute>} />
 
@@ -124,6 +126,7 @@ function App() {
           <Route path="products" element={<ProductManager />} />
           <Route path="orders" element={<ShipmentDemoStatusPage />} />
           <Route path="payments" element={<AdminComingSoon title="Thanh toán" />} />
+          <Route path="complaints" element={<AdminComplaintManagementPage />} />
           <Route path="wallets" element={<AdminWallets />} />
           <Route path="withdrawals" element={<AdminWithdrawals />} />
           <Route path="categories" element={<CategoryManager />} />

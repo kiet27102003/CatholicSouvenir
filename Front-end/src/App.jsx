@@ -9,6 +9,8 @@ import ArtisanOrderDetailPage from './pages/artisan/ArtisanOrderDetailPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import CustomerLayout from './pages/customer/CustomerLayout'
 import ProfilePage from './pages/customer/ProfilePage'
+import PaymentPage from './pages/customer/PaymentPage'
+import PaymentDetailPage from './pages/customer/PaymentDetailPage'
 import OrderHistoryPage from './pages/customer/OrderHistoryPage'
 import RegisterForm from './components/RegisterForm/RegisterForm'
 import ProductDetailsPage from './pages/ProductDetailsPage'
@@ -25,7 +27,7 @@ import TemplateCatalogPage from './pages/TemplateCatalogPage'
 
 import CheckoutPage from './pages/CheckoutPage'
 import CartPage from './pages/CartPage'
-import PaymentSuccessPage from './pages/PaymentSuccessPage'
+import PaymentSuccessPage from './pages/PaymentResultPage'
 import PaymentFailedPage from './pages/PaymentFailedPage'
 import OrderTrackingPage from './pages/customer/OrderTrackingPage'
 import WalletPage from './pages/customer/WalletPage'
@@ -98,9 +100,8 @@ function App() {
         <Route path="/artisans/:id" element={<ArtisanProfilePage />} />
         <Route path="/artisan-centre" element={<ArtisanCentrePage />} />
         <Route path="/checkout" element={<CheckoutPage />} />
-        <Route path="/payment/success" element={<PaymentSuccessPage />} />
+        <Route path="/payment-result" element={<PaymentSuccessPage />} />
         <Route path="/payment/error" element={<PaymentFailedPage />} />
-        <Route path="/payment/failed" element={<PaymentFailedPage />} />
         <Route path="/cart" element={<CartPage />} />
 
         <Route path="/artisan" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
@@ -147,6 +148,8 @@ function App() {
 
         <Route element={<CustomerLayout />}>
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/payments" element={<PaymentPage />} />
+          <Route path="/payments/:paymentId" element={<PaymentDetailPage />} />
           <Route path="/orders" element={<OrderHistoryPage />} />
           <Route path="/orders/:orderId" element={<OrderTrackingPage />} />
           <Route path="/orders/:orderId/tracking" element={<OrderTrackingPage />} />

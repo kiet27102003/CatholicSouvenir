@@ -21,8 +21,8 @@ const CustomerLayout = () => {
     const isProfileNoHash = isProfile && activeTab === 'profile';
     const isSecurityActive = isProfile && activeTab === 'security';
     const isNotificationsActive = isProfile && activeTab === 'notifications';
-    const isPaymentActive = isProfile && activeTab === 'payment';
     const isComplaintActive = location.pathname === '/complaint-history';
+    const isPaymentActive = location.pathname === '/payments';
     const isRefundActive = location.pathname === '/refund-support';
     const isSupportActive = isComplaintActive || isRefundActive;
 
@@ -44,7 +44,7 @@ const CustomerLayout = () => {
                             <FiBell size={20} strokeWidth={2} />
                             Thông báo
                         </NavLink>
-                        <NavLink to="/profile?tab=payment" className={`sidebar-link ${isPaymentActive ? 'active' : ''}`}>
+                        <NavLink to="/payments" className={`sidebar-link ${isPaymentActive ? 'active' : ''}`}>
                             <FiCreditCard size={20} strokeWidth={2} />
                             Thanh toán
                         </NavLink>

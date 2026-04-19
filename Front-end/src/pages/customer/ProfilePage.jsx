@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { FiUser, FiShield, FiBell, FiCreditCard, FiHome, FiMail, FiMessageCircle, FiShoppingBag } from 'react-icons/fi';
+import { FiUser, FiShield, FiBell, FiMail, FiMessageCircle, FiShoppingBag } from 'react-icons/fi';
 import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../../cofig/api';
 import './ProfilePage.css';
@@ -173,7 +173,13 @@ const ProfilePage = () => {
         }
     };
 
-    const setTab = (tab) => navigate(`/profile?tab=${tab}`);
+    const setTab = (tab) => {
+        if (tab === 'payment') {
+            navigate('/payments');
+            return;
+        }
+        navigate(`/profile?tab=${tab}`);
+    };
 
     return (
         <div className="profile-page">
@@ -273,17 +279,6 @@ const ProfilePage = () => {
                         <div className="profile-notif-card"><FiMail size={20} strokeWidth={2} className="profile-notif-icon" /><span className="profile-notif-label">Thông báo qua Email</span><button type="button" className={`profile-toggle profile-toggle-notif ${notifEmail ? 'on' : ''}`} onClick={() => setNotifEmail(!notifEmail)} role="switch" aria-checked={notifEmail}><span className="profile-toggle-thumb" /></button></div>
                         <div className="profile-notif-card"><FiMessageCircle size={20} strokeWidth={2} className="profile-notif-icon" /><span className="profile-notif-label">Thông báo qua SMS</span><button type="button" className={`profile-toggle profile-toggle-notif ${notifSMS ? 'on' : ''}`} onClick={() => setNotifSMS(!notifSMS)} role="switch" aria-checked={notifSMS}><span className="profile-toggle-thumb" /></button></div>
                         <div className="profile-notif-card"><FiShoppingBag size={20} strokeWidth={2} className="profile-notif-icon" /><span className="profile-notif-label">Khuyến mãi & Sản phẩm mới</span><button type="button" className={`profile-toggle profile-toggle-notif ${notifPromo ? 'on' : ''}`} onClick={() => setNotifPromo(!notifPromo)} role="switch" aria-checked={notifPromo}><span className="profile-toggle-thumb" /></button></div>
-                    </div>
-                </section>
-            )}
-
-            {activeTab === 'payment' && (
-                <section className="profile-block profile-section profile-section-payment">
-                    <div className="profile-section-header"><div className="profile-section-title-wrap"><FiCreditCard size={22} strokeWidth={2} className="profile-section-icon" /><h2 className="profile-section-title">Phương thức thanh toán</h2></div><button type="button" className="btn profile-payment-add-btn">+ Thêm mới</button></div>
-                    <div className="profile-section-divider profile-payment-divider" aria-hidden="true" />
-                    <div className="profile-payment-cards">
-                        <div className="profile-payment-card profile-payment-card-visa"><span className="payment-card-number">**** **** **** 4521</span><span className="payment-card-holder">CHỦ THẺ: NGUYEN VAN AN</span><span className="payment-card-expiry">HẠN DÙNG: 12/28</span><span className="payment-card-brand">VISA PREMIUM</span></div>
-                        <div className="profile-payment-card profile-payment-card-bank"><FiHome size={28} strokeWidth={2} className="payment-bank-icon" /><div className="payment-bank-info"><span className="payment-bank-name">Vietcombank</span><span className="payment-bank-number">**** **** 9081</span><span className="payment-bank-status">ĐÃ LIÊN KẾT</span></div></div>
                     </div>
                 </section>
             )}

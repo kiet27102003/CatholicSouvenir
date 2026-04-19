@@ -19,7 +19,7 @@ export const initiatePayment = async (body) => {
     try {
         const response = await api.post('/payments/initiate', body);
         const payload = normalizeResponse(response);
-        if (payload.code !== 200 && payload.code !== 201) {
+        if (![0, 200, 201].includes(Number(payload.code))) {
             return { success: false, error: payload.message || 'Không thể khởi tạo thanh toán.' };
         }
         return { success: true, data: payload.data ?? {} };
@@ -49,30 +49,13 @@ export const initiateOrderGroupPayment = async ({ orderGroupId, method = 'VNPAY'
     }
 };
 
-export const callbackPayment = async (gateway, queryObject) => {
-    try {
-        const normalizedGateway = String(gateway || 'VNPAY').toLowerCase();
-        const endpoint = normalizedGateway === 'vnpay'
-            ? '/payments/vnpay/ipn'
-            : `/payments/${encodeURIComponent(normalizedGateway)}/ipn`;
-
-        const response = await api.get(endpoint, { params: queryObject || {} });
-        const payload = normalizeResponse(response);
-        if (payload.code !== 200 && payload.code !== 201) {
-            return { success: false, error: payload.message || 'Xử lý IPN thanh toán thất bại.' };
-        }
-        return { success: true, data: payload.data ?? {} };
-    } catch (error) {
-        return { success: false, error: mapError(error, 'Xử lý IPN thanh toán thất bại.') };
-    }
-};
 export const refundPayment = async (paymentId, reason) => {
     try {
         const response = await api.post(`/payments/${paymentId}/refund`, null, {
             params: reason ? { reason } : undefined,
         });
         const payload = normalizeResponse(response);
-        if (payload.code !== 200 && payload.code !== 201) {
+        if (![0, 200, 201].includes(Number(payload.code))) {
             return { success: false, error: payload.message || 'Hoàn tiền thất bại.' };
         }
         return { success: true, data: payload.data ?? {} };
@@ -140,7 +123,6 @@ export const getPaymentsByCustomOrder = async (customOrderId) => {
 export default {
     initiatePayment,
     initiateOrderGroupPayment,
-    callbackPayment,
     refundPayment,
     getPayments,
     getPaymentsByOrder,

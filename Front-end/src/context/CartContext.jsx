@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useReducer } from 'react';
 import { appToast } from '../lib/appToast';
-import { useAuth } from './AuthContext';
+import AuthContext from './AuthContext';
 import cartService from '../services/cartService';
 
 /* eslint-disable react-refresh/only-export-components */
@@ -147,7 +147,9 @@ const isValidCustomerSession = (user) => {
 
 export const CartProvider = ({ children }) => {
     const [state, dispatch] = useReducer(cartReducer, { items: [], isOpen: false });
-    const { user, loading: authLoading } = useAuth();
+    const auth = useContext(AuthContext);
+    const user = auth?.user;
+    const authLoading = auth?.loading ?? true;
 
     useEffect(() => {
         let cancelled = false;

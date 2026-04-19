@@ -196,40 +196,46 @@ const ArtisanOrdersPage = () => {
                         const status = String(order?.status || '').toUpperCase();
 
                         return (
-                            <article key={String(id)} className="order-card">
-                                <header className="order-card-header">
-                                    <div>
-                                        <h3>{order?.requestDescription || order?.requestTitle || 'Yêu cầu custom'}</h3>
-                                        <div className="order-meta-row">
-                                            <span><FiUser /> {order?.customerName || order?.customer?.fullName || 'Khách hàng'}</span>
-                                            <span><FiCalendar /> {formatDate(order?.createdAt)}</span>
-                                            <strong>{formatCurrency(order?.totalPrice)}</strong>
-                                        </div>
+                            <article key={String(id)} className="order-card unified-card">
+                                <header className="card-header-block">
+                                    <div className="card-title-row">
+                                        <h3 title={order?.requestDescription || order?.requestTitle || 'Yêu cầu custom'}>{order?.requestDescription || order?.requestTitle || 'Yêu cầu custom'}</h3>
+                                        <span className={`status-badge ${getStatusClass(status)}`}>{getStatusText(status)}</span>
                                     </div>
-                                    <span className={`status-badge ${getStatusClass(status)}`}>{getStatusText(status)}</span>
+                                    <div className="card-meta-row">
+                                        <span><FiCalendar /> {formatDate(order?.createdAt)}</span>
+                                        <span><FiUser /> {order?.customerName || order?.customer?.fullName || 'Khách hàng'}</span>
+                                        <strong>{formatCurrency(order?.totalPrice)}</strong>
+                                    </div>
                                 </header>
 
-                                <div className="order-stage-badges">
-                                    {stages.length === 0 ? (
-                                        <span className="no-stage">Chưa có giai đoạn</span>
-                                    ) : (
-                                        stages.map((stage, idx) => {
-                                            const s = String(stage?.status || '').toUpperCase();
-                                            const klass = s === 'COMPLETED' ? 'done' : stage?.canComplete ? 'active' : 'idle';
-                                            return <span key={`${stage?.id || idx}`} className={`mini-badge ${klass}`}>{idx + 1}</span>;
-                                        })
-                                    )}
-                                </div>
-
-                                <div className="progress-wrap">
-                                    <div className="progress-label-row">
-                                        <span>Tiến độ thực hiện</span>
-                                        <strong>{progress}%</strong>
+                                <div className="card-body-block">
+                                    <p className="card-description">{order?.description || order?.requestDescription || order?.requestTitle || '—'}</p>
+                                    <div className="card-compact-stat">{stages.length} giai đoạn • {progress}% hoàn thành</div>
+                                    <div className="card-avatar-row">
+                                        <div className="card-avatar">{String(order?.customerName || order?.customer?.fullName || 'KH').trim().slice(0, 2).toUpperCase()}</div>
+                                        <div>
+                                            <strong>{order?.artisanName || 'Nghệ nhân chưa chọn'}</strong>
+                                            <p>{order?.artisanEmail || 'Đang chờ phân công'}</p>
+                                        </div>
                                     </div>
-                                    <div className="progress-track"><div className="progress-value" style={{ width: `${progress}%` }} /></div>
+                                    <div className="order-stage-badges">
+                                        {stages.length === 0 ? (
+                                            <span className="no-stage">Chưa có giai đoạn</span>
+                                        ) : (
+                                            stages.map((stage, idx) => {
+                                                const s = String(stage?.status || '').toUpperCase();
+                                                const klass = s === 'COMPLETED' ? 'done' : stage?.canComplete ? 'active' : 'idle';
+                                                return <span key={`${stage?.id || idx}`} className={`mini-badge ${klass}`}>{idx + 1}</span>;
+                                            })
+                                        )}
+                                    </div>
                                 </div>
 
-                                <footer className="order-card-footer">
+                                <footer className="card-footer-block">
+                                    <div className="card-footer-meta">
+                                        <span>Tiến độ: {progress}%</span>
+                                    </div>
                                     <div className="actions">
                                         <button
                                             type="button"

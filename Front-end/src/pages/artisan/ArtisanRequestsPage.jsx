@@ -89,22 +89,32 @@ const RequestList = memo(({ loading, filtered, page, totalPages, onPrev, onNext,
                     const statusLabel = status === 'OPEN' ? 'Đang mở' : status === 'ARTISAN_SELECTED' ? 'Đã chọn nghệ nhân' : status === 'IN_PROGRESS' ? 'Đang thực hiện' : status === 'COMPLETED' ? 'Hoàn thành' : status === 'CANCELLED' ? 'Đã huỷ' : status === 'CLOSED' ? 'Đã đóng' : status || 'Không xác định';
 
                     return (
-                        <article key={String(id)} className="artisan-request-card">
-                            <header>
-                                <h3>{truncate(item?.description, 70)}</h3>
-                                <p>{formatDate(item?.createdAt)} · {formatCurrency(item?.minBudget)} – {formatCurrency(item?.maxBudget)}</p>
-                                <span className="status-open">{statusLabel}</span>
+                        <article key={String(id)} className="artisan-request-card unified-card">
+                            <header className="card-header-block">
+                                <div className="card-title-row">
+                                    <h3 title={truncate(item?.description, 70)}>{truncate(item?.description, 70)}</h3>
+                                    <span className="status-badge status-open">{statusLabel}</span>
+                                </div>
+                                <div className="card-meta-row">
+                                    <span>{formatDate(item?.createdAt)}</span>
+                                    <span>{formatCurrency(item?.minBudget)} – {formatCurrency(item?.maxBudget)}</span>
+                                </div>
                             </header>
-                            <div className="body">
-                                <p>{truncate(item?.description, 140)}</p>
+                            <div className="card-body-block">
+                                <p className="card-description">{truncate(item?.description, 140)}</p>
+                                <div className="card-avatar-row">
+                                    <div className="card-avatar">{String(customerName || 'K').trim().slice(0, 2).toUpperCase()}</div>
+                                    <div>
+                                        <strong>{customerName}</strong>
+                                        <p>Khách hàng</p>
+                                    </div>
+                                </div>
                                 <div className="thumbs">
                                     {item?.aiGeneratedImageUrl && <img src={item.aiGeneratedImageUrl} alt="AI" />}
                                     {refs.slice(0, 3).map((url) => <img key={url} src={url} alt="ref" />)}
                                 </div>
-                                <small>{quoteCount} báo giá đã nhận</small>
                             </div>
-                            <footer>
-                                <span>{customerName}</span>
+                            <footer className="card-footer-block">
                                 <div className="artisan-request-actions">
                                     {canCreateCustomOrder ? (
                                         <button type="button" className="btn btn-outline btn-sm" onClick={() => navigate(`/artisan/requests/${id}/custom-order`)}>

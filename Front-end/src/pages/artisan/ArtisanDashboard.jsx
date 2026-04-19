@@ -44,6 +44,15 @@ const ArtisanDashboard = () => {
         setActiveView(getViewFromPath(location.pathname));
     }, [location.pathname]);
 
+    useEffect(() => {
+        if (!user || String(user.role || '').toUpperCase() !== 'ARTISAN') return;
+
+        console.log('ENV:', {
+            url: import.meta.env.VITE_SUPABASE_URL,
+            key: import.meta.env.VITE_SUPABASE_ANON_KEY,
+        });
+    }, [user]);
+
     if (!user || String(user.role || '').toUpperCase() !== 'ARTISAN') {
         navigate('/');
         return null;
@@ -90,7 +99,6 @@ const ArtisanDashboard = () => {
                         {activeView === 'customOrderCreate' && <ArtisanQuoteCreatePage embedded />}
                         {activeView === 'customOrders' && <ArtisanOrdersPage embedded />}
                         {activeView === 'wallet' && <WalletPage embedded />}
-                        {activeView === 'earnings' && <div className="view-placeholder">Earnings View</div>}
                     </div>
                 )}
             </main>

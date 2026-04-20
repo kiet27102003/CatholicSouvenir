@@ -184,7 +184,7 @@ const TemplatesView = ({ user }) => {
             query.artisanId = artisanId;
         }
 
-        const result = await templateService.getTemplates(query);
+        const result = await templateService.getMyTemplates(query);
         if (result.success) {
             const pageData = result.data;
             const normalizedContent = (pageData.content || []).map(normalizeTemplate);

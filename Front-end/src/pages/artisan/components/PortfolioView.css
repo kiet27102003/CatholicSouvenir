@@ -517,6 +517,11 @@
     min-height: 400px;
 }
 
+.edit-modal-body--create {
+    grid-template-columns: 1fr;
+    min-height: auto;
+}
+
 .edit-modal-image {
     background: #f8f9fa;
     display: flex;
@@ -633,6 +638,10 @@
     max-height: 90vh;
 }
 
+.edit-modal-form--create {
+    width: min(760px, 100%);
+}
+
 .edit-modal-form .form-group {
     margin-bottom: 16px;
 }
@@ -686,7 +695,8 @@
 }
 
 @media (max-width: 700px) {
-    .edit-modal-body {
+    .edit-modal-body,
+    .edit-modal-body--create {
         grid-template-columns: 1fr;
     }
 

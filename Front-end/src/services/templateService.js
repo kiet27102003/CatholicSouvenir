@@ -29,9 +29,9 @@ const mapError = (error, fallback) => {
     return typeof message === 'string' ? message : fallback;
 };
 
-export const getTemplates = async (params = {}) => {
+export const getPublicTemplates = async (params = {}) => {
     try {
-        const response = await api.get('/templates/my-templates', { params });
+        const response = await api.get('/templates', { params });
         const payload = normalizeResponse(response);
         if (payload.code !== 200) {
             return { success: false, error: payload.message || 'Không tải được danh sách mẫu.' };
@@ -39,6 +39,19 @@ export const getTemplates = async (params = {}) => {
         return { success: true, data: normalizePaged({ data: payload.data }) };
     } catch (error) {
         return { success: false, error: mapError(error, 'Không tải được danh sách mẫu.') };
+    }
+};
+
+export const getMyTemplates = async (params = {}) => {
+    try {
+        const response = await api.get('/templates/my-templates', { params });
+        const payload = normalizeResponse(response);
+        if (payload.code !== 200) {
+            return { success: false, error: payload.message || 'Không tải được danh sách mẫu của bạn.' };
+        }
+        return { success: true, data: normalizePaged({ data: payload.data }) };
+    } catch (error) {
+        return { success: false, error: mapError(error, 'Không tải được danh sách mẫu của bạn.') };
     }
 };
 
@@ -164,7 +177,8 @@ export const getPriceBreakdown = async (templateId, zoneInputs) => {
 };
 
 export default {
-    getTemplates,
+    getPublicTemplates,
+    getMyTemplates,
     getTemplateById,
     createTemplate,
     updateTemplate,

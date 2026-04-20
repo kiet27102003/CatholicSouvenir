@@ -18,7 +18,7 @@ const TemplateCatalogPage = () => {
     const queryCategoryId = searchParams.get('categoryId') || 'all';
 
     const [categories, setCategories] = useState([{ id: 'all', label: 'Tất cả', Icon: FiGrid }]);
-    const [selectedCategory, setSelectedCategory] = useState(queryCategoryId);
+    const selectedCategory = queryCategoryId || 'all';
     const [templates, setTemplates] = useState([]);
     const [loading, setLoading] = useState(true);
     const [loadingCategories, setLoadingCategories] = useState(true);
@@ -26,10 +26,6 @@ const TemplateCatalogPage = () => {
     useEffect(() => {
         window.scrollTo(0, 0);
     }, []);
-
-    useEffect(() => {
-        setSelectedCategory(queryCategoryId || 'all');
-    }, [queryCategoryId]);
 
     useEffect(() => {
         let cancelled = false;
@@ -73,7 +69,7 @@ const TemplateCatalogPage = () => {
             const params = { page: 0, size: 50 };
             if (selectedCategory && selectedCategory !== 'all') params.categoryId = selectedCategory;
 
-            const result = await templateService.getTemplates(params);
+            const result = await templateService.getPublicTemplates(params);
             if (cancelled) return;
 
             if (!result.success) {
@@ -113,7 +109,6 @@ const TemplateCatalogPage = () => {
     }, [categories]);
 
     const handleSelectCategory = (categoryId) => {
-        setSelectedCategory(categoryId);
         const next = new URLSearchParams(searchParams);
         if (!categoryId || categoryId === 'all') next.delete('categoryId');
         else next.set('categoryId', categoryId);

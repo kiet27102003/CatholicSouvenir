@@ -617,6 +617,95 @@
     animation: wb-shimmer 1.4s infinite linear;
 }
 
+.wb-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 60;
+}
+
+.wb-modal {
+    width: min(760px, 100%);
+    border-radius: 24px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 24px 80px rgba(15, 23, 42, 0.22);
+    padding: 20px;
+}
+
+.wb-modal-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+    margin-bottom: 16px;
+}
+
+.wb-modal-head h2 {
+    margin: 0;
+}
+
+.wb-modal-close {
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.wb-modal-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.wb-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.wb-field--full {
+    grid-column: 1 / -1;
+}
+
+.wb-field span {
+    font-size: 13px;
+    font-weight: 700;
+    color: #334155;
+}
+
+.wb-field input,
+.wb-field select,
+.wb-field textarea {
+    width: 100%;
+    border: 1px solid #cbd5e1;
+    border-radius: 14px;
+    padding: 12px 14px;
+    font: inherit;
+    background: #fff;
+    color: #0f172a;
+}
+
+.wb-field textarea {
+    resize: vertical;
+}
+
+.wb-modal-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
 @keyframes wb-shimmer {
     from { background-position: 200% 0; }
     to { background-position: -200% 0; }

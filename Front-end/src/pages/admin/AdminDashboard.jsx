@@ -35,6 +35,29 @@ const emptyDashboard = {
     revenueChart: [],
 };
 
+const toPercent = (value) => `${Math.max(0, Math.min(100, Number(value) || 0)).toFixed(0)}%`;
+
+const toRate = (part, total) => `${Number(total) > 0 ? ((Number(part) / Number(total)) * 100).toFixed(1) : '0.0'}%`;
+
+const buildRevenueBars = (items) => {
+    const list = Array.isArray(items) ? items : [];
+    const peak = Math.max(...list.map((item) => Number(item?.revenue || 0)), 1);
+    return list.map((item) => ({
+        ...item,
+        height: Math.max(12, Math.round((Number(item?.revenue || 0) / peak) * 100)),
+    }));
+};
+
+const buildCategoryBars = (items, valueKey = 'revenue') => {
+    const list = Array.isArray(items) ? items : [];
+    const peak = Math.max(...list.map((item) => Number(item?.[valueKey] || 0)), 1);
+    return list.map((item, index) => ({
+        ...item,
+        id: item?.id || item?.productId || item?.customerId || item?.artisanId || item?.templateId || `${valueKey}-${index}`,
+        height: Math.max(12, Math.round((Number(item?.[valueKey] || 0) / peak) * 100)),
+    }));
+};
+
 const AdminDashboard = () => {
     const [dashboard, setDashboard] = useState(emptyDashboard);
     const [loading, setLoading] = useState(true);
@@ -67,6 +90,7 @@ const AdminDashboard = () => {
                     topArtisans: Array.isArray(payload.topArtisans) ? payload.topArtisans : [],
                     topCustomers: Array.isArray(payload.topCustomers) ? payload.topCustomers : [],
                     topProducts: Array.isArray(payload.topProducts) ? payload.topProducts : [],
+                    topTemplates: Array.isArray(payload.topTemplates) ? payload.topTemplates : [],
                     revenueChart: Array.isArray(payload.revenueChart) ? payload.revenueChart : [],
                 };
 
@@ -80,6 +104,7 @@ const AdminDashboard = () => {
                     topArtisans: merged.topArtisans.length,
                     topCustomers: merged.topCustomers.length,
                     topProducts: merged.topProducts.length,
+                    topTemplates: merged.topTemplates.length,
                     revenueChartPoints: merged.revenueChart.length,
                 });
             } catch (err) {
@@ -138,6 +163,11 @@ const AdminDashboard = () => {
             iconClass: 'red',
         },
     ]), [dashboard]);
+
+    const revenueTrend = useMemo(() => buildRevenueBars(dashboard.revenueChart), [dashboard.revenueChart]);
+    const orderStatusBars = useMemo(() => buildCategoryBars(Object.entries(dashboard.orderStatus || {}).map(([status, value]) => ({ id: status, label: status, value })), 'value'), [dashboard.orderStatus]);
+    const topCustomerBars = useMemo(() => buildCategoryBars(dashboard.topCustomers.slice(0, 5), 'totalSpent'), [dashboard.topCustomers]);
+    const topProductBars = useMemo(() => buildCategoryBars(dashboard.topProducts.slice(0, 5), 'revenue'), [dashboard.topProducts]);
 
     const recentActivities = useMemo(() => {
         const topCustomers = dashboard.topCustomers.slice(0, 4).map((customer, index) => ({
@@ -209,28 +239,107 @@ const AdminDashboard = () => {
                     ))}
                 </section>
 
-                <section className="dashboard-grid">
-                    <article className="admin-card activity-card">
+                <section className="dashboard-grid dashboard-grid--charts">
+                    <article className="admin-card chart-card chart-card--wide">
                         <header className="activity-header">
-                            <h3>Hoạt động gần đây</h3>
-                            <button type="button" className="activity-link">Xem tất cả</button>
+                            <div>
+                                <h3>Doanh thu theo ngày</h3>
+                                <p>Dữ liệu từ `revenueChart`</p>
+                            </div>
+                            <button type="button" className="activity-link">Xem chi tiết</button>
                         </header>
-
-                        <div className="activity-list">
-                            {recentActivities.length > 0 ? recentActivities.map((item) => (
-                                <div className="activity-item" key={item.id}>
-                                    <div className={`activity-icon ${item.iconClass}`}>{item.icon}</div>
-                                    <div className="activity-content">
-                                        <div className="activity-title-row">
-                                            <h4>{item.title}</h4>
-                                            <span>{item.time}</span>
-                                        </div>
-                                        <p>{item.description}</p>
+                        <div className="chart-bars chart-bars--revenue">
+                            {revenueTrend.length > 0 ? revenueTrend.map((item) => (
+                                <div className="chart-bar-item" key={item.date}>
+                                    <div className="chart-bar-track">
+                                        <div className="chart-bar-fill" style={{ height: `${item.height}%` }} />
                                     </div>
+                                    <strong>{formatCurrency(item.revenue)}</strong>
+                                    <span>{item.orderNumber} đơn</span>
+                                    <p>{item.date}</p>
                                 </div>
-                            )) : (
-                                <p>Chưa có dữ liệu hoạt động gần đây từ API.</p>
-                            )}
+                            )) : <p className="chart-empty">Chưa có dữ liệu doanh thu.</p>}
+                        </div>
+                    </article>
+
+                    <article className="admin-card chart-card">
+                        <header className="activity-header">
+                            <div>
+                                <h3>Trạng thái đơn hàng</h3>
+                                <p>Từ `orderStatus` và hiệu suất</p>
+                            </div>
+                            <button type="button" className="activity-link">Xem chi tiết</button>
+                        </header>
+                        <div className="status-chart-list">
+                            {Object.entries(dashboard.orderStatus || {}).map(([status, value]) => (
+                                <div className="status-chart-row" key={status}>
+                                    <span>{status}</span>
+                                    <div className="status-chart-track">
+                                        <div className="status-chart-fill" style={{ width: `${Math.min(100, Number(value) * 10)}%` }} />
+                                    </div>
+                                    <strong>{value}</strong>
+                                </div>
+                            ))}
+                            <div className="status-chart-row status-chart-row--meta">
+                                <span>Hoàn tất đơn</span>
+                                <strong>{toPercent(dashboard.customOrderStats.conversionRate)}</strong>
+                            </div>
+                            <div className="status-chart-row status-chart-row--meta">
+                                <span>Tỷ lệ khiếu nại</span>
+                                <strong>{toRate(dashboard.complaintStats.pendingComplaints, dashboard.complaintStats.totalComplaints)}</strong>
+                            </div>
+                            <div className="status-chart-row status-chart-row--meta">
+                                <span>Khách active</span>
+                                <strong>{toRate(dashboard.customerStats.activeCustomers, dashboard.customerStats.totalCustomers)}</strong>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article className="admin-card chart-card">
+                        <header className="activity-header">
+                            <div>
+                                <h3>Top khách hàng</h3>
+                                <p>Khách có tổng chi tiêu cao nhất</p>
+                            </div>
+                            <button type="button" className="activity-link">Xem thêm</button>
+                        </header>
+                        <div className="category-chart-list">
+                            {topCustomerBars.length > 0 ? topCustomerBars.map((item, index) => (
+                                <div className="category-chart-row" key={item.customerId || index}>
+                                    <div className="category-chart-labels">
+                                        <strong>{item.customerName || 'Khách hàng'}</strong>
+                                        <span>{item.email || '—'}</span>
+                                    </div>
+                                    <div className="category-chart-track">
+                                        <div className="category-chart-fill category-chart-fill--green" style={{ width: `${item.height}%` }} />
+                                    </div>
+                                    <strong>{formatCurrency(item.totalSpent)}</strong>
+                                </div>
+                            )) : <p className="chart-empty">Chưa có dữ liệu khách hàng.</p>}
+                        </div>
+                    </article>
+
+                    <article className="admin-card chart-card">
+                        <header className="activity-header">
+                            <div>
+                                <h3>Top sản phẩm</h3>
+                                <p>Sản phẩm bán chạy nhất</p>
+                            </div>
+                            <button type="button" className="activity-link">Xem thêm</button>
+                        </header>
+                        <div className="category-chart-list">
+                            {topProductBars.length > 0 ? topProductBars.map((item, index) => (
+                                <div className="category-chart-row" key={item.productId || index}>
+                                    <div className="category-chart-labels">
+                                        <strong>{item.productName || 'Sản phẩm'}</strong>
+                                        <span>{item.sold || 0} đã bán</span>
+                                    </div>
+                                    <div className="category-chart-track">
+                                        <div className="category-chart-fill category-chart-fill--blue" style={{ width: `${item.height}%` }} />
+                                    </div>
+                                    <strong>{formatCurrency(item.revenue)}</strong>
+                                </div>
+                            )) : <p className="chart-empty">Chưa có dữ liệu sản phẩm.</p>}
                         </div>
                     </article>
 

@@ -2,6 +2,300 @@
     width: 100%;
     max-width: 1440px;
     margin: 0 auto;
+    color: #0f172a;
+}
+
+.wb-section-kicker {
+    margin: 0 0 6px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #6366f1;
+}
+
+.wb-dashboard-panel {
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    border: 1px solid #e5e7eb;
+    border-radius: 20px;
+    padding: 18px;
+    margin-bottom: 12px;
+}
+
+.wb-dashboard-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.wb-dashboard-head h2 {
+    margin: 0;
+    font-size: 22px;
+}
+
+.wb-dashboard-meta {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.wb-dashboard-meta-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: 999px;
+    background: #eef2ff;
+    color: #4338ca;
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.wb-dashboard-meta-item svg {
+    flex-shrink: 0;
+}
+
+.wb-dashboard-cards {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.wb-dashboard-card {
+    border-radius: 16px;
+    padding: 16px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+}
+
+.wb-dashboard-card-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    background: #eef2ff;
+    color: #4338ca;
+}
+
+.wb-dashboard-card--green .wb-dashboard-card-icon { background: #dcfce7; color: #166534; }
+.wb-dashboard-card--amber .wb-dashboard-card-icon { background: #fef3c7; color: #92400e; }
+.wb-dashboard-card--purple .wb-dashboard-card-icon { background: #ede9fe; color: #6d28d9; }
+.wb-dashboard-card--blue .wb-dashboard-card-icon { background: #dbeafe; color: #1d4ed8; }
+
+.wb-dashboard-card-label {
+    margin: 0;
+    font-size: 12px;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.wb-dashboard-card-value {
+    display: block;
+    margin-top: 6px;
+    font-size: 24px;
+    color: #0f172a;
+}
+
+.wb-dashboard-card-helper {
+    margin: 6px 0 0;
+    font-size: 13px;
+    color: #64748b;
+}
+
+.wb-dashboard-charts {
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr;
+    gap: 12px;
+}
+
+.wb-chart-card {
+    background: #fff;
+    border-radius: 16px;
+    border: 1px solid #e5e7eb;
+    padding: 16px;
+}
+
+.wb-chart-card--list {
+    grid-column: 1 / -1;
+}
+
+.wb-chart-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.wb-chart-head h3,
+.wb-chart-head p {
+    margin: 0;
+}
+
+.wb-chart-head p {
+    margin-top: 4px;
+    color: #64748b;
+    font-size: 13px;
+}
+
+.wb-bar-chart {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(74px, 1fr));
+    gap: 12px;
+    align-items: end;
+}
+
+.wb-bar-chart--revenue {
+    align-items: start;
+}
+
+.wb-bar-chart-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    min-height: 210px;
+}
+
+.wb-bar-track {
+    width: 100%;
+    height: 160px;
+    display: flex;
+    align-items: end;
+    justify-content: center;
+    background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+    border-radius: 14px;
+    padding: 10px;
+}
+
+.wb-bar-fill {
+    width: 42px;
+    border-radius: 12px 12px 6px 6px;
+    background: linear-gradient(180deg, #6366f1 0%, #4f46e5 100%);
+    box-shadow: 0 12px 26px rgba(79, 70, 229, 0.25);
+    transition: height 0.2s ease;
+}
+
+.wb-bar-label {
+    text-align: center;
+    font-size: 12px;
+    color: #475569;
+}
+
+.wb-bar-value {
+    text-align: center;
+    font-size: 12px;
+    color: #0f172a;
+}
+
+.wb-bar-small {
+    text-align: center;
+    font-size: 11px;
+    color: #64748b;
+}
+
+.wb-status-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.wb-status-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 10px 12px;
+}
+
+.wb-status-row span {
+    color: #64748b;
+    font-size: 13px;
+}
+
+.wb-status-row strong {
+    color: #0f172a;
+    font-size: 14px;
+}
+
+.wb-top-lists {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.wb-top-list-block {
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 12px;
+    background: #f8fafc;
+}
+
+.wb-top-list-block h4 {
+    margin: 0 0 10px;
+    font-size: 14px;
+    color: #0f172a;
+}
+
+.wb-top-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 0;
+    border-top: 1px dashed #e2e8f0;
+}
+
+.wb-top-item:first-of-type {
+    border-top: 0;
+    padding-top: 0;
+}
+
+.wb-top-item strong,
+.wb-top-item p {
+    margin: 0;
+}
+
+.wb-top-item p {
+    font-size: 12px;
+    color: #64748b;
+}
+
+.wb-top-item span {
+    font-size: 12px;
+    color: #0f172a;
+    white-space: nowrap;
+    align-self: center;
+}
+
+.wb-dashboard-empty {
+    border-radius: 16px;
+    padding: 18px;
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+}
+
+.wb-dashboard-empty strong {
+    display: block;
+    margin-bottom: 4px;
+}
+
+.wb-dashboard-empty p {
+    margin: 0;
+    color: #9a3412;
 }
 
 .wb-header {
@@ -248,6 +542,8 @@
     align-items: center;
 }
 
+.wb-stat-card--neutral .wb-stat-icon { background: #f1f5f9; color: #334155; }
+
 .wb-stat-icon {
     width: 42px;
     height: 42px;
@@ -407,13 +703,15 @@
 .wb-wallet {
     border-radius: 12px;
     padding: 16px;
-    background: linear-gradient(145deg, #1e1b4b, #312e81);
-    color: #fff;
+    background: #fff;
+    color: #0f172a;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
 }
 
 .wb-wallet-label {
     margin: 0;
-    opacity: 0.85;
+    color: #64748b;
     font-size: 14px;
 }
 
@@ -421,40 +719,65 @@
     margin: 8px 0 14px;
     font-size: 30px;
     line-height: 1.2;
+    color: #1e293b;
 }
 
 .wb-wallet-meta {
     display: grid;
-    grid-template-columns: 1fr 1fr auto;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
+}
+
+.wb-wallet-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
 }
 
 .wb-wallet-box {
     border-radius: 10px;
-    background: rgba(255, 255, 255, 0.14);
+    background: #f8fafc;
     padding: 10px;
+    color: #0f172a;
+    border: 1px solid #e2e8f0;
+}
+
+.wb-wallet-box--earnings {
+    background: #ecfdf5;
+}
+
+.wb-wallet-box--commission {
+    background: #fff7ed;
 }
 
 .wb-wallet-box span {
     display: block;
     font-size: 12px;
-    opacity: 0.9;
+    color: #64748b;
 }
 
 .wb-wallet-box strong {
     display: block;
     margin-top: 3px;
     font-size: 14px;
+    color: #0f172a;
 }
 
 .wb-wallet-link {
-    border: 1px solid rgba(255, 255, 255, 0.35);
-    background: rgba(255, 255, 255, 0.18);
-    color: #fff;
+    border: 1px solid #cbd5e1;
+    background: #fff;
+    color: #1e293b;
     border-radius: 10px;
     padding: 10px;
     font-weight: 600;
     cursor: pointer;
+}
+
+.wb-wallet-actions .wb-wallet-link {
+    border-color: #cbd5e1;
+    background: #fff;
+    color: #1e293b;
 }
 
 .wb-new-badge {
@@ -552,8 +875,13 @@
 }
 
 @media (max-width: 1279px) {
-    .wb-stats {
+    .wb-stats,
+    .wb-dashboard-cards {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .wb-dashboard-charts {
+        grid-template-columns: 1fr;
     }
 }
 
@@ -562,18 +890,21 @@
         grid-template-columns: 1fr;
     }
 
-    .wb-header {
+    .wb-header,
+    .wb-dashboard-head {
         flex-direction: column;
     }
 
-    .wb-header-actions {
+    .wb-header-actions,
+    .wb-dashboard-meta {
         width: 100%;
         justify-content: flex-start;
     }
 }
 
 @media (max-width: 680px) {
-    .wb-stats {
+    .wb-stats,
+    .wb-dashboard-cards {
         grid-template-columns: 1fr;
     }
 
@@ -587,5 +918,14 @@
 
     .wb-chat-time {
         grid-column: 2;
+    }
+
+    .wb-dashboard-panel,
+    .wb-chart-card {
+        padding: 14px;
+    }
+
+    .wb-bar-track {
+        height: 120px;
     }
 }

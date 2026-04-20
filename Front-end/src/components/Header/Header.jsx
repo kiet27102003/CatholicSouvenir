@@ -114,7 +114,14 @@ const Header = () => {
         }
     };
 
-    const handleOpenCart = () => openCart();
+    const handleOpenCart = () => {
+        if (!isAuthenticated) {
+            navigate('/login');
+            return;
+        }
+
+        openCart();
+    };
 
     const formatNotificationTime = (value) => {
         if (!value) return '';

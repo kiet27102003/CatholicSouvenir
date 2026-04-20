@@ -190,7 +190,7 @@ const HomePage = () => {
                                         {loading ? <div className="skeleton skeleton-square" /> : <Icon size={22} />}
                                         <div>
                                             <h3>{loading ? 'Đang tải...' : category?.name || category?.categoryName || 'Danh mục'}</h3>
-                                            <p>{loading ? ' ' : `${category?.productCount ?? category?.productsCount ?? 0} sản phẩm`}</p>
+                                            <p>{loading ? ' ' : `${category?.templateCount ?? category?.productCount ?? category?.productsCount ?? 0} sản phẩm`}</p>
                                         </div>
                                     </div>
                                 );

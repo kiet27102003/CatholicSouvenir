@@ -32,6 +32,12 @@ const normalizeIncomingItem = (item) => {
     const basePrice = Number(item?.basePrice ?? item?.price ?? 0);
     const quantity = Math.max(1, Number(item?.quantity || 1));
     const totalPrice = Number(item?.totalPrice ?? item?.subtotal ?? calcItemTotal({ basePrice, quantity, zoneInputs }));
+    const customizationData = zoneInputs.reduce((acc, z, index) => {
+        const key = String(z?.zoneName || `field_${index + 1}`).trim() || `field_${index + 1}`;
+        if (!String(z?.value || '').trim()) return acc;
+        acc[key] = String(z.value).trim();
+        return acc;
+    }, {});
 
     return {
         cartItemId,
@@ -53,6 +59,7 @@ const normalizeIncomingItem = (item) => {
         quantity,
         zoneInputs,
         totalPrice,
+        customizationData,
         selected: item?.selected !== false,
     };
 };
@@ -213,7 +220,9 @@ export const CartProvider = ({ children }) => {
 
         const customizationData = (normalized.zoneInputs || []).reduce((acc, z, index) => {
             const key = String(z?.zoneName || `field_${index + 1}`).trim() || `field_${index + 1}`;
-            acc[key] = String(z?.value || '').trim();
+            const value = String(z?.value || '').trim();
+            if (!value) return acc;
+            acc[key] = value;
             return acc;
         }, {});
 
@@ -287,11 +296,19 @@ export const CartProvider = ({ children }) => {
 
     const addToCart = (product, quantity = 1) => {
         const zonePriceBreakdown = Array.isArray(product.zonePriceBreakdown) ? product.zonePriceBreakdown : [];
-        const zoneInputs = zonePriceBreakdown.map((z) => ({
-            zoneName: String(z?.label || z?.zoneName || '').trim(),
-            value: String(product?.customRequests?.[z?.key || z?.zoneName] || '').trim(),
-            extraPrice: Number(z?.amount || 0),
-        }));
+        const customizationSource = product.customizationData ?? product.customRequests ?? {};
+        const zoneInputs = zonePriceBreakdown
+            .map((z) => {
+                const key = String(z?.key || z?.zoneName || '').trim();
+                const value = String(customizationSource?.[key] || '').trim();
+                if (!value) return null;
+                return {
+                    zoneName: String(z?.label || z?.zoneName || '').trim(),
+                    value,
+                    extraPrice: Number(z?.amount || 0),
+                };
+            })
+            .filter(Boolean);
         const templateId = String(product.templateId ?? '').trim();
         const productId = String(product.productId ?? product.id ?? '').trim();
 

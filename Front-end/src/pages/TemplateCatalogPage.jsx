@@ -126,14 +126,14 @@ const TemplateCatalogPage = () => {
             <main className="template-catalog-main">
                 <section className="template-catalog-hero container">
                     <div>
-                        <div className="template-catalog-badge"><FiStar /> Template Order</div>
-                        <h1>Chọn template có sẵn và tùy biến theo zone</h1>
+                        <div className="template-catalog-badge"><FiStar /> Thiết kế theo mẫu</div>
+                        <h1>Chọn mẫu thiết kế có sẵn và tùy biến theo vùng</h1>
                         <p>
-                            Chọn một mẫu thiết kế, nhập dữ liệu theo các zone định sẵn rồi chuyển sang đặt hàng như bình thường.
+                            Chọn một mẫu thiết kế, nhập dữ liệu theo các vùng định sẵn rồi thanh toán như đơn hàng bình thường.
                         </p>
                     </div>
                     <div className="template-catalog-hero-card">
-                        <div><strong>{templates.length}</strong><span>template đang hiển thị</span></div>
+                        <div><strong>{templates.length}</strong><span>mẫu thiết kế đang hiển thị</span></div>
                         <div><strong>{categories.length - 1}</strong><span>danh mục</span></div>
                     </div>
                 </section>
@@ -178,7 +178,7 @@ const TemplateCatalogPage = () => {
                                         <div className="template-catalog-body">
                                             <div className="template-catalog-topline">
                                                 <span>{categoryMap[template.categoryId] || 'Danh mục'}</span>
-                                                <span>{template.zoneCount} zone</span>
+                                                <span>{template.zoneCount} vùng</span>
                                             </div>
                                             <h3>{template.name}</h3>
                                             <p>{template.description || 'Chưa có mô tả.'}</p>
@@ -197,7 +197,7 @@ const TemplateCatalogPage = () => {
                                                 className="btn btn-primary template-catalog-action"
                                                 onClick={() => navigate(`/template-order?templateId=${template.templateId}`)}
                                             >
-                                                Chọn template <FiArrowRight />
+                                                Chọn mẫu thiết kế <FiArrowRight />
                                             </button>
                                         </div>
                                     </article>

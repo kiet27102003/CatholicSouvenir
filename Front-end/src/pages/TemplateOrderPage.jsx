@@ -1,10 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { FiArrowLeft, FiCheck, FiCopy, FiLoader, FiShoppingBag, FiStar, FiX } from 'react-icons/fi';
+import { FiArrowLeft, FiCheck, FiShoppingBag, FiStar } from 'react-icons/fi';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Header from '../components/Header/Header';
 import Footer from '../components/Footer/Footer';
 import templateService from '../services/templateService';
-import { recommendScripture } from '../services/aiService';
 import { useCart } from '../context/CartContext';
 import { appToast } from '../lib/appToast';
 import './TemplateOrderPage.css';
@@ -30,13 +29,6 @@ const TemplateOrderPage = () => {
     const [template, setTemplate] = useState(null);
     const [zoneValues, setZoneValues] = useState({});
     const [selectedImage, setSelectedImage] = useState('');
-    const [aiOpen, setAiOpen] = useState(false);
-    const [aiLoading, setAiLoading] = useState(false);
-    const [aiForm, setAiForm] = useState({ purpose: '', theme: '', language: 'vi', maxResults: 5 });
-    const [aiRecommendations, setAiRecommendations] = useState([]);
-    const [aiMessage, setAiMessage] = useState('');
-
-    const textZones = useMemo(() => (template?.zones || []).filter((zone) => String(zone.inputType || 'TEXT').toUpperCase() === 'TEXT'), [template]);
 
     useEffect(() => {
         window.scrollTo(0, 0);
@@ -104,64 +96,6 @@ const TemplateOrderPage = () => {
         return () => { cancelled = true; };
     }, [templateId]);
 
-    const openAiModal = (zone = null) => {
-        setAiForm((prev) => ({
-            ...prev,
-            purpose: prev.purpose || (zone?.zoneName || template?.name || ''),
-            theme: prev.theme || (zone?.zoneDescription || template?.style || template?.categoryName || ''),
-        }));
-        setAiMessage('');
-        setAiOpen(true);
-    };
-
-    const handleOpenZoneAi = (zone) => {
-        openAiModal(zone);
-    };
-
-    const handleAiRecommend = async () => {
-        if (!template) return;
-        setAiLoading(true);
-        setAiMessage('');
-        try {
-            const result = await recommendScripture({
-                purpose: aiForm.purpose || textZones[0]?.zoneName || template.name,
-                productName: template.name,
-                theme: aiForm.theme || template.style || template.categoryName || '',
-                language: aiForm.language || 'vi',
-                maxResults: Number(aiForm.maxResults || 5),
-            });
-
-            if (!result.success) {
-                setAiRecommendations([]);
-                setAiMessage(result.error || 'Không lấy được gợi ý AI.');
-                return;
-            }
-
-            const payload = result.data || {};
-            const recommendations = Array.isArray(payload.recommendations) ? payload.recommendations : [];
-            setAiRecommendations(recommendations);
-            setAiMessage(payload.message || (recommendations.length ? 'Đã tạo gợi ý AI.' : 'Chưa có gợi ý phù hợp.'));
-        } finally {
-            setAiLoading(false);
-        }
-    };
-
-    const handleCopyRecommendation = async (rec) => {
-        const text = [
-            rec?.verse ? `${rec.verse}` : '',
-            rec?.text ? `${rec.text}` : '',
-            rec?.translation ? `(${rec.translation})` : '',
-            rec?.reason ? `Lý do: ${rec.reason}` : '',
-            rec?.occasion ? `Hoàn cảnh: ${rec.occasion}` : '',
-        ].filter(Boolean).join('\n');
-
-        try {
-            await navigator.clipboard.writeText(text);
-            appToast.success('Đã copy gợi ý');
-        } catch {
-            appToast.error('Không thể copy', 'Trình duyệt đã chặn thao tác sao chép.');
-        }
-    };
 
     const extraPriceTotal = useMemo(() => {
         return (template?.zones || []).reduce((sum, zone) => {
@@ -182,15 +116,24 @@ const TemplateOrderPage = () => {
             return;
         }
 
+        const customizationData = (template.zones || []).reduce((acc, zone) => {
+            const value = String(zoneValues[zone.zoneId] || '').trim();
+            if (!value) return acc;
+            acc[zone.zoneId] = value;
+            return acc;
+        }, {});
+
         setSubmitting(true);
         try {
-            const zoneInputs = (template.zones || []).map((zone) => ({
-                label: zone.zoneName,
-                key: zone.zoneId,
-                zoneName: zone.zoneName,
-                value: String(zoneValues[zone.zoneId] || '').trim(),
-                amount: Number(zone.extraPrice || 0),
-            }));
+            const zoneInputs = (template.zones || [])
+                .map((zone) => ({
+                    label: zone.zoneName,
+                    key: zone.zoneId,
+                    zoneName: zone.zoneName,
+                    value: String(zoneValues[zone.zoneId] || '').trim(),
+                    amount: Number(zone.extraPrice || 0),
+                }))
+                .filter((zone) => zone.value);
 
             addToCart({
                 id: template.templateId,
@@ -201,7 +144,8 @@ const TemplateOrderPage = () => {
                 image: selectedImage || template.baseImages[0] || '',
                 artisan: template.artisanName,
                 templateId: template.templateId,
-                customRequests: zoneValues,
+                customizationData,
+                customRequests: customizationData,
                 zonePriceBreakdown: zoneInputs,
             }, 1);
 
@@ -272,9 +216,9 @@ const TemplateOrderPage = () => {
                     </div>
 
                     <aside className="template-order-summary-card">
-                        <div className="template-order-badge"><FiStar /> Template order</div>
+                        <div className="template-order-badge"><FiStar /> Thiết kế theo mẫu</div>
                         <h1>{template.name}</h1>
-                        <p className="template-order-subtitle">Điền thông tin vào các zone được định sẵn rồi checkout như đơn hàng bình thường.</p>
+                        <p className="template-order-subtitle">Điền thông tin vào các vùng được định sẵn rồi thanh toán như đơn hàng bình thường.</p>
 
                         <div className="template-order-meta">
                             <div><span>Danh mục</span><strong>{template.categoryName || '—'}</strong></div>
@@ -290,9 +234,6 @@ const TemplateOrderPage = () => {
                         </div>
 
                         <div className="template-order-actions">
-                            <button type="button" className="btn btn-secondary btn-large template-order-ai-btn" onClick={openAiModal} disabled={!textZones.length}>
-                                <FiStar /> Gợi ý bằng AI
-                            </button>
                             <button type="button" className="btn btn-primary btn-large" onClick={handleAddToCart} disabled={submitting}>
                                 <FiShoppingBag /> {submitting ? 'Đang thêm...' : 'Thêm vào giỏ hàng'}
                             </button>
@@ -304,7 +245,7 @@ const TemplateOrderPage = () => {
                     <div className="template-order-form-card">
                         <div className="section-heading">
                             <h2>Customization data</h2>
-                            <p>Nhập các thông tin cho từng zone được template cho phép.</p>
+                            <p>Nhập các thông tin cho từng vùng được mẫu thiết kế cho phép.</p>
                         </div>
 
                         <div className="template-order-zones">
@@ -352,9 +293,7 @@ const TemplateOrderPage = () => {
                                                     onChange={(e) => setZoneValues((prev) => ({ ...prev, [zone.zoneId]: e.target.value }))}
                                                 />
                                                 {isTextZone ? (
-                                                    <button type="button" className="template-order-zone-ai-btn" onClick={() => handleOpenZoneAi(zone)}>
-                                                        <FiStar /> AI
-                                                    </button>
+                                                    <span className="template-order-zone-ai-hint">AI</span>
                                                 ) : null}
                                             </div>
                                         )}
@@ -364,72 +303,12 @@ const TemplateOrderPage = () => {
                         </div>
 
                         <div className="template-order-note">
-                            <FiCheck /> Dữ liệu này sẽ được lưu cùng đơn hàng khi bạn checkout.
+                            <FiCheck /> Dữ liệu này sẽ được lưu cùng đơn hàng khi bạn thanh toán.
                         </div>
                     </div>
                 </section>
             </main>
 
-            {aiOpen ? (
-                <div className="template-order-ai-modal-overlay" onClick={() => setAiOpen(false)}>
-                    <div className="template-order-ai-modal" onClick={(e) => e.stopPropagation()}>
-                        <div className="template-order-ai-modal-header">
-                            <div>
-                                <div className="template-order-ai-modal-badge"><FiStar /> Gợi ý bằng AI</div>
-                                <h3>Nhận các câu Kinh Thánh phù hợp</h3>
-                                <p>Nhập mục đích, chủ đề và ngôn ngữ để AI gợi ý nội dung cho zone TEXT.</p>
-                            </div>
-                            <button type="button" className="template-order-ai-close" onClick={() => setAiOpen(false)}><FiX /></button>
-                        </div>
-
-                        <div className="template-order-ai-form">
-                            <label>
-                                <span>Mục đích</span>
-                                <input value={aiForm.purpose} onChange={(e) => setAiForm((prev) => ({ ...prev, purpose: e.target.value }))} placeholder="Ví dụ: lời chúc phúc, trang trí bàn thờ..." />
-                            </label>
-                            <label>
-                                <span>Chủ đề</span>
-                                <input value={aiForm.theme} onChange={(e) => setAiForm((prev) => ({ ...prev, theme: e.target.value }))} placeholder="Ví dụ: tình yêu, hy vọng, bình an..." />
-                            </label>
-                            <div className="template-order-ai-grid">
-                                <label>
-                                    <span>Ngôn ngữ</span>
-                                    <select value={aiForm.language} onChange={(e) => setAiForm((prev) => ({ ...prev, language: e.target.value }))}>
-                                        <option value="vi">Tiếng Việt</option>
-                                        <option value="en">English</option>
-                                        <option value="la">Latin</option>
-                                    </select>
-                                </label>
-                                <label>
-                                    <span>Số kết quả</span>
-                                    <input type="number" min="1" max="10" value={aiForm.maxResults} onChange={(e) => setAiForm((prev) => ({ ...prev, maxResults: e.target.value }))} />
-                                </label>
-                            </div>
-                            <button type="button" className="btn btn-primary template-order-ai-submit" onClick={handleAiRecommend} disabled={aiLoading}>
-                                {aiLoading ? <FiLoader className="spin" /> : <FiStar />} {aiLoading ? 'Đang gợi ý...' : 'Tạo gợi ý'}
-                            </button>
-                            {aiMessage ? <div className="template-order-ai-message">{aiMessage}</div> : null}
-                        </div>
-
-                        <div className="template-order-ai-results">
-                            {aiRecommendations.length > 0 ? aiRecommendations.map((rec, idx) => (
-                                <article key={`${rec?.verse || 'rec'}-${idx}`} className="template-order-ai-result">
-                                    <div className="template-order-ai-result-head">
-                                        <strong>{rec?.verse || '—'}</strong>
-                                        <button type="button" className="template-order-ai-copy" onClick={() => handleCopyRecommendation(rec)}><FiCopy /> Copy</button>
-                                    </div>
-                                    <p className="template-order-ai-verse">{rec?.text || '—'}</p>
-                                    {rec?.translation ? <p className="template-order-ai-translation">{rec.translation}</p> : null}
-                                    <div className="template-order-ai-meta">
-                                        {rec?.reason ? <span><strong>Lý do:</strong> {rec.reason}</span> : null}
-                                        {rec?.occasion ? <span><strong>Hoàn cảnh:</strong> {rec.occasion}</span> : null}
-                                    </div>
-                                </article>
-                            )) : <div className="template-order-ai-empty">Chưa có gợi ý nào. Hãy bấm “Tạo gợi ý”.</div>}
-                        </div>
-                    </div>
-                </div>
-            ) : null}
 
             <Footer />
         </div>

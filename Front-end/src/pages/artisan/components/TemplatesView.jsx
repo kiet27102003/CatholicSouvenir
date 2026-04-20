@@ -6,7 +6,12 @@ import ImageUploadZone from '../../../components/ui/ImageUploadZone';
 import './TemplatesView.css';
 
 const PLACEHOLDER_IMAGE = 'https://via.placeholder.com/120x90?text=No+Image';
-const INPUT_TYPES = ['TEXT', 'IMAGE', 'COLOR', 'NUMBER'];
+const INPUT_TYPES = [
+    { value: 'TEXT', label: 'Văn bản' },
+    { value: 'IMAGE', label: 'Hình ảnh' },
+    { value: 'COLOR', label: 'Màu sắc' },
+    { value: 'NUMBER', label: 'Số' },
+];
 
 const formatVnd = (value) => `${new Intl.NumberFormat('vi-VN').format(Number(value || 0))} ₫`;
 const formatNumberInput = (value) => {
@@ -57,7 +62,6 @@ const normalizeTemplate = (item) => {
         basePrice: Number(item?.basePrice ?? 0),
         material: item?.material || '',
         style: item?.style || '',
-        basePromptHint: item?.basePromptHint || '',
         baseImages: Array.isArray(item?.baseImages) ? item.baseImages.filter(Boolean) : [],
         isActive: item?.isActive !== false,
         zoneCount: Number(item?.zoneCount ?? customZones.length ?? zones.length ?? 0),
@@ -95,7 +99,6 @@ const defaultTemplateForm = {
     basePrice: '',
     material: '',
     style: '',
-    basePromptHint: '',
     baseImages: [],
     isActive: true,
     customZones: [],
@@ -277,7 +280,6 @@ const TemplatesView = ({ user }) => {
             basePrice: detail.basePrice ?? item.basePrice ?? '',
             material: detail.material || item.material || '',
             style: detail.style || item.style || '',
-            basePromptHint: detail.basePromptHint || item.basePromptHint || '',
             baseImages: Array.isArray(detail.baseImages || item.baseImages) ? (detail.baseImages || item.baseImages).filter(Boolean) : [],
             isActive: detail.isActive !== false,
             customZones: mappedZones,
@@ -330,7 +332,6 @@ const TemplatesView = ({ user }) => {
             basePrice,
             material: (templateForm.material || '').trim() || undefined,
             style: (templateForm.style || '').trim() || undefined,
-            basePromptHint: (templateForm.basePromptHint || '').trim() || undefined,
             baseImages: (templateForm.baseImages || []).filter(Boolean),
             customZones: mappedCustomZones,
             isActive: Boolean(templateForm.isActive),
@@ -514,7 +515,6 @@ const TemplatesView = ({ user }) => {
             basePrice: expandedTemplateDetail.basePrice,
             material: expandedTemplateDetail.material || undefined,
             style: expandedTemplateDetail.style || undefined,
-            basePromptHint: expandedTemplateDetail.basePromptHint || undefined,
             baseImages: expandedTemplateDetail.baseImages || [],
             isActive: nextActive,
         };
@@ -537,7 +537,7 @@ const TemplatesView = ({ user }) => {
             <header className="templates-header">
                 <div>
                     <h1 className="templates-title">Mẫu thiết kế</h1>
-                    <p className="templates-subtitle">Quản lý Product Templates và Custom Zones</p>
+                    <p className="templates-subtitle">Quản lý mẫu sản phẩm và các vùng tùy chỉnh</p>
                 </div>
                 <button type="button" className="btn-primary" onClick={openCreateTemplate}>+ Tạo mẫu mới</button>
             </header>
@@ -737,7 +737,7 @@ const TemplatesView = ({ user }) => {
                                         </div>
                                     )}
                                     <div className="form-field wide-field">
-                                        <label>Base Images</label>
+                                        <label>Ảnh mẫu</label>
                                         <ImageUploadZone
                                             multiple
                                             folder="templates"
@@ -771,9 +771,6 @@ const TemplatesView = ({ user }) => {
                                                 type="text"
                                                 inputMode="numeric"
                                                 autoComplete="off"
-                                                type="text"
-                                                inputMode="numeric"
-                                                autoComplete="off"
                                                 value={templateForm.basePrice}
                                                 onChange={(e) => handleTemplatePriceChange(e.target.value)}
                                             />
@@ -800,16 +797,12 @@ const TemplatesView = ({ user }) => {
                                         <textarea rows={3} value={templateForm.description} onChange={(e) => { setTemplateFormDirty(true); setTemplateForm((p) => ({ ...p, description: e.target.value })); }} />
                                     </div>
 
-                                    <div className="form-field wide-field">
-                                        <label>Base Prompt Hint</label>
-                                        <textarea rows={2} value={templateForm.basePromptHint} onChange={(e) => { setTemplateFormDirty(true); setTemplateForm((p) => ({ ...p, basePromptHint: e.target.value })); }} />
-                                    </div>
                                 </div>
                             </div>
 
                             <div className="constraints-wrap modal-zone-section">
                                 <div className="zones-header-row">
-                                    <h4>Custom Zones</h4>
+                                    <h4>Vùng tùy chỉnh</h4>
                                     <button
                                         type="button"
                                         className="btn-outline"
@@ -818,33 +811,33 @@ const TemplatesView = ({ user }) => {
                                             customZones: [...(p.customZones || []), createEmptyTemplateZone()],
                                         })); }}
                                     >
-                                        + Thêm zone
+                                        + Thêm vùng
                                     </button>
                                 </div>
 
                                 {(templateForm.customZones || []).length === 0 ? (
-                                    <p className="template-subtext">Chưa có zone. Bấm "Thêm zone" để tạo.</p>
+                                    <p className="template-subtext">Chưa có vùng nào. Bấm "Thêm vùng" để tạo.</p>
                                 ) : (
                                     <div className="constraints-list">
                                         {(templateForm.customZones || []).map((zone, idx) => (
                                             <div className="zone-row" key={`template-zone-${idx}`}>
                                                 <div className="zone-row-top">
                                                     <div className="form-field">
-                                                        <label>Tên zone <span className="required-mark">*</span></label>
+                                                        <label>Tên vùng <span className="required-mark">*</span></label>
                                                         <input value={zone.zoneName} onChange={(e) => setTemplateFormDirty(true) || setTemplateForm((p) => { const next = [...(p.customZones || [])]; next[idx] = { ...next[idx], zoneName: e.target.value }; return { ...p, customZones: next }; })} />
                                                     </div>
                                                     <div className="form-field">
-                                                        <label>Input type <span className="required-mark">*</span></label>
+                                                        <label>Kiểu đầu vào <span className="required-mark">*</span></label>
                                                         <select value={zone.inputType} onChange={(e) => setTemplateFormDirty(true) || setTemplateForm((p) => { const next = [...(p.customZones || [])]; next[idx] = { ...next[idx], inputType: e.target.value }; return { ...p, customZones: next }; })}>
-                                                            {INPUT_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}
+                                                            {INPUT_TYPES.map((type) => <option key={type.value} value={type.value}>{type.label}</option>)}
                                                         </select>
                                                     </div>
                                                     <div className="form-field">
-                                                        <label>Extra price</label>
+                                                        <label>Phụ phí</label>
                                                         <input type="number" value={zone.extraPrice} onChange={(e) => setTemplateFormDirty(true) || setTemplateForm((p) => { const next = [...(p.customZones || [])]; next[idx] = { ...next[idx], extraPrice: e.target.value }; return { ...p, customZones: next }; })} />
                                                     </div>
                                                     <div className="form-field">
-                                                        <label>Sort order</label>
+                                                        <label>Thứ tự sắp xếp</label>
                                                         <input type="number" value={zone.sortOrder} onChange={(e) => setTemplateFormDirty(true) || setTemplateForm((p) => { const next = [...(p.customZones || [])]; next[idx] = { ...next[idx], sortOrder: e.target.value }; return { ...p, customZones: next }; })} />
                                                     </div>
                                                     <button
@@ -857,7 +850,7 @@ const TemplatesView = ({ user }) => {
                                                 </div>
                                                 <div className="zone-row-bottom">
                                                     <div className="form-field">
-                                                        <label>Mô tả zone</label>
+                                                        <label>Mô tả vùng</label>
                                                         <input value={zone.zoneDescription} onChange={(e) => setTemplateFormDirty(true) || setTemplateForm((p) => { const next = [...(p.customZones || [])]; next[idx] = { ...next[idx], zoneDescription: e.target.value }; return { ...p, customZones: next }; })} />
                                                     </div>
                                                     <label className="checkbox-label"><input type="checkbox" checked={zone.isRequired} onChange={(e) => setTemplateFormDirty(true) || setTemplateForm((p) => { const next = [...(p.customZones || [])]; next[idx] = { ...next[idx], isRequired: e.target.checked }; return { ...p, customZones: next }; })} /> Bắt buộc</label>
@@ -881,19 +874,19 @@ const TemplatesView = ({ user }) => {
                 <div className="template-modal-overlay" onClick={closeZoneModal}>
                     <div className="template-modal zone-modal" onClick={(e) => e.stopPropagation()}>
                         <div className="template-modal-header">
-                            <h3>{zoneModalMode === 'create' ? 'Thêm hạng mục zone' : 'Chỉnh sửa hạng mục zone'}</h3>
+                            <h3>{zoneModalMode === 'create' ? 'Thêm vùng' : 'Chỉnh sửa vùng'}</h3>
                             <button type="button" className="modal-close" onClick={closeZoneModal}>×</button>
                         </div>
                         <form className="template-modal-body" onSubmit={submitZone}>
                             <div className="zone-form-grid">
                                 <div className="form-field wide-field">
-                                    <label>Tên zone <span className="required-mark">*</span></label>
+                                    <label>Tên vùng <span className="required-mark">*</span></label>
                                     <input value={zoneForm.zoneName} onChange={(e) => setZoneForm((p) => ({ ...p, zoneName: e.target.value }))} />
                                 </div>
                                 <div className="form-field">
-                                    <label>Loại đầu vào <span className="required-mark">*</span></label>
+                                    <label>Kiểu đầu vào <span className="required-mark">*</span></label>
                                     <select value={zoneForm.inputType} onChange={(e) => setZoneForm((p) => ({ ...p, inputType: e.target.value }))}>
-                                        {INPUT_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}
+                                        {INPUT_TYPES.map((type) => <option key={type.value} value={type.value}>{type.label}</option>)}
                                     </select>
                                 </div>
                                 <div className="form-field">
@@ -905,7 +898,7 @@ const TemplatesView = ({ user }) => {
                                     <input type="number" value={zoneForm.sortOrder} onChange={(e) => setZoneForm((p) => ({ ...p, sortOrder: e.target.value }))} />
                                 </div>
                                 <div className="form-field wide-field">
-                                    <label>Mô tả zone</label>
+                                    <label>Mô tả vùng</label>
                                     <input value={zoneForm.zoneDescription} onChange={(e) => setZoneForm((p) => ({ ...p, zoneDescription: e.target.value }))} />
                                 </div>
                                 <label className="checkbox-label wide-field"><input type="checkbox" checked={zoneForm.isRequired} onChange={(e) => setZoneForm((p) => ({ ...p, isRequired: e.target.checked }))} /> Bắt buộc</label>
@@ -1010,17 +1003,16 @@ const TemplateDetailPanel = ({
                 <h3>{safeText(detail.name)}</h3>
                 <p className="template-subtext">{safeText(detail.material)} / {safeText(detail.style)}</p>
                 <p><strong>Giá gốc:</strong> {formatVnd(detail.basePrice)}</p>
-                <p><strong>Base prompt:</strong> {safeText(detail.basePromptHint)}</p>
                 <label className="checkbox-label"><input type="checkbox" checked={detail.isActive} onChange={(e) => onStatusChange(e.target.checked)} /> Hoạt động</label>
             </div>
             <div className="template-detail-right">
                 <div className="zones-header-row">
                     <h4>Danh sách zones ({zones.length})</h4>
-                    <button type="button" className="btn-outline" onClick={onCreateZone}>+ Thêm zone</button>
+                    <button type="button" className="btn-outline" onClick={onCreateZone}>+ Thêm vùng</button>
                 </div>
 
                 {zones.length === 0 ? (
-                    <p className="template-subtext">Chưa có zone.</p>
+                    <p className="template-subtext">Chưa có vùng nào.</p>
                 ) : (
                     <div className="zone-list">
                         {zones.map((zone) => (
@@ -1031,7 +1023,7 @@ const TemplateDetailPanel = ({
                                     <div className="zone-meta-badges">
                                         <span className="badge">{zone.inputType}</span>
                                         <span className="badge">+ {formatVnd(zone.extraPrice)}</span>
-                                        <span className="badge">Sort: {zone.sortOrder}</span>
+                                        <span className="badge">Thứ tự: {zone.sortOrder}</span>
                                     </div>
                                 </div>
                                 <div className="table-actions">

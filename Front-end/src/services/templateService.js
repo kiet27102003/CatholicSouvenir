@@ -31,7 +31,7 @@ const mapError = (error, fallback) => {
 
 export const getTemplates = async (params = {}) => {
     try {
-        const response = await api.get('/templates', { params });
+        const response = await api.get('/templates/my-templates', { params });
         const payload = normalizeResponse(response);
         if (payload.code !== 200) {
             return { success: false, error: payload.message || 'Không tải được danh sách mẫu.' };

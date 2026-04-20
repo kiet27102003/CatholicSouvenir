@@ -119,7 +119,7 @@ const ArtisanRegisterForm = () => {
             });
 
             if (result.success) {
-                appToast.success('Tạo thành công', result.message || 'Đơn đăng ký nghệ nhân đã được gửi');
+                appToast.success('Tạo thành công', 'Vui lòng chờ Admin duyệt đơn');
                 navigate('/login', { state: { message: result.message } });
             } else {
                 appToast.error('Có lỗi xảy ra', result.error || 'Đăng ký nghệ nhân thất bại. Vui lòng thử lại.');

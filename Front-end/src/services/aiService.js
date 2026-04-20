@@ -46,7 +46,7 @@ export const recommendScripture = async ({ purpose, productName, theme, language
 
 export const generateConceptImage = async ({ description }) => {
     try {
-        const response = await api.post('/ai/generate-concept-image', { description });
+        const response = await api.post('/ai/generate-concept', { description });
         const normalized = normalizeResponse(response);
         if (!isSuccessCode(normalized.code)) {
             return { success: false, error: normalized.message || 'Không tạo được ảnh AI.' };

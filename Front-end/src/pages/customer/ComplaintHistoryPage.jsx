@@ -34,6 +34,7 @@ const ComplaintHistoryPage = () => {
     const [pageInfo, setPageInfo] = useState({ totalPages: 1, totalElements: 0, number: 0 });
     const [selectedComplaint, setSelectedComplaint] = useState(null);
     const [detailLoading, setDetailLoading] = useState(false);
+    const [previewImage, setPreviewImage] = useState('');
 
     const loadData = async (nextPage = page) => {
         setLoading(true);
@@ -73,7 +74,8 @@ const ComplaintHistoryPage = () => {
         const id = complaint?.complaintId;
         if (!id) return;
 
-        setSelectedComplaint(null);
+        setSelectedComplaint(complaint);
+        setPreviewImage('');
         setDetailLoading(true);
         const res = await complaintService.getComplaintDetail(id);
         setDetailLoading(false);
@@ -83,7 +85,7 @@ const ComplaintHistoryPage = () => {
             return;
         }
 
-        setSelectedComplaint(res.data || complaint);
+        setSelectedComplaint({ ...complaint, ...(res.data || {}) });
     };
 
     if (!isAuthenticated) return <Navigate to="/login" replace />;
@@ -188,82 +190,93 @@ const ComplaintHistoryPage = () => {
                             <button type="button" className="complaint-detail-close" onClick={() => setSelectedComplaint(null)} aria-label="Đóng">×</button>
                         </div>
 
-                        {detailLoading ? (
-                            <div className="complaint-history-empty">Đang tải chi tiết...</div>
-                        ) : (
-                            <div className="complaint-detail-grid">
-                                <div className="complaint-detail-block">
-                                    <span>Mã khiếu nại</span>
-                                    <strong>{selectedComplaint.complaintId || '—'}</strong>
-                                </div>
-                                <div className="complaint-detail-block">
-                                    <span>Trạng thái</span>
-                                    <strong>{STATUS_META[String(selectedComplaint.status || '').toUpperCase()]?.label || selectedComplaint.status || '—'}</strong>
-                                </div>
-                                <div className="complaint-detail-block">
-                                    <span>Khách hàng</span>
-                                    <strong>{selectedComplaint.customerName || '—'}</strong>
-                                </div>
-                                <div className="complaint-detail-block">
-                                    <span>Artisan</span>
-                                    <strong>{selectedComplaint.artisanName || '—'}</strong>
-                                </div>
-                                <div className="complaint-detail-block wide">
-                                    <span>Lý do</span>
-                                    <p>{selectedComplaint.reason || '—'}</p>
-                                </div>
-                                <div className="complaint-detail-block wide">
-                                    <span>Ảnh bằng chứng</span>
-                                    {Array.isArray(selectedComplaint.evidenceImages) && selectedComplaint.evidenceImages.length > 0 ? (
-                                        <div className="complaint-evidence-grid">
-                                            {selectedComplaint.evidenceImages.map((imageUrl, idx) => (
-                                                <a key={`${imageUrl}-${idx}`} href={imageUrl} target="_blank" rel="noreferrer" className="complaint-evidence-item">
-                                                    <img src={imageUrl} alt={`Bằng chứng ${idx + 1}`} />
-                                                </a>
-                                            ))}
+                        <div className="complaint-detail-scroll">
+                            {detailLoading ? (
+                                <div className="complaint-history-empty">Đang tải chi tiết...</div>
+                            ) : (
+                                <>
+                                    <div className="complaint-detail-grid">
+                                        <div className="complaint-detail-block">
+                                            <span>Mã khiếu nại</span>
+                                            <strong>{selectedComplaint.complaintId || '—'}</strong>
                                         </div>
-                                    ) : (
-                                        <p>Chưa có ảnh bằng chứng.</p>
-                                    )}
-                                </div>
-                                <div className="complaint-detail-block wide">
-                                    <span>Phản hồi artisan</span>
-                                    <p>{selectedComplaint.artisanResponse || '—'}</p>
-                                </div>
-                                <div className="complaint-detail-block">
-                                    <span>Yêu cầu trả hàng</span>
-                                    <strong>{selectedComplaint.requireReturn ? 'Có' : 'Không'}</strong>
-                                </div>
-                                <div className="complaint-detail-block">
-                                    <span>Số tiền hoàn</span>
-                                    <strong>{new Intl.NumberFormat('vi-VN').format(Number(selectedComplaint.refundAmount || 0))} đ</strong>
-                                </div>
-                                <div className="complaint-detail-block">
-                                    <span>Người duyệt</span>
-                                    <strong>{selectedComplaint.reviewedByName || '—'}</strong>
-                                </div>
-                                <div className="complaint-detail-block wide">
-                                    <span>Lý do từ chối</span>
-                                    <p>{selectedComplaint.rejectionReason || '—'}</p>
-                                </div>
-                                <div className="complaint-detail-block wide">
-                                    <span>Ghi chú admin</span>
-                                    <p>{selectedComplaint.adminNote || '—'}</p>
-                                </div>
-                                <div className="complaint-detail-block">
-                                    <span>Đã cập nhật</span>
-                                    <strong>{formatDateTime(selectedComplaint.updatedAt)}</strong>
-                                </div>
-                                <div className="complaint-detail-block">
-                                    <span>Ngày tạo</span>
-                                    <strong>{formatDateTime(selectedComplaint.createdAt)}</strong>
-                                </div>
-                                <div className="complaint-detail-block wide">
-                                    <span>Refund transaction</span>
-                                    <p>{selectedComplaint.refundTransactionId || '—'} {selectedComplaint.refundStatus ? `• ${selectedComplaint.refundStatus}` : ''}</p>
-                                </div>
-                            </div>
-                        )}
+                                        <div className="complaint-detail-block">
+                                            <span>Trạng thái</span>
+                                            <strong>{STATUS_META[String(selectedComplaint.status || '').toUpperCase()]?.label || selectedComplaint.status || '—'}</strong>
+                                        </div>
+                                        <div className="complaint-detail-block">
+                                            <span>Khách hàng</span>
+                                            <strong>{selectedComplaint.customerName || '—'}</strong>
+                                            <p>{selectedComplaint.customerEmail || '—'}</p>
+                                        </div>
+                                        <div className="complaint-detail-block">
+                                            <span>Artisan</span>
+                                            <strong>{selectedComplaint.artisanName || '—'}</strong>
+                                        </div>
+                                        <div className="complaint-detail-block">
+                                            <span>Yêu cầu trả hàng</span>
+                                            <strong>{selectedComplaint.requireReturn ? 'Có' : 'Không'}</strong>
+                                        </div>
+                                        <div className="complaint-detail-block">
+                                            <span>Số tiền hoàn</span>
+                                            <strong>{new Intl.NumberFormat('vi-VN').format(Number(selectedComplaint.refundAmount || 0))} đ</strong>
+                                        </div>
+                                        <div className="complaint-detail-block wide">
+                                            <span>Lý do</span>
+                                            <p>{selectedComplaint.reason || '—'}</p>
+                                        </div>
+                                        <div className="complaint-detail-block wide">
+                                            <span>Phản hồi artisan</span>
+                                            <p>{selectedComplaint.artisanResponse || '—'}</p>
+                                        </div>
+                                        <div className="complaint-detail-block wide">
+                                            <span>Ảnh bằng chứng</span>
+                                            {Array.isArray(selectedComplaint.evidenceImages) && selectedComplaint.evidenceImages.length > 0 ? (
+                                                <div className="complaint-evidence-grid">
+                                                    {selectedComplaint.evidenceImages.map((imageUrl, idx) => (
+                                                        <button
+                                                            key={`${imageUrl}-${idx}`}
+                                                            type="button"
+                                                            className="complaint-evidence-item"
+                                                            onClick={() => setPreviewImage(imageUrl)}
+                                                        >
+                                                            <img src={imageUrl} alt={`Bằng chứng ${idx + 1}`} />
+                                                            <span>Xem</span>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <p>Chưa có ảnh bằng chứng.</p>
+                                            )}
+                                        </div>
+                                        <div className="complaint-detail-block">
+                                            <span>Người duyệt</span>
+                                            <strong>{selectedComplaint.reviewedByName || '—'}</strong>
+                                        </div>
+                                        <div className="complaint-detail-block wide">
+                                            <span>Lý do từ chối</span>
+                                            <p>{selectedComplaint.rejectionReason || '—'}</p>
+                                        </div>
+                                        <div className="complaint-detail-block wide">
+                                            <span>Ghi chú admin</span>
+                                            <p>{selectedComplaint.adminNote || '—'}</p>
+                                        </div>
+                                        <div className="complaint-detail-block">
+                                            <span>Đã cập nhật</span>
+                                            <strong>{formatDateTime(selectedComplaint.updatedAt)}</strong>
+                                        </div>
+                                        <div className="complaint-detail-block">
+                                            <span>Ngày tạo</span>
+                                            <strong>{formatDateTime(selectedComplaint.createdAt)}</strong>
+                                        </div>
+                                        <div className="complaint-detail-block wide">
+                                            <span>Refund transaction</span>
+                                            <p>{selectedComplaint.refundTransactionId || '—'} {selectedComplaint.refundStatus ? `• ${selectedComplaint.refundStatus}` : ''}</p>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </div>
 
                         <div className="complaint-detail-actions">
                             <button type="button" className="btn btn-outline" onClick={() => setSelectedComplaint(null)}>Đóng</button>
@@ -274,6 +287,15 @@ const ComplaintHistoryPage = () => {
                                 Xem đơn hàng
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {previewImage && (
+                <div className="complaint-image-viewer" onClick={() => setPreviewImage('')} role="presentation">
+                    <div className="complaint-image-viewer__panel" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+                        <button type="button" className="complaint-image-viewer__close" onClick={() => setPreviewImage('')} aria-label="Đóng">×</button>
+                        <img src={previewImage} alt="Ảnh bằng chứng phóng to" />
                     </div>
                 </div>
             )}

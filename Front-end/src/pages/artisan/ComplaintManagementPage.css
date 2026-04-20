@@ -248,6 +248,43 @@
     line-height: 1.6;
 }
 
+.detail-box strong {
+    display: block;
+    margin-top: 6px;
+    font-size: 16px;
+}
+
+.detail-panel {
+    padding: 16px;
+    border-radius: 18px;
+    border: 1px solid #e2e8f0;
+    background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+}
+
+.detail-panel__head {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.detail-panel__head h3 {
+    margin: 0;
+    font-size: 16px;
+}
+
+.detail-panel__head span {
+    color: #64748b;
+    font-size: 13px;
+}
+
+.detail-empty {
+    margin: 0;
+    color: #475569;
+    line-height: 1.6;
+}
+
 .response-box {
     display: grid;
     gap: 12px;
@@ -277,15 +314,78 @@
 
 .evidence-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
     gap: 10px;
 }
 
-.evidence-grid img {
+.evidence-thumb {
+    position: relative;
     width: 100%;
-    height: 140px;
-    object-fit: cover;
+    aspect-ratio: 1 / 1;
+    padding: 0;
+    border: 0;
     border-radius: 14px;
+    overflow: hidden;
+    background: #e2e8f0;
+    cursor: zoom-in;
+}
+
+.evidence-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.2s ease;
+}
+
+.evidence-thumb span {
+    position: absolute;
+    inset: auto 0 0 0;
+    background: linear-gradient(180deg, transparent, rgba(15, 23, 42, 0.7));
+    color: #fff;
+    font-size: 11px;
+    padding: 14px 8px 6px;
+    text-align: center;
+    font-weight: 700;
+}
+
+.evidence-thumb:hover img {
+    transform: scale(1.05);
+}
+
+.complaint-image-viewer {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    background: rgba(15, 23, 42, 0.78);
+    display: grid;
+    place-items: center;
+    padding: 18px;
+}
+
+.complaint-image-viewer__panel {
+    position: relative;
+    max-width: min(92vw, 1100px);
+    max-height: 92vh;
+    background: #0f172a;
+    border-radius: 18px;
+    padding: 48px 18px 18px;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.35);
+}
+
+.complaint-image-viewer__panel img {
+    display: block;
+    max-width: 100%;
+    max-height: calc(92vh - 80px);
+    margin: 0 auto;
+    object-fit: contain;
+    border-radius: 12px;
+}
+
+.complaint-image-viewer__close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
 }
 
 @media (max-width: 900px) {
@@ -325,5 +425,9 @@
     .card-top {
         flex-direction: column;
         align-items: flex-start;
+    }
+
+    .complaint-image-viewer__panel {
+        padding: 44px 12px 12px;
     }
 }

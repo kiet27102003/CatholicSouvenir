@@ -142,6 +142,15 @@
 .complaint-detail-modal {
     width: min(980px, 100%);
     padding: 22px;
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 40px);
+}
+
+.complaint-detail-scroll {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 6px;
 }
 
 .complaint-detail-close {
@@ -166,6 +175,11 @@
     border-radius: 14px;
 }
 
+.complaint-detail-block strong {
+    display: block;
+    margin-top: 8px;
+}
+
 .complaint-detail-block.wide {
     grid-column: span 2;
 }
@@ -178,17 +192,83 @@
 
 .complaint-evidence-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
     gap: 10px;
     margin-top: 10px;
 }
 
+.complaint-evidence-item {
+    position: relative;
+    border: none;
+    padding: 0;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #e2e8f0;
+    cursor: zoom-in;
+}
+
 .complaint-evidence-item img {
     width: 100%;
-    height: 120px;
+    height: 96px;
     object-fit: cover;
     border-radius: 12px;
+    display: block;
 }
+
+.complaint-evidence-item span {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    color: #fff;
+    background: linear-gradient(180deg, transparent, rgba(15, 23, 42, 0.75));
+    font-size: 0.72rem;
+    padding: 14px 8px 6px;
+    text-align: center;
+    font-weight: 700;
+}
+
+.complaint-image-viewer {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    background: rgba(15, 23, 42, 0.78);
+    display: grid;
+    place-items: center;
+    padding: 18px;
+}
+
+.complaint-image-viewer__panel {
+    position: relative;
+    max-width: min(92vw, 1100px);
+    max-height: 92vh;
+    background: #0f172a;
+    border-radius: 18px;
+    padding: 48px 18px 18px;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.35);
+}
+
+.complaint-image-viewer__panel img {
+    display: block;
+    max-width: 100%;
+    max-height: calc(92vh - 80px);
+    margin: 0 auto;
+    object-fit: contain;
+    border-radius: 12px;
+}
+
+.complaint-image-viewer__close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 999px;
+    background: rgba(241, 245, 249, 0.96);
+    font-size: 1.4rem;
+}
+
 
 @media (max-width: 768px) {
     .complaint-history-summary,
@@ -207,5 +287,9 @@
 
     .complaint-detail-block.wide {
         grid-column: span 1;
+    }
+
+    .complaint-image-viewer__panel {
+        padding: 44px 12px 12px;
     }
 }

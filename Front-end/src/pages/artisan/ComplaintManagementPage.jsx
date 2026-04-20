@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import dayjs from 'dayjs';
 import { FiCheckCircle, FiChevronLeft, FiChevronRight, FiClock, FiMessageSquare, FiRefreshCw, FiTruck, FiUser } from 'react-icons/fi';
 import { appToast } from '../../lib/appToast';
-import { confirmReturnShipment, getArtisanComplaints, respondToComplaint } from '../../services/complaintService';
+import { confirmReturnShipment, getArtisanComplaintDetail, getArtisanComplaints, respondToComplaint } from '../../services/complaintService';
 import './ComplaintManagementPage.css';
 
 const PAGE_SIZE = 10;
@@ -24,6 +24,8 @@ const ComplaintManagementPage = ({ embedded = false }) => {
     const [page, setPage] = useState(0);
     const [pageInfo, setPageInfo] = useState({ totalPages: 0, totalElements: 0, number: 0 });
     const [selected, setSelected] = useState(null);
+    const [detailLoading, setDetailLoading] = useState(false);
+    const [previewImage, setPreviewImage] = useState('');
     const [detailMode, setDetailMode] = useState('view');
     const [responseText, setResponseText] = useState('');
     const [requireReturn, setRequireReturn] = useState(false);
@@ -64,9 +66,22 @@ const ComplaintManagementPage = ({ embedded = false }) => {
 
     const openDetail = async (item) => {
         setSelected(item);
+        setDetailLoading(true);
+        setPreviewImage('');
         setDetailMode('view');
         setResponseText(item?.artisanResponse || '');
         setRequireReturn(Boolean(item?.requireReturn));
+
+        const res = await getArtisanComplaintDetail(item?.complaintId);
+        if (res.success) {
+            const detail = res.data || item;
+            setSelected({ ...item, ...detail });
+            setResponseText(detail?.artisanResponse || item?.artisanResponse || '');
+            setRequireReturn(Boolean(detail?.requireReturn ?? item?.requireReturn));
+        } else {
+            appToast.error('Không tải được chi tiết khiếu nại', res.error || 'Vui lòng thử lại');
+        }
+        setDetailLoading(false);
     };
 
     const handleSubmitResponse = async () => {
@@ -170,58 +185,75 @@ const ComplaintManagementPage = ({ embedded = false }) => {
 
             {selected && (
                 <div className="complaint-modal-overlay" onClick={() => setSelected(null)}>
-                    <div className="complaint-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+                    <div className="complaint-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="complaint-modal-title">
                         <div className="modal-head">
                             <div>
                                 <p className="eyebrow">Chi tiết khiếu nại</p>
-                                <h2>#{String(selected.complaintId || '').slice(0, 8)}</h2>
+                                <h2 id="complaint-modal-title">#{String(selected.complaintId || '').slice(0, 8)}</h2>
                             </div>
                             <button type="button" className="modal-close" onClick={() => setSelected(null)}>×</button>
                         </div>
 
                         <div className="modal-scroll">
-                            <div className="detail-grid">
-                                <div className="detail-box"><span>Khách hàng</span><strong>{selected.customerName || '—'}</strong></div>
-                                <div className="detail-box"><span>Đơn hàng</span><strong>{selected.orderId || '—'}</strong></div>
-                                <div className="detail-box wide"><span>Lý do</span><p>{selected.reason || '—'}</p></div>
-                                <div className="detail-box"><span>Yêu cầu trả hàng</span><strong>{selected.requireReturn ? 'Có' : 'Không'}</strong></div>
-                                <div className="detail-box"><span>Số tiền hoàn</span><strong>{new Intl.NumberFormat('vi-VN').format(Number(selected.refundAmount || 0))} đ</strong></div>
-                                <div className="detail-box"><span>Trạng thái</span><strong>{STATUS_META[String(selected.status || '').toUpperCase()]?.label || selected.status || '—'}</strong></div>
-                            </div>
-
-                            {detailMode === 'edit' ? (
-                                <div className="response-box">
-                                    <label>
-                                        <span>Phản hồi artisan</span>
-                                        <textarea rows="5" value={responseText} onChange={(e) => setResponseText(e.target.value)} />
-                                    </label>
-                                    <label className="checkbox-row">
-                                        <input type="checkbox" checked={requireReturn} onChange={(e) => setRequireReturn(e.target.checked)} />
-                                        <span>Yêu cầu khách trả hàng</span>
-                                    </label>
-                                </div>
+                            {detailLoading ? (
+                                <div className="empty-state">Đang tải chi tiết khiếu nại...</div>
                             ) : (
-                                <div className="detail-box wide">
-                                    <span>Phản hồi artisan</span>
-                                    <p>{selected.artisanResponse || 'Chưa có phản hồi.'}</p>
-                                </div>
-                            )}
-
-                            {Array.isArray(selected.evidenceImages) && selected.evidenceImages.length > 0 && (
-                                <div className="detail-box wide">
-                                    <span>Ảnh bằng chứng</span>
-                                    <div className="evidence-grid">
-                                        {selected.evidenceImages.map((url, idx) => (
-                                            <a key={`${url}-${idx}`} href={url} target="_blank" rel="noreferrer"><img src={url} alt={`Bằng chứng ${idx + 1}`} /></a>
-                                        ))}
+                                <>
+                                    <div className="detail-grid">
+                                        <div className="detail-box"><span>Khách hàng</span><strong>{selected.customerName || '—'}</strong><p>{selected.customerEmail || '—'}</p></div>
+                                        <div className="detail-box"><span>Đơn hàng</span><strong>{selected.orderId || '—'}</strong><p>{selected.customOrderId || 'Không phải đơn tùy chỉnh'}</p></div>
+                                        <div className="detail-box"><span>Trạng thái</span><strong>{STATUS_META[String(selected.status || '').toUpperCase()]?.label || selected.status || '—'}</strong></div>
+                                        <div className="detail-box"><span>Yêu cầu trả hàng</span><strong>{selected.requireReturn ? 'Có' : 'Không'}</strong></div>
+                                        <div className="detail-box"><span>Số tiền hoàn</span><strong>{new Intl.NumberFormat('vi-VN').format(Number(selected.refundAmount || 0))} đ</strong></div>
+                                        <div className="detail-box"><span>Thời gian</span><strong>{formatDateTime(selected.createdAt)}</strong><p>Cập nhật: {formatDateTime(selected.updatedAt)}</p></div>
+                                        <div className="detail-box wide"><span>Lý do khiếu nại</span><p>{selected.reason || '—'}</p></div>
                                     </div>
-                                </div>
-                            )}
 
-                            <div className="detail-box wide">
-                                <span>Thời gian</span>
-                                <p>Tạo: {formatDateTime(selected.createdAt)} · Cập nhật: {formatDateTime(selected.updatedAt)}</p>
-                            </div>
+                                    <section className="detail-panel">
+                                        <div className="detail-panel__head">
+                                            <h3>Ảnh bằng chứng</h3>
+                                            <span>{Array.isArray(selected.evidenceImages) ? selected.evidenceImages.length : 0} ảnh</span>
+                                        </div>
+                                        {Array.isArray(selected.evidenceImages) && selected.evidenceImages.length > 0 ? (
+                                            <div className="evidence-grid">
+                                                {selected.evidenceImages.map((url, idx) => (
+                                                    <button
+                                                        key={`${url}-${idx}`}
+                                                        type="button"
+                                                        className="evidence-thumb"
+                                                        onClick={() => setPreviewImage(url)}
+                                                    >
+                                                        <img src={url} alt={`Bằng chứng ${idx + 1}`} />
+                                                        <span>Xem</span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <p className="detail-empty">Chưa có ảnh bằng chứng.</p>
+                                        )}
+                                    </section>
+
+                                    <section className="detail-panel">
+                                        <div className="detail-panel__head">
+                                            <h3>Phản hồi artisan</h3>
+                                        </div>
+                                        {detailMode === 'edit' ? (
+                                            <div className="response-box">
+                                                <label>
+                                                    <span>Nội dung phản hồi</span>
+                                                    <textarea rows="5" value={responseText} onChange={(e) => setResponseText(e.target.value)} />
+                                                </label>
+                                                <label className="checkbox-row">
+                                                    <input type="checkbox" checked={requireReturn} onChange={(e) => setRequireReturn(e.target.checked)} />
+                                                    <span>Yêu cầu khách trả hàng</span>
+                                                </label>
+                                            </div>
+                                        ) : (
+                                            <p className="detail-empty">{selected.artisanResponse || 'Chưa có phản hồi.'}</p>
+                                        )}
+                                    </section>
+                                </>
+                            )}
                         </div>
 
                         <div className="modal-actions">
@@ -248,6 +280,15 @@ const ComplaintManagementPage = ({ embedded = false }) => {
                                 </button>
                             )}
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {previewImage && (
+                <div className="complaint-image-viewer" onClick={() => setPreviewImage('')}>
+                    <div className="complaint-image-viewer__panel" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+                        <button type="button" className="modal-close complaint-image-viewer__close" onClick={() => setPreviewImage('')}>×</button>
+                        <img src={previewImage} alt="Ảnh bằng chứng phóng to" />
                     </div>
                 </div>
             )}

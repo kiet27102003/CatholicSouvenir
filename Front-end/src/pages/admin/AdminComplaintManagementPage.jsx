@@ -10,12 +10,15 @@ const PAGE_SIZE = 10;
 const COMPLAINT_STATUS_LABELS = {
     PENDING: 'Đang chờ xử lý',
     WAITING_RETURN: 'Chờ khách hoàn hàng',
+    RETURN_PENDING: 'Chờ khách hoàn hàng',
     PROCESSING_REFUND: 'Đang xử lý hoàn tiền',
+    REFUND_PROCESSING: 'Đang xử lý hoàn tiền',
     APPROVED: 'Đã duyệt',
     REJECTED: 'Đã từ chối',
 };
 const REFUND_STATUS_LABELS = {
     PENDING: 'Đang chờ',
+    PROCESSING: 'Đang xử lý',
     COMPLETED: 'Hoàn tất',
     FAILED: 'Thất bại',
 };
@@ -50,6 +53,7 @@ const AdminComplaintManagementPage = () => {
     const [zoomedEvidence, setZoomedEvidence] = useState(null);
     const [orderTotal, setOrderTotal] = useState(null);
     const [orderLoading, setOrderLoading] = useState(false);
+    const [targetCustomOrder, setTargetCustomOrder] = useState(null);
 
     const loadComplaints = async () => {
         setLoading(true);
@@ -99,6 +103,7 @@ const AdminComplaintManagementPage = () => {
         setModalAction(action);
         setDetailMode(true);
         setOrderTotal(null);
+        setTargetCustomOrder(item?.customOrderId || null);
         const res = await complaintService.getAdminComplaintDetail(item.complaintId || item.id);
         if (!res.success) {
             appToast.error('Không tải được chi tiết', res.error || 'Vui lòng thử lại sau');
@@ -254,7 +259,9 @@ const AdminComplaintManagementPage = () => {
                     <button type="button" className="admin-evidence-modal-close" onClick={() => setZoomedEvidence(null)} aria-label="Đóng hình">
                         ×
                     </button>
-                    <img src={zoomedEvidence} alt="Bằng chứng phóng to" className="admin-evidence-modal-image" onClick={(e) => e.stopPropagation()} />
+                    <div className="admin-evidence-modal-panel" onClick={(e) => e.stopPropagation()}>
+                        <img src={zoomedEvidence} alt="Bằng chứng phóng to" className="admin-evidence-modal-image" />
+                    </div>
                 </div>
             )}
 
@@ -266,6 +273,9 @@ const AdminComplaintManagementPage = () => {
                                 <p className="admin-complaint-modal-kicker">Chi tiết khiếu nại</p>
                                 <h2 id="complaint-detail-title">#{String(selectedDetail?.complaintId || selected.complaintId || '').slice(0, 8)}</h2>
                                 <p className="admin-complaint-modal-subtitle">Xem toàn bộ thông tin để xử lý phê duyệt hoặc từ chối.</p>
+                                {selectedDetail?.reviewedByName && (
+                                    <p className="admin-complaint-modal-subtitle">Đã duyệt bởi: {selectedDetail.reviewedByName}{selectedDetail.reviewedAt ? ` · ${formatDateTime(selectedDetail.reviewedAt)}` : ''}</p>
+                                )}
                             </div>
                             <button type="button" className="admin-complaint-modal-close" onClick={() => setDetailMode(false)} aria-label="Đóng">×</button>
                         </div>
@@ -296,6 +306,34 @@ const AdminComplaintManagementPage = () => {
                                     <span>Tổng đơn hàng</span>
                                     <strong>{orderLoading ? 'Đang tải...' : (orderTotal != null ? `${Number(orderTotal).toLocaleString('vi-VN')} đ` : '—')}</strong>
                                 </div>
+                                <div className="admin-complaint-summary-row">
+                                    <span>ID khiếu nại</span>
+                                    <strong>{selectedDetail?.complaintId || selected.complaintId || '—'}</strong>
+                                </div>
+                                <div className="admin-complaint-summary-row">
+                                    <span>Refund Txn</span>
+                                    <strong>{selectedDetail?.refundTransactionId || '—'}</strong>
+                                </div>
+                                <div className="admin-complaint-summary-row">
+                                    <span>Refund status</span>
+                                    <strong>{translateStatus(selectedDetail?.refundStatus, REFUND_STATUS_LABELS)}</strong>
+                                </div>
+                                <div className="admin-complaint-summary-row">
+                                    <span>Admin note</span>
+                                    <strong>{selectedDetail?.adminNote || '—'}</strong>
+                                </div>
+                                <div className="admin-complaint-summary-row">
+                                    <span>Từ chối</span>
+                                    <strong>{selectedDetail?.rejectionReason || '—'}</strong>
+                                </div>
+                                <div className="admin-complaint-summary-row">
+                                    <span>Người duyệt</span>
+                                    <strong>{selectedDetail?.reviewedByName || '—'}</strong>
+                                </div>
+                                <div className="admin-complaint-summary-row">
+                                    <span>Thời gian duyệt</span>
+                                    <strong>{formatDateTime(selectedDetail?.reviewedAt)}</strong>
+                                </div>
                             </aside>
 
                             <div className="admin-complaint-details-grid">
@@ -304,7 +342,19 @@ const AdminComplaintManagementPage = () => {
                                     <div className="admin-complaint-detail-list">
                                         <div><span>Khách hàng</span><strong>{selectedDetail?.customerName || '—'}</strong></div>
                                         <div><span>Email</span><strong>{selectedDetail?.customerEmail || '—'}</strong></div>
+                                        <div><span>Customer ID</span><strong>{selectedDetail?.customerId || '—'}</strong></div>
                                         <div><span>Artisan</span><strong>{selectedDetail?.artisanName || '—'}</strong></div>
+                                        <div><span>Artisan ID</span><strong>{selectedDetail?.artisanId || '—'}</strong></div>
+                                    </div>
+                                </section>
+
+                                <section className="admin-complaint-detail-block">
+                                    <h3>Thông tin đơn liên quan</h3>
+                                    <div className="admin-complaint-detail-list">
+                                        <div><span>Order ID</span><strong>{selectedDetail?.orderId || '—'}</strong></div>
+                                        <div><span>Custom Order ID</span><strong>{selectedDetail?.customOrderId || '—'}</strong></div>
+                                        <div><span>Số tiền hoàn</span><strong>{selectedDetail?.refundAmount != null ? `${Number(selectedDetail.refundAmount).toLocaleString('vi-VN')} đ` : '—'}</strong></div>
+                                        <div><span>Refund status</span><strong>{translateStatus(selectedDetail?.refundStatus, REFUND_STATUS_LABELS)}</strong></div>
                                     </div>
                                 </section>
 
@@ -314,30 +364,27 @@ const AdminComplaintManagementPage = () => {
                                 </section>
 
                                 <section className="admin-complaint-detail-block">
+                                    <h3>Phản hồi artisan</h3>
+                                    <p className="admin-complaint-detail-text">{selectedDetail?.artisanResponse || 'Chưa có phản hồi.'}</p>
+                                    <p className="admin-complaint-detail-subtext">{selectedDetail?.artisanResponseAt ? `Phản hồi lúc ${formatDateTime(selectedDetail.artisanResponseAt)}` : ''}</p>
+                                </section>
+
+                                <section className="admin-complaint-detail-block">
                                     <h3>Bằng chứng đính kèm</h3>
                                     {(selectedDetail?.evidenceImages || []).length > 0 ? (
                                         <div className="admin-complaint-evidence-grid">
-                                            {(selectedDetail?.evidenceImages || []).map((image, index) => {
-                                                const isZoomed = zoomedEvidence === image;
-                                                return (
-                                                    <button
-                                                        key={`${image}-${index}`}
-                                                        type="button"
-                                                        className={`admin-complaint-evidence-item ${isZoomed ? 'is-zoomed' : ''}`}
-                                                        onClick={() => setZoomedEvidence(isZoomed ? null : image)}
-                                                        aria-label={isZoomed ? 'Thu nhỏ hình' : `Phóng to bằng chứng ${index + 1}`}
-                                                    >
-                                                        {!isZoomed ? (
-                                                            <img src={image} alt={`Bằng chứng ${index + 1}`} />
-                                                        ) : (
-                                                            <>
-                                                                <img src={image} alt={`Bằng chứng ${index + 1}`} />
-                                                                <span className="admin-complaint-evidence-close">×</span>
-                                                            </>
-                                                        )}
-                                                    </button>
-                                                );
-                                            })}
+                                            {(selectedDetail?.evidenceImages || []).map((image, index) => (
+                                                <button
+                                                    key={`${image}-${index}`}
+                                                    type="button"
+                                                    className="admin-complaint-evidence-item"
+                                                    onClick={() => setZoomedEvidence(image)}
+                                                    aria-label={`Phóng to bằng chứng ${index + 1}`}
+                                                >
+                                                    <img src={image} alt={`Bằng chứng ${index + 1}`} />
+                                                    <span>Xem</span>
+                                                </button>
+                                            ))}
                                         </div>
                                     ) : (
                                         <div className="admin-complaint-empty inline">Chưa có ảnh bằng chứng</div>

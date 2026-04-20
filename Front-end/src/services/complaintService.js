@@ -106,7 +106,19 @@ export const getArtisanComplaints = async ({ page = 0, size = 10 } = {}) => {
     }
 };
 
-export const getArtisanComplaintDetail = async (id) => getComplaintDetail(id);
+export const getArtisanComplaintDetail = async (id) => {
+    if (!id) return { success: false, error: 'Thiếu mã khiếu nại.' };
+    try {
+        const response = await api.get(`/artisan/complaints/${id}`);
+        const normalized = normalizeResponse(response);
+        if (!isSuccessCode(normalized.code)) {
+            return { success: false, error: normalized.message || 'Không tải được chi tiết khiếu nại artisan.' };
+        }
+        return { success: true, data: normalized.data ?? null };
+    } catch (error) {
+        return { success: false, error: mapError(error, 'Không tải được chi tiết khiếu nại artisan. Vui lòng thử lại.') };
+    }
+};
 
 export const respondToComplaint = async (id, body) => {
     if (!id) return { success: false, error: 'Thiếu mã khiếu nại.' };

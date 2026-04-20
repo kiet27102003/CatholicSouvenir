@@ -7,9 +7,13 @@ import Footer from '../../components/Footer/Footer';
 import './CustomerLayout.css';
 
 const CustomerLayout = () => {
-    const { user, isAuthenticated } = useAuth();
+    const { user, isAuthenticated, loading } = useAuth();
     const location = useLocation();
     const [supportOpen, setSupportOpen] = useState(location.pathname === '/complaint-history' || location.pathname === '/refund-support');
+
+    if (loading) {
+        return null;
+    }
 
     const role = String(user?.role || '').toUpperCase();
     if (!isAuthenticated || role !== 'CUSTOMER') {

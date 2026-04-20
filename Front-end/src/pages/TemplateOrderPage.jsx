@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { FiArrowLeft, FiCheck, FiShoppingBag, FiStar } from 'react-icons/fi';
+import { FiArrowLeft, FiCheck, FiCopy, FiLoader, FiMessageSquare, FiSearch, FiShoppingBag, FiStar, FiX } from 'react-icons/fi';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Header from '../components/Header/Header';
 import Footer from '../components/Footer/Footer';
 import templateService from '../services/templateService';
+import { recommendScripture } from '../services/aiService';
 import { useCart } from '../context/CartContext';
 import { appToast } from '../lib/appToast';
 import './TemplateOrderPage.css';
@@ -29,6 +30,17 @@ const TemplateOrderPage = () => {
     const [template, setTemplate] = useState(null);
     const [zoneValues, setZoneValues] = useState({});
     const [selectedImage, setSelectedImage] = useState('');
+    const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+    const [aiLoading, setAiLoading] = useState(false);
+    const [aiForm, setAiForm] = useState({
+        purpose: '',
+        productName: '',
+        theme: '',
+        language: 'vi',
+        maxResults: 5,
+    });
+    const [aiData, setAiData] = useState(null);
+    const [aiError, setAiError] = useState('');
 
     useEffect(() => {
         window.scrollTo(0, 0);
@@ -106,6 +118,66 @@ const TemplateOrderPage = () => {
     }, [template?.zones, zoneValues]);
 
     const totalPrice = Number(template?.basePrice || 0) + extraPriceTotal;
+
+    useEffect(() => {
+        if (!template) return;
+
+        setAiForm((prev) => ({
+            ...prev,
+            productName: prev.productName || template.name || '',
+            theme: prev.theme || template.style || template.categoryName || '',
+        }));
+    }, [template]);
+
+    const handleOpenAiModal = () => {
+        setAiData(null);
+        setAiError('');
+        setIsAiModalOpen(true);
+    };
+
+    const handleAiSubmit = async (event) => {
+        event.preventDefault();
+        if (!template) return;
+
+        setAiLoading(true);
+        setAiError('');
+        setAiData(null);
+
+        try {
+            const result = await recommendScripture({
+                purpose: aiForm.purpose.trim(),
+                productName: aiForm.productName.trim() || template.name,
+                theme: aiForm.theme.trim(),
+                language: aiForm.language,
+                maxResults: Number(aiForm.maxResults) || 5,
+            });
+
+            if (!result.success) {
+                setAiError(result.error || 'Không lấy được gợi ý Kinh Thánh.');
+                return;
+            }
+
+            const payload = result.data || {};
+            if (payload?.success === false) {
+                setAiError(payload?.errorMessage || payload?.message || 'Không lấy được gợi ý Kinh Thánh.');
+                return;
+            }
+
+            setAiData(payload);
+        } finally {
+            setAiLoading(false);
+        }
+    };
+
+    const handleCopyVerse = async (item) => {
+        const text = [item?.verse, item?.text, item?.translation].filter(Boolean).join('\n');
+        try {
+            await navigator.clipboard.writeText(text);
+            appToast.success('Đã sao chép câu Kinh Thánh');
+        } catch {
+            appToast.warning('Không thể sao chép', 'Trình duyệt đã chặn thao tác clipboard.');
+        }
+    };
 
     const handleAddToCart = async () => {
         if (!template) return;
@@ -234,6 +306,9 @@ const TemplateOrderPage = () => {
                         </div>
 
                         <div className="template-order-actions">
+                            <button type="button" className="btn btn-secondary btn-large template-order-ai-btn" onClick={handleOpenAiModal}>
+                                <FiMessageSquare /> Gợi ý câu Kinh Thánh
+                            </button>
                             <button type="button" className="btn btn-primary btn-large" onClick={handleAddToCart} disabled={submitting}>
                                 <FiShoppingBag /> {submitting ? 'Đang thêm...' : 'Thêm vào giỏ hàng'}
                             </button>
@@ -293,7 +368,13 @@ const TemplateOrderPage = () => {
                                                     onChange={(e) => setZoneValues((prev) => ({ ...prev, [zone.zoneId]: e.target.value }))}
                                                 />
                                                 {isTextZone ? (
-                                                    <span className="template-order-zone-ai-hint">AI</span>
+                                                    <button
+                                                        type="button"
+                                                        className="template-order-zone-ai-btn"
+                                                        onClick={handleOpenAiModal}
+                                                    >
+                                                        <FiMessageSquare /> AI
+                                                    </button>
                                                 ) : null}
                                             </div>
                                         )}
@@ -309,6 +390,108 @@ const TemplateOrderPage = () => {
                 </section>
             </main>
 
+
+            {isAiModalOpen ? (
+                <div className="template-order-ai-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="template-order-ai-modal-title" onClick={() => setIsAiModalOpen(false)}>
+                    <div className="template-order-ai-modal" onClick={(event) => event.stopPropagation()}>
+                        <div className="template-order-ai-modal-header">
+                            <div>
+                                <div className="template-order-ai-modal-badge">
+                                    <FiStar /> Trợ lý Kinh Thánh
+                                </div>
+                                <h2 id="template-order-ai-modal-title">Gợi ý câu Kinh Thánh cho sản phẩm</h2>
+                                <p className="template-order-subtitle">Thiết kế modal mới để lấy câu phù hợp cho sản phẩm, chủ đề và ngôn ngữ bạn muốn.</p>
+                            </div>
+                            <button type="button" className="template-order-ai-close" onClick={() => setIsAiModalOpen(false)} aria-label="Đóng modal">
+                                <FiX />
+                            </button>
+                        </div>
+
+                        <form className="template-order-ai-form" onSubmit={handleAiSubmit}>
+                            <div className="template-order-ai-grid">
+                                <label>
+                                    <span>Mục đích</span>
+                                    <input
+                                        type="text"
+                                        value={aiForm.purpose}
+                                        onChange={(e) => setAiForm((prev) => ({ ...prev, purpose: e.target.value }))}
+                                        placeholder="Ví dụ: in lên quà mừng lễ rửa tội"
+                                        required
+                                    />
+                                </label>
+                                <label>
+                                    <span>Tên sản phẩm</span>
+                                    <input
+                                        type="text"
+                                        value={aiForm.productName}
+                                        onChange={(e) => setAiForm((prev) => ({ ...prev, productName: e.target.value }))}
+                                        placeholder={template.name}
+                                    />
+                                </label>
+                                <label>
+                                    <span>Chủ đề</span>
+                                    <input
+                                        type="text"
+                                        value={aiForm.theme}
+                                        onChange={(e) => setAiForm((prev) => ({ ...prev, theme: e.target.value }))}
+                                        placeholder="Tình yêu, hy vọng, cầu nguyện..."
+                                        required
+                                    />
+                                </label>
+                                <label>
+                                    <span>Ngôn ngữ</span>
+                                    <select
+                                        value={aiForm.language}
+                                        onChange={(e) => setAiForm((prev) => ({ ...prev, language: e.target.value }))}
+                                    >
+                                        <option value="vi">Tiếng Việt</option>
+                                        <option value="en">English</option>
+                                        <option value="la">Latin</option>
+                                    </select>
+                                </label>
+                                <label>
+                                    <span>Số kết quả tối đa</span>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max="10"
+                                        value={aiForm.maxResults}
+                                        onChange={(e) => setAiForm((prev) => ({ ...prev, maxResults: e.target.value }))}
+                                    />
+                                </label>
+                            </div>
+
+                            <button type="submit" className="btn btn-primary template-order-ai-submit" disabled={aiLoading}>
+                                {aiLoading ? <FiLoader className="spin" /> : <FiSearch />}
+                                {aiLoading ? 'Đang tìm gợi ý...' : 'Nhận gợi ý'}
+                            </button>
+                        </form>
+
+                        {aiError ? <div className="template-order-ai-message">{aiError}</div> : null}
+
+                        {aiData?.recommendations?.length ? (
+                            <div className="template-order-ai-results">
+                                {aiData.recommendations.map((item, index) => (
+                                    <article key={`${item.verse || index}-${index}`} className="template-order-ai-result">
+                                        <div className="template-order-ai-result-head">
+                                            <strong>{item.verse || `Gợi ý ${index + 1}`}</strong>
+                                            <button type="button" className="template-order-ai-copy" onClick={() => handleCopyVerse(item)}>
+                                                <FiCopy /> Sao chép
+                                            </button>
+                                        </div>
+                                        <p className="template-order-ai-verse">{item.text}</p>
+                                        <p className="template-order-ai-translation">{item.translation}</p>
+                                        <p className="template-order-ai-meta"><strong>Lý do:</strong> {item.reason}</p>
+                                        <p className="template-order-ai-meta"><strong>Phù hợp dịp:</strong> {item.occasion}</p>
+                                    </article>
+                                ))}
+                            </div>
+                        ) : aiData ? (
+                            <div className="template-order-ai-empty">Không có gợi ý phù hợp.</div>
+                        ) : null}
+                    </div>
+                </div>
+            ) : null}
 
             <Footer />
         </div>

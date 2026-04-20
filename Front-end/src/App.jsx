@@ -35,6 +35,7 @@ import ComplaintCenterPage from './pages/customer/ComplaintCenterPage'
 import ComplaintHistoryPage from './pages/customer/ComplaintHistoryPage'
 import RefundSupportPage from './pages/customer/RefundSupportPage'
 import CartDrawer from './components/CartDrawer/CartDrawer'
+import ChatBox from './components/ChatBox'
 
 import AdminLayout from './pages/admin/AdminLayout'
 import AdminWallets from './pages/admin/AdminWallets'
@@ -88,6 +89,7 @@ function App() {
     <>
       <AppToastContainer />
       <CartDrawer />
+      <ChatBox />
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/shop" element={<ShopPage />} />

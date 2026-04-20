@@ -354,16 +354,35 @@ const ArtisanOrderDetailPage = () => {
     }, [shipmentForm.districtCode]);
 
     const handleCreateShipment = async () => {
-        if (!order?.orderId || shippingSubmitting) return;
+        const shipmentOrderId = order?.orderId || order?.id;
+
+        console.groupCollapsed('[Shipment] Create shipment request');
+        console.log('order detail:', order);
+        console.log('shipment form:', shipmentForm);
+        console.log('selected province:', selectedProvince);
+        console.log('selected district:', selectedDistrict);
+        console.log('selected ward code:', shipmentForm.wardCode);
+        console.log('resolved orderId:', shipmentOrderId);
+        console.groupEnd();
+
+        if (!shipmentOrderId || shippingSubmitting) {
+            console.warn('[Shipment] Skip create shipment because orderId is missing or request is already in progress.');
+            appToast.error('Thiếu mã đơn hàng', 'Không xác định được orderId để tạo vận đơn. Vui lòng kiểm tra console.');
+            return;
+        }
 
         if (!shipmentForm.recipientName.trim() || !shipmentForm.recipientPhone.trim() || !shipmentForm.deliveryAddress.trim()) {
+            console.warn('[Shipment] Skip create shipment because required recipient fields are missing.', {
+                recipientName: shipmentForm.recipientName,
+                recipientPhone: shipmentForm.recipientPhone,
+                deliveryAddress: shipmentForm.deliveryAddress,
+            });
             appToast.error('Thiếu thông tin giao hàng', 'Vui lòng nhập đầy đủ người nhận, số điện thoại và địa chỉ.');
             return;
         }
 
-        setShippingSubmitting(true);
-        const res = await createShipment({
-            orderId: order.orderId,
+        const payload = {
+            orderId: shipmentOrderId,
             customOrderId: order?.customOrderId || order?.id || undefined,
             recipientName: shipmentForm.recipientName.trim(),
             recipientPhone: shipmentForm.recipientPhone.trim(),
@@ -378,16 +397,30 @@ const ArtisanOrderDetailPage = () => {
             note: shipmentForm.note.trim(),
             serviceTypeId: shipmentForm.serviceTypeId,
             paymentTypeId: shipmentForm.paymentTypeId,
-        });
-        setShippingSubmitting(false);
+        };
 
-        if (!res.success) {
-            appToast.error('Tạo vận đơn thất bại', res.error || 'Vui lòng thử lại');
-            return;
+        console.groupCollapsed('[Shipment] Payload before API call');
+        console.log(payload);
+        console.groupEnd();
+
+        setShippingSubmitting(true);
+        try {
+            const res = await createShipment(payload);
+            console.log('[Shipment] API response:', res);
+
+            if (!res.success) {
+                appToast.error('Tạo vận đơn thất bại', res.error || 'Vui lòng thử lại');
+                return;
+            }
+
+            setShipmentFormOpen(false);
+            appToast.success('Đã tạo vận đơn thành công');
+        } catch (error) {
+            console.error('[Shipment] Unexpected error while creating shipment:', error);
+            appToast.error('Tạo vận đơn thất bại', 'Đã xảy ra lỗi không mong muốn. Vui lòng kiểm tra console.');
+        } finally {
+            setShippingSubmitting(false);
         }
-
-        setShipmentFormOpen(false);
-        appToast.success('Đã tạo vận đơn thành công');
     };
 
     if (!id) return <div className="artisan-empty">Thiếu mã đơn hàng.</div>;
@@ -665,60 +698,95 @@ const ArtisanOrderDetailPage = () => {
                     {shipmentFormOpen && (
                         <div className="cancel-modal-overlay" onClick={() => setShipmentFormOpen(false)} aria-hidden="true">
                             <div className="cancel-modal shipment-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
-                                <h3>Tạo vận đơn</h3>
+                                <div className="order-detail-modal-header">
+                                    <div>
+                                        <p className="page-kicker">Tạo vận đơn</p>
+                                        <h3>Điền thông tin giao hàng</h3>
+                                    </div>
+                                    <button type="button" className="btn btn-outline btn-sm" onClick={() => setShipmentFormOpen(false)} disabled={shippingSubmitting}>Đóng</button>
+                                </div>
                                 <p className="muted">Điền thông tin người nhận và thông số kiện hàng để gửi sang hệ thống vận chuyển.</p>
                                 <div className="shipment-form-grid">
-                                    <input className="form-input" placeholder="Tên người nhận" value={shipmentForm.recipientName} onChange={(e) => setShipmentForm((prev) => ({ ...prev, recipientName: e.target.value }))} />
-                                    <input className="form-input" placeholder="Số điện thoại" value={shipmentForm.recipientPhone} onChange={(e) => setShipmentForm((prev) => ({ ...prev, recipientPhone: e.target.value }))} />
-                                    <input className="form-input shipment-span-2" placeholder="Địa chỉ giao hàng" value={shipmentForm.deliveryAddress} onChange={(e) => setShipmentForm((prev) => ({ ...prev, deliveryAddress: e.target.value }))} />
-                                    <select
-                                        className="form-input"
-                                        value={shipmentForm.provinceCode}
-                                        onChange={(e) => setShipmentForm((prev) => ({ ...prev, provinceCode: e.target.value }))}
-                                        disabled={locationLoading.provinces}
-                                    >
-                                        <option value="">Chọn tỉnh/thành</option>
-                                        {provinces.map((item) => (
-                                            <option key={item.code} value={item.code}>
-                                                {item.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    <select
-                                        className="form-input"
-                                        value={shipmentForm.districtCode}
-                                        onChange={(e) => setShipmentForm((prev) => ({ ...prev, districtCode: e.target.value }))}
-                                        disabled={!shipmentForm.provinceCode || locationLoading.districts}
-                                    >
-                                        <option value="">Chọn quận/huyện</option>
-                                        {districts.map((item) => (
-                                            <option key={item.code} value={item.code}>
-                                                {item.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    <select
-                                        className="form-input"
-                                        value={shipmentForm.wardCode}
-                                        onChange={(e) => setShipmentForm((prev) => ({ ...prev, wardCode: e.target.value }))}
-                                        disabled={!shipmentForm.districtCode || locationLoading.wards}
-                                    >
-                                        <option value="">Chọn phường/xã</option>
-                                        {wards.map((item) => (
-                                            <option key={item.code} value={item.code}>
-                                                {item.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    <input className="form-input" placeholder="Giá trị đơn" value={shipmentForm.orderValue} onChange={(e) => setShipmentForm((prev) => ({ ...prev, orderValue: e.target.value }))} />
-                                    <input className="form-input" placeholder="Cân nặng (gram)" value={shipmentForm.weight} onChange={(e) => setShipmentForm((prev) => ({ ...prev, weight: e.target.value }))} />
-                                    <input className="form-input" placeholder="Dài" value={shipmentForm.length} onChange={(e) => setShipmentForm((prev) => ({ ...prev, length: e.target.value }))} />
-                                    <input className="form-input" placeholder="Rộng" value={shipmentForm.width} onChange={(e) => setShipmentForm((prev) => ({ ...prev, width: e.target.value }))} />
-                                    <input className="form-input" placeholder="Cao" value={shipmentForm.height} onChange={(e) => setShipmentForm((prev) => ({ ...prev, height: e.target.value }))} />
-                                    <textarea className="form-input shipment-span-2" rows="3" placeholder="Ghi chú" value={shipmentForm.note} onChange={(e) => setShipmentForm((prev) => ({ ...prev, note: e.target.value }))} />
+                                    <label className="shipment-field">
+                                        <span>Tên người nhận</span>
+                                        <input className="form-input" placeholder="Nhập tên người nhận" value={shipmentForm.recipientName} onChange={(e) => setShipmentForm((prev) => ({ ...prev, recipientName: e.target.value }))} />
+                                    </label>
+                                    <label className="shipment-field">
+                                        <span>Số điện thoại</span>
+                                        <input className="form-input" placeholder="Nhập số điện thoại" value={shipmentForm.recipientPhone} onChange={(e) => setShipmentForm((prev) => ({ ...prev, recipientPhone: e.target.value }))} />
+                                    </label>
+                                    <label className="shipment-field shipment-span-2">
+                                        <span>Địa chỉ giao hàng</span>
+                                        <input className="form-input" placeholder="Nhập địa chỉ giao hàng" value={shipmentForm.deliveryAddress} onChange={(e) => setShipmentForm((prev) => ({ ...prev, deliveryAddress: e.target.value }))} />
+                                    </label>
+                                    <label className="shipment-field">
+                                        <span>Tỉnh / thành phố</span>
+                                        <select
+                                            className="form-input"
+                                            value={shipmentForm.provinceCode}
+                                            onChange={(e) => setShipmentForm((prev) => ({ ...prev, provinceCode: e.target.value }))}
+                                            disabled={locationLoading.provinces}
+                                        >
+                                            <option value="">Chọn tỉnh/thành</option>
+                                            {provinces.map((item) => (
+                                                <option key={item.code} value={item.code}>{item.name}</option>
+                                            ))}
+                                        </select>
+                                    </label>
+                                    <label className="shipment-field">
+                                        <span>Quận / huyện</span>
+                                        <select
+                                            className="form-input"
+                                            value={shipmentForm.districtCode}
+                                            onChange={(e) => setShipmentForm((prev) => ({ ...prev, districtCode: e.target.value }))}
+                                            disabled={!shipmentForm.provinceCode || locationLoading.districts}
+                                        >
+                                            <option value="">Chọn quận/huyện</option>
+                                            {districts.map((item) => (
+                                                <option key={item.code} value={item.code}>{item.name}</option>
+                                            ))}
+                                        </select>
+                                    </label>
+                                    <label className="shipment-field">
+                                        <span>Phường / xã</span>
+                                        <select
+                                            className="form-input"
+                                            value={shipmentForm.wardCode}
+                                            onChange={(e) => setShipmentForm((prev) => ({ ...prev, wardCode: e.target.value }))}
+                                            disabled={!shipmentForm.districtCode || locationLoading.wards}
+                                        >
+                                            <option value="">Chọn phường/xã</option>
+                                            {wards.map((item) => (
+                                                <option key={item.code} value={item.code}>{item.name}</option>
+                                            ))}
+                                        </select>
+                                    </label>
+                                    <label className="shipment-field">
+                                        <span>Giá trị đơn hàng</span>
+                                        <input className="form-input" placeholder="Nhập giá trị đơn hàng" value={shipmentForm.orderValue} onChange={(e) => setShipmentForm((prev) => ({ ...prev, orderValue: e.target.value }))} />
+                                    </label>
+                                    <label className="shipment-field">
+                                        <span>Cân nặng (gram)</span>
+                                        <input className="form-input" placeholder="Nhập cân nặng" value={shipmentForm.weight} onChange={(e) => setShipmentForm((prev) => ({ ...prev, weight: e.target.value }))} />
+                                    </label>
+                                    <label className="shipment-field">
+                                        <span>Dài (cm)</span>
+                                        <input className="form-input" placeholder="Nhập chiều dài" value={shipmentForm.length} onChange={(e) => setShipmentForm((prev) => ({ ...prev, length: e.target.value }))} />
+                                    </label>
+                                    <label className="shipment-field">
+                                        <span>Rộng (cm)</span>
+                                        <input className="form-input" placeholder="Nhập chiều rộng" value={shipmentForm.width} onChange={(e) => setShipmentForm((prev) => ({ ...prev, width: e.target.value }))} />
+                                    </label>
+                                    <label className="shipment-field">
+                                        <span>Cao (cm)</span>
+                                        <input className="form-input" placeholder="Nhập chiều cao" value={shipmentForm.height} onChange={(e) => setShipmentForm((prev) => ({ ...prev, height: e.target.value }))} />
+                                    </label>
+                                    <label className="shipment-field shipment-span-2">
+                                        <span>Ghi chú</span>
+                                        <textarea className="form-input" rows="3" placeholder="Nhập ghi chú" value={shipmentForm.note} onChange={(e) => setShipmentForm((prev) => ({ ...prev, note: e.target.value }))} />
+                                    </label>
                                 </div>
                                 <div className="cancel-modal-actions">
-                                    <button type="button" className="btn btn-outline" onClick={() => setShipmentFormOpen(false)} disabled={shippingSubmitting}>Đóng</button>
                                     <button type="button" className="btn btn-primary" onClick={handleCreateShipment} disabled={shippingSubmitting}>
                                         {shippingSubmitting ? 'Đang tạo...' : 'Tạo vận đơn'}
                                     </button>

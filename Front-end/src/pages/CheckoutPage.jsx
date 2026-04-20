@@ -47,9 +47,6 @@ const CheckoutPage = () => {
     const items = useMemo(() => selectedItems || [], [selectedItems]);
 
     const [submitting, setSubmitting] = useState(false);
-    const [shippingLoading, setShippingLoading] = useState(false);
-    const [shippingError, setShippingError] = useState('');
-    const [shippingFee, setShippingFee] = useState(0);
 
     const [provinces, setProvinces] = useState([]);
     const [districts, setDistricts] = useState([]);
@@ -178,52 +175,6 @@ const CheckoutPage = () => {
         return Math.max(500, estimated || 500);
     }, [items]);
 
-    useEffect(() => {
-        let cancelled = false;
-
-        const calcFee = async () => {
-            if (!shipping.districtId || !shipping.wardCode) {
-                setShippingError('');
-                setShippingFee(0);
-                return;
-            }
-
-            setShippingLoading(true);
-            setShippingError('');
-
-            const result = await checkoutService.calculateShippingFee({
-                toDistrictId: Number(shipping.districtId),
-                toWardCode: shipping.wardCode,
-                weight: totalWeight,
-                length: 20,
-                width: 15,
-                height: 10,
-                serviceTypeId: 2,
-                paymentTypeId: 1,
-                orderValue: Number(subtotal || 0),
-            });
-
-            if (cancelled) return;
-
-            if (!result.success) {
-                setShippingFee(0);
-                setShippingError('Không tính được phí, sẽ tính khi giao');
-                setShippingLoading(false);
-                return;
-            }
-
-            setShippingFee(resolveShippingFee(result.data));
-            setShippingError('');
-            setShippingLoading(false);
-        };
-
-        calcFee();
-
-        return () => {
-            cancelled = true;
-        };
-    }, [shipping.districtId, shipping.wardCode, subtotal, totalWeight]);
-
     const validateForm = () => {
         const nextErrors = {};
 
@@ -301,7 +252,7 @@ const CheckoutPage = () => {
         setErrors((prev) => ({ ...prev, wardCode: '' }));
     };
 
-    const total = useMemo(() => Number(subtotal || 0) + Number(shippingFee || 0), [subtotal, shippingFee]);
+    const total = useMemo(() => Number(subtotal || 0), [subtotal]);
 
     const handlePlaceOrder = async () => {
         if (submitting) return;
@@ -364,12 +315,6 @@ const CheckoutPage = () => {
         <div className="checkout-page">
             <Header />
             <main className="checkout-main container">
-                <div className="checkout-steps">
-                    <span className="done">Giỏ hàng</span>
-                    <span className="active">Giao hàng & TT</span>
-                    <span>Xác nhận</span>
-                </div>
-
                 <div className="checkout-layout">
                     <section className="checkout-left">
                         <article className="checkout-card">
@@ -494,22 +439,12 @@ const CheckoutPage = () => {
                                     <strong>{formatVnd(subtotal)}</strong>
                                 </div>
                                 <div>
-                                    <span>Phí vận chuyển</span>
-                                    <strong>
-                                        {shippingLoading
-                                            ? 'Đang tính...'
-                                            : shippingError
-                                                ? 'Không tính được phí, sẽ tính khi giao'
-                                                : formatVnd(shippingFee)}
-                                    </strong>
-                                </div>
-                                <div>
                                     <span>Giảm giá</span>
                                     <strong>—</strong>
                                 </div>
                                 <div className="grand">
                                     <span>Tổng cộng</span>
-                                    <strong>{formatVnd(total)}</strong>
+                                    <strong>{formatVnd(subtotal)}</strong>
                                 </div>
                             </div>
 

@@ -94,8 +94,11 @@ const CartDrawer = () => {
                         </div>
                     ) : (
                         <div className="cart-items-list">
-                            {cartItems.map((item) => (
-                                <div key={item.productId || item.id} className="cart-item">
+                            {cartItems.map((item, index) => (
+                                <div
+                                    key={item.cartItemId || `${item.productId || item.id || 'cart-item'}-${index}`}
+                                    className="cart-item"
+                                >
                                     <div className="cart-item-image">
                                         {item.image || item.imageUrl ? (
                                             <img src={item.image || item.imageUrl} alt={item.title || item.productName} />

@@ -37,9 +37,18 @@ const normalizeIncomingItem = (item) => {
         cartItemId,
         productId,
         templateId: item?.templateId ?? null,
-        productName: item?.productName ?? item?.title ?? 'Sản phẩm',
+        templateName: item?.templateName ?? item?.template?.name ?? item?.productTemplateName ?? '',
+        productName: item?.productName ?? item?.title ?? item?.name ?? item?.templateName ?? item?.template?.name ?? 'Sản phẩm',
         artisanName: item?.artisanName ?? item?.artisan ?? '',
-        imageUrl: item?.imageUrl ?? item?.image ?? item?.productImage ?? null,
+        imageUrl:
+            item?.imageUrl ??
+            item?.image ??
+            item?.productImage ??
+            item?.thumbnailUrl ??
+            item?.templateImageUrl ??
+            item?.template?.imageUrl ??
+            item?.template?.thumbnailUrl ??
+            null,
         basePrice,
         quantity,
         zoneInputs,
@@ -164,7 +173,14 @@ export const CartProvider = ({ children }) => {
             if (cancelled) return;
 
             if (result.success) {
-                const normalized = (result.data || []).map(normalizeIncomingItem);
+                const normalized = (result.data || []).map((item) => {
+                    const normalizedItem = normalizeIncomingItem(item);
+                    return {
+                        ...normalizedItem,
+                        productName: normalizedItem.productName || normalizedItem.templateName || 'Sản phẩm',
+                        imageUrl: normalizedItem.imageUrl || item?.template?.imageUrl || item?.templateImageUrl || null,
+                    };
+                });
                 dispatch({ type: 'HYDRATE_ITEMS', payload: normalized });
                 return;
             }
@@ -244,14 +260,21 @@ export const CartProvider = ({ children }) => {
         }
     };
 
-    const clearSelectedItems = async (productIds = []) => {
-        const ids = Array.isArray(productIds) ? productIds.map((id) => String(id)) : [];
-        dispatch({ type: 'CLEAR_SELECTED_ITEMS', payload: ids });
+    const clearSelectedItems = async (cartItemIds = []) => {
+        const ids = Array.isArray(cartItemIds) ? cartItemIds.map((id) => String(id)).filter(Boolean) : [];
+        const selectedSet = new Set(ids);
+        const targetItems = state.items.filter((item) => selectedSet.has(String(item.cartItemId)));
 
-        if (ids.length > 0) {
-            const result = await cartService.checkoutCart(ids);
-            if (!result.success) {
-                appToast.error('Đồng bộ giỏ hàng thất bại', result.error || 'Vui lòng thử lại');
+        dispatch({
+            type: 'CLEAR_SELECTED_ITEMS',
+            payload: ids.length > 0 ? ids : undefined,
+        });
+
+        if (targetItems.length > 0) {
+            const results = await Promise.all(targetItems.map((item) => cartService.removeCartItem(item.cartItemId)));
+            const failed = results.find((result) => !result.success);
+            if (failed) {
+                appToast.error('Xóa sản phẩm đã chọn thất bại', failed.error || 'Vui lòng thử lại');
             }
         }
     };

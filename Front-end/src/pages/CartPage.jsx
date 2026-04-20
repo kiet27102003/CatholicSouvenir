@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiArrowLeft, FiImage, FiShoppingCart, FiTrash2 } from 'react-icons/fi';
+import { FiArrowLeft, FiCheckCircle, FiImage, FiShoppingCart, FiTrash2 } from 'react-icons/fi';
+import Header from '../components/Header/Header';
+import Footer from '../components/Footer/Footer';
 import { useCart } from '../context/CartContext';
-import cartService from '../services/cartService';
 import { appToast } from '../lib/appToast';
 import './CartPage.css';
 
@@ -19,11 +20,15 @@ const CartPage = () => {
         updateQuantity,
         removeItem,
         clearCart,
+        clearSelectedItems,
     } = useCart();
 
     const [coupon, setCoupon] = useState('');
     const [checkingOut, setCheckingOut] = useState(false);
     const [confirmClearOpen, setConfirmClearOpen] = useState(false);
+    const [confirmItemDeleteOpen, setConfirmItemDeleteOpen] = useState(false);
+    const [pendingDeleteItem, setPendingDeleteItem] = useState(null);
+    const [confirmSelectedDeleteOpen, setConfirmSelectedDeleteOpen] = useState(false);
 
     const selectedCount = selectedItems.length;
     const allCount = items.length;
@@ -40,12 +45,6 @@ const CartPage = () => {
 
         setCheckingOut(true);
         try {
-            const productIds = selectedItems.map((i) => i.productId);
-            const result = await cartService.checkoutCart(productIds);
-            if (!result.success) {
-                appToast.error('Thanh toán thất bại', result.error || 'Vui lòng thử lại');
-                return;
-            }
             navigate('/checkout');
         } catch (error) {
             appToast.error('Thanh toán thất bại', error?.message || 'Vui lòng thử lại');
@@ -62,9 +61,34 @@ const CartPage = () => {
         appToast.info('Tính năng đang phát triển');
     };
 
-    const handleRemove = async (productId) => {
-        await removeItem(productId);
+    const handleRemove = async (cartItemId) => {
+        await removeItem(cartItemId);
         appToast.success('Đã xóa sản phẩm khỏi giỏ hàng');
+    };
+
+    const openItemDeleteConfirm = (item) => {
+        setPendingDeleteItem(item);
+        setConfirmItemDeleteOpen(true);
+    };
+
+    const handleConfirmItemDelete = async () => {
+        if (!pendingDeleteItem) return;
+        await handleRemove(pendingDeleteItem.cartItemId || pendingDeleteItem.productId);
+        setConfirmItemDeleteOpen(false);
+        setPendingDeleteItem(null);
+    };
+
+    const openSelectedDeleteConfirm = () => {
+        if (selectedItems.length === 0) {
+            appToast.warning('Vui lòng chọn sản phẩm để xóa');
+            return;
+        }
+        setConfirmSelectedDeleteOpen(true);
+    };
+
+    const handleConfirmSelectedDelete = async () => {
+        await clearSelectedItems(selectedItems.map((item) => item.cartItemId));
+        setConfirmSelectedDeleteOpen(false);
     };
 
     const handleUpdateQty = async (productId, nextQty) => {
@@ -83,14 +107,22 @@ const CartPage = () => {
 
     return (
         <div className="cart-page">
+            <Header />
             <main className="container cart-main">
                 <button type="button" className="cart-back" onClick={() => navigate(-1)}>
                     <FiArrowLeft /> Tiếp tục mua sắm
                 </button>
 
-                <header className="cart-header-block">
-                    <h1>Giỏ hàng</h1>
-                    <p>{allCount} sản phẩm đang chờ thanh toán</p>
+                <header className="cart-hero">
+                    <div>
+                        <span className="cart-kicker">Giỏ hàng đầy đủ</span>
+                        <h1>Kiểm tra lại đơn hàng trước khi thanh toán</h1>
+                        <p>{allCount} sản phẩm đang chờ thanh toán</p>
+                    </div>
+                    <div className="cart-hero-badge">
+                        <FiCheckCircle />
+                        <span>{selectedCount} sản phẩm đã chọn</span>
+                    </div>
                 </header>
 
                 {items.length === 0 ? (
@@ -113,6 +145,14 @@ const CartPage = () => {
                                     />
                                     <span>Chọn tất cả ({allCount} sản phẩm)</span>
                                 </label>
+                                <button
+                                    type="button"
+                                    className="btn btn-outline cart-clear-selected"
+                                    onClick={openSelectedDeleteConfirm}
+                                    disabled={selectedItems.length === 0}
+                                >
+                                    Xóa sản phẩm đã chọn
+                                </button>
                             </div>
 
                             <div className="cart-table">
@@ -140,7 +180,7 @@ const CartPage = () => {
                                                 )}
                                             </div>
                                             <div>
-                                                <h4>{item.productName}</h4>
+                                                <h4>{item.productName || item.templateName || 'Sản phẩm'}</h4>
                                                 <p>{item.artisanName || 'Sanctus Artisan'}</p>
                                                 {item.zoneInputs?.length > 0 && (
                                                     <p className="zone-summary">
@@ -159,7 +199,7 @@ const CartPage = () => {
                                         </div>
                                         <div className="line-price">{formatVnd(item.totalPrice)}</div>
                                         <div>
-                                            <button type="button" className="icon-btn" onClick={() => handleRemove(item.cartItemId || item.productId)}>
+                                            <button type="button" className="icon-btn" onClick={() => openItemDeleteConfirm(item)}>
                                                 <FiTrash2 />
                                             </button>
                                         </div>
@@ -222,6 +262,7 @@ const CartPage = () => {
                     </div>
                 )}
             </main>
+            <Footer />
 
             {confirmClearOpen && (
                 <div className="cart-confirm-overlay" onClick={() => setConfirmClearOpen(false)}>
@@ -231,6 +272,32 @@ const CartPage = () => {
                         <div className="confirm-actions">
                             <button type="button" className="btn btn-outline" onClick={() => setConfirmClearOpen(false)}>Hủy</button>
                             <button type="button" className="btn btn-primary" onClick={handleClearAll}>Xóa tất cả</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {confirmSelectedDeleteOpen && (
+                <div className="cart-confirm-overlay" onClick={() => setConfirmSelectedDeleteOpen(false)}>
+                    <div className="cart-confirm-modal" onClick={(e) => e.stopPropagation()}>
+                        <h4>Xóa các sản phẩm đã chọn?</h4>
+                        <p>Hành động này sẽ xóa {selectedItems.length} sản phẩm khỏi giỏ hàng.</p>
+                        <div className="confirm-actions">
+                            <button type="button" className="btn btn-outline" onClick={() => setConfirmSelectedDeleteOpen(false)}>Hủy</button>
+                            <button type="button" className="btn btn-primary" onClick={handleConfirmSelectedDelete}>Xóa</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {confirmItemDeleteOpen && pendingDeleteItem && (
+                <div className="cart-confirm-overlay" onClick={() => setConfirmItemDeleteOpen(false)}>
+                    <div className="cart-confirm-modal" onClick={(e) => e.stopPropagation()}>
+                        <h4>Xóa sản phẩm này?</h4>
+                        <p>Bạn có chắc muốn xóa <strong>{pendingDeleteItem.productName}</strong> khỏi giỏ hàng không?</p>
+                        <div className="confirm-actions">
+                            <button type="button" className="btn btn-outline" onClick={() => setConfirmItemDeleteOpen(false)}>Hủy</button>
+                            <button type="button" className="btn btn-primary" onClick={handleConfirmItemDelete}>Xóa</button>
                         </div>
                     </div>
                 </div>

@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { FiArrowLeft, FiCalendar, FiCreditCard, FiHash, FiPackage, FiShoppingBag, FiTruck, FiUser } from 'react-icons/fi';
+import { FiArrowLeft, FiCalendar, FiCreditCard, FiHash, FiPackage, FiShoppingBag, FiStar, FiTruck, FiUser } from 'react-icons/fi';
 import { useNavigate, useParams } from 'react-router-dom';
 import dayjs from 'dayjs';
-import { getOrderById } from '../../services/orderService';
+import { createFeedback, getOrderById } from '../../services/orderService';
 import { appToast } from '../../lib/appToast';
 import './OrderDetailPage.css';
 
@@ -32,6 +32,11 @@ const OrderDetailPage = () => {
 
     const [loading, setLoading] = useState(true);
     const [order, setOrder] = useState(null);
+    const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
+    const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
+    const [feedbackRating, setFeedbackRating] = useState(5);
+    const [feedbackComment, setFeedbackComment] = useState('');
+    const [complaintConfirmOpen, setComplaintConfirmOpen] = useState(false);
 
     useEffect(() => {
         let cancelled = false;
@@ -62,6 +67,21 @@ const OrderDetailPage = () => {
     const orderDetails = Array.isArray(order?.orderDetails) ? order.orderDetails : [];
     const templateDetails = Array.isArray(order?.templateDetails) ? order.templateDetails : [];
     const items = [...orderDetails, ...templateDetails];
+    const feedbackTarget = useMemo(() => {
+        const customOrderItem = templateDetails[0] || orderDetails[0] || null;
+        return {
+            orderId: order?.orderId || order?.id || '',
+            customOrderId:
+                customOrderItem?.customOrderId ||
+                customOrderItem?.orderDetailId ||
+                customOrderItem?.id ||
+                order?.customOrderId ||
+                order?.orderDetails?.[0]?.customOrderId ||
+                '',
+        };
+    }, [order?.customOrderId, order?.id, order?.orderDetails, order?.orderId, orderDetails, templateDetails]);
+
+    const canSubmitFeedback = Boolean(feedbackTarget.orderId && feedbackTarget.customOrderId);
 
     if (loading) {
         return (
@@ -71,6 +91,51 @@ const OrderDetailPage = () => {
             </div>
         );
     }
+
+    const openFeedbackModal = () => {
+        if (!canSubmitFeedback) {
+            appToast.warning('Thiếu thông tin đánh giá', 'Không xác định được đơn custom để gửi đánh giá');
+            return;
+        }
+        setFeedbackModalOpen(true);
+    };
+
+    const closeFeedbackModal = () => {
+        if (feedbackSubmitting) return;
+        setFeedbackModalOpen(false);
+    };
+
+    const handleSubmitFeedback = async () => {
+        if (!canSubmitFeedback) {
+            appToast.error('Không thể gửi đánh giá', 'Thiếu thông tin đơn hàng');
+            return;
+        }
+
+        setFeedbackSubmitting(true);
+        const res = await createFeedback({
+            orderId: feedbackTarget.orderId,
+            customOrderId: feedbackTarget.customOrderId,
+            rating: feedbackRating,
+            comment: feedbackComment,
+        });
+        setFeedbackSubmitting(false);
+
+        if (!res.success) {
+            appToast.error('Gửi đánh giá thất bại', res.error || 'Vui lòng thử lại sau');
+            return;
+        }
+
+        setFeedbackModalOpen(false);
+        appToast.success('Đánh giá thành công');
+        if (Number(feedbackRating) === 1) {
+            setComplaintConfirmOpen(true);
+        }
+    };
+
+    const handleOpenComplaint = () => {
+        setComplaintConfirmOpen(false);
+        navigate('/complaints');
+    };
 
     if (!order) {
         return (
@@ -133,7 +198,12 @@ const OrderDetailPage = () => {
                         <section className="panel">
                             <div className="panel-head">
                                 <h2>Danh sách sản phẩm</h2>
-                                <span>{items.length} mục</span>
+                                <div className="panel-head-actions">
+                                    <span>{items.length} mục</span>
+                                    <button type="button" className="btn btn-outline btn-feedback" onClick={openFeedbackModal} disabled={!canSubmitFeedback}>
+                                        <FiStar /> Đánh giá sản phẩm
+                                    </button>
+                                </div>
                             </div>
 
                             <div className="items-list">
@@ -211,6 +281,65 @@ const OrderDetailPage = () => {
                     </aside>
                 </div>
             </div>
+
+            {feedbackModalOpen && (
+                <div className="modal-backdrop" onClick={closeFeedbackModal} role="presentation">
+                    <div className="feedback-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="feedback-modal-title">
+                        <h2 id="feedback-modal-title">Đánh giá sản phẩm</h2>
+                        <p>Hãy chọn số sao và để lại nhận xét cho đơn hàng của bạn.</p>
+
+                        <div className="rating-row" role="radiogroup" aria-label="Đánh giá sao">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                                <button
+                                    key={star}
+                                    type="button"
+                                    className={`rating-star ${Number(feedbackRating) >= star ? 'active' : ''}`}
+                                    onClick={() => setFeedbackRating(star)}
+                                    aria-label={`${star} sao`}
+                                >
+                                    <FiStar />
+                                </button>
+                            ))}
+                        </div>
+
+                        <textarea
+                            className="feedback-textarea"
+                            placeholder="Chia sẻ cảm nhận của bạn..."
+                            value={feedbackComment}
+                            onChange={(e) => setFeedbackComment(e.target.value)}
+                            rows={4}
+                        />
+
+                        <div className="modal-actions">
+                            <button type="button" className="btn btn-outline" onClick={closeFeedbackModal} disabled={feedbackSubmitting}>
+                                Đóng
+                            </button>
+                            <button type="button" className="btn btn-primary" onClick={handleSubmitFeedback} disabled={feedbackSubmitting}>
+                                {feedbackSubmitting ? 'Đang gửi...' : 'Gửi đánh giá'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {complaintConfirmOpen && (
+                <div className="modal-backdrop" onClick={() => setComplaintConfirmOpen(false)} role="presentation">
+                    <div className="feedback-modal feedback-confirm-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="complaint-confirm-title">
+                        <h2 id="complaint-confirm-title">Bạn muốn khiếu nại đơn hàng không?</h2>
+                        <p>Bạn vừa đánh giá 1 sao. Nếu muốn tạo khiếu nại, hệ thống sẽ đưa bạn đến trung tâm khiếu nại.</p>
+                        <div className="modal-actions">
+                            <button type="button" className="btn btn-outline" onClick={() => setComplaintConfirmOpen(false)}>
+                                Không
+                            </button>
+                            <button type="button" className="btn btn-primary" onClick={handleOpenComplaint}>
+                                Có, khiếu nại
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            <Footer />
         </div>
     );
 };

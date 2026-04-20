@@ -6,8 +6,6 @@ import { getMyWallet, getWalletTransactions } from '../../../services/walletServ
 import { getOpenCustomRequests, getArtisanCustomOrders, getCustomOrderStages } from '../../../services/customRequestService';
 import { getMyConversations } from '../../../services/chatService';
 import { getNotifications, getUnreadNotificationCount, markAllNotificationsAsRead, markNotificationAsRead } from '../../../services/notificationService';
-import { createProduct } from '../../../services/productService';
-import categoryService from '../../../services/categoryService';
 import { appToast } from '../../../lib/appToast';
 import api from '../../../cofig/api';
 import './Workbench.css';
@@ -111,6 +109,14 @@ const pickFirstNumber = (...values) => {
     return 0;
 };
 
+const pickFirstDate = (...values) => {
+    for (const value of values) {
+        if (!value) continue;
+        const date = new Date(value);
+        if (!Number.isNaN(date.getTime())) return date;
+    }
+    return null;
+};
 
 const toPercent = (value) => `${Math.max(0, Math.min(100, Number(value) || 0)).toFixed(0)}%`;
 
@@ -220,19 +226,6 @@ const Workbench = ({ user }) => {
     const [dashboard, setDashboard] = useState(null);
     const [loadingDashboard, setLoadingDashboard] = useState(true);
     const [dashboardError, setDashboardError] = useState('');
-
-    const [showCreateModal, setShowCreateModal] = useState(false);
-    const [createTemplateLoading, setCreateTemplateLoading] = useState(false);
-    const [templateCategories, setTemplateCategories] = useState([]);
-    const [templateForm, setTemplateForm] = useState({
-        productName: '',
-        productDescription: '',
-        productPrice: '',
-        quantity: '',
-        size: '',
-        categoryId: '',
-        tags: '',
-    });
 
     const [loadingOrders, setLoadingOrders] = useState(true);
     const [loadingWallet, setLoadingWallet] = useState(true);
@@ -427,27 +420,6 @@ const Workbench = ({ user }) => {
     useEffect(() => {
         let active = true;
 
-        const loadCategories = async () => {
-            const res = await categoryService.getCategories();
-            if (!active) return;
-            if (!res.success) {
-                setTemplateCategories([]);
-                return;
-            }
-
-            const normalized = (res.data || [])
-                .map((item) => ({
-                    id: item?.categoryId || item?.id || item?.uuid || '',
-                    label: item?.categoryName || item?.name || item?.title || '',
-                    isActive: item?.isActive !== false,
-                }))
-                .filter((item) => item.id && item.label && item.isActive);
-
-            setTemplateCategories(normalized);
-        };
-
-        loadCategories();
-
         const loadDashboard = async () => {
             setLoadingDashboard(true);
             setDashboardError('');
@@ -559,64 +531,6 @@ const Workbench = ({ user }) => {
         }
     };
 
-    const closeCreateModal = () => {
-        setShowCreateModal(false);
-        setTemplateForm({
-            productName: '',
-            productDescription: '',
-            productPrice: '',
-            quantity: '',
-            size: '',
-            categoryId: '',
-            tags: '',
-        });
-    };
-
-    const handleCreateTemplateSubmit = async (event) => {
-        event.preventDefault();
-        if (!templateForm.productName.trim()) {
-            appToast.error('Thiếu tên sản phẩm', 'Vui lòng nhập tên sản phẩm.');
-            return;
-        }
-        if (!templateForm.productPrice || Number(templateForm.productPrice) < 0) {
-            appToast.error('Thiếu giá sản phẩm', 'Vui lòng nhập giá hợp lệ.');
-            return;
-        }
-        if (!templateForm.quantity || Number(templateForm.quantity) < 0) {
-            appToast.error('Thiếu số lượng', 'Vui lòng nhập số lượng hợp lệ.');
-            return;
-        }
-        if (!templateForm.categoryId) {
-            appToast.error('Thiếu danh mục', 'Vui lòng chọn danh mục.');
-            return;
-        }
-
-        setCreateTemplateLoading(true);
-        const payload = {
-            productName: templateForm.productName.trim(),
-            productDescription: templateForm.productDescription.trim(),
-            productPrice: Number(templateForm.productPrice),
-            quantity: Number(templateForm.quantity),
-            size: templateForm.size.trim(),
-            categoryId: templateForm.categoryId,
-            tags: templateForm.tags
-                .split(',')
-                .map((tag) => tag.trim())
-                .filter(Boolean),
-        };
-
-        const result = await createProduct(payload);
-        setCreateTemplateLoading(false);
-
-        if (!result.success) {
-            appToast.error('Không tạo được sản phẩm', result.error || 'Vui lòng thử lại.');
-            return;
-        }
-
-        appToast.success('Tạo sản phẩm thành công');
-        closeCreateModal();
-    };
-
     return (
         <div className="wb">
             <header className="wb-header">
@@ -631,7 +545,6 @@ const Workbench = ({ user }) => {
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M15 17H5l1.4-1.4A2 2 0 0 0 7 14.2V10a5 5 0 1 1 10 0v4.2a2 2 0 0 0 .6 1.4L19 17h-4m-5 0a2 2 0 0 0 4 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                             </svg>
-                            <span className="wb-notification-badge">{notificationCount > 99 ? '99+' : notificationCount}</span>
                         </button>
 
                         {showNotifications && (
@@ -680,7 +593,6 @@ const Workbench = ({ user }) => {
                             </div>
                         )}
                     </div>
-                    <button type="button" className="wb-btn wb-btn--primary" onClick={() => setShowCreateModal(true)}>+ Thêm sản phẩm</button>
                 </div>
             </header>
 
@@ -977,104 +889,6 @@ const Workbench = ({ user }) => {
 
                 </div>
             </section>
-
-            {showCreateModal && (
-                <div className="wb-modal-backdrop" role="presentation" onClick={closeCreateModal}>
-                    <div className="wb-modal" role="dialog" aria-modal="true" aria-labelledby="wb-create-template-title" onClick={(e) => e.stopPropagation()}>
-                        <div className="wb-modal-head">
-                            <div>
-                                <p className="wb-section-kicker">Thêm sản phẩm mới</p>
-                                <h2 id="wb-create-template-title">Tạo sản phẩm artisan</h2>
-                            </div>
-                            <button type="button" className="wb-modal-close" onClick={closeCreateModal}>×</button>
-                        </div>
-
-                        <form className="wb-modal-form" onSubmit={handleCreateTemplateSubmit}>
-                            <label className="wb-field">
-                                <span>Tên sản phẩm *</span>
-                                <input
-                                    type="text"
-                                    value={templateForm.productName}
-                                    onChange={(e) => setTemplateForm((prev) => ({ ...prev, productName: e.target.value }))}
-                                    placeholder="Ví dụ: Ly sứ in ảnh"
-                                />
-                            </label>
-
-                            <label className="wb-field">
-                                <span>Danh mục *</span>
-                                <select
-                                    value={templateForm.categoryId}
-                                    onChange={(e) => setTemplateForm((prev) => ({ ...prev, categoryId: e.target.value }))}
-                                >
-                                    <option value="">Chọn danh mục</option>
-                                    {templateCategories.map((category) => (
-                                        <option key={category.id} value={category.id}>{category.label}</option>
-                                    ))}
-                                </select>
-                            </label>
-
-                            <label className="wb-field wb-field--full">
-                                <span>Mô tả</span>
-                                <textarea
-                                    rows={4}
-                                    value={templateForm.productDescription}
-                                    onChange={(e) => setTemplateForm((prev) => ({ ...prev, productDescription: e.target.value }))}
-                                    placeholder="Mô tả ngắn về sản phẩm"
-                                />
-                            </label>
-
-                            <label className="wb-field">
-                                <span>Giá *</span>
-                                <input
-                                    type="number"
-                                    min="0"
-                                    value={templateForm.productPrice}
-                                    onChange={(e) => setTemplateForm((prev) => ({ ...prev, productPrice: e.target.value }))}
-                                    placeholder="0"
-                                />
-                            </label>
-
-                            <label className="wb-field">
-                                <span>Số lượng *</span>
-                                <input
-                                    type="number"
-                                    min="0"
-                                    value={templateForm.quantity}
-                                    onChange={(e) => setTemplateForm((prev) => ({ ...prev, quantity: e.target.value }))}
-                                    placeholder="0"
-                                />
-                            </label>
-
-                            <label className="wb-field">
-                                <span>Kích thước</span>
-                                <input
-                                    type="text"
-                                    value={templateForm.size}
-                                    onChange={(e) => setTemplateForm((prev) => ({ ...prev, size: e.target.value }))}
-                                    placeholder="Ví dụ: A4, 15cm"
-                                />
-                            </label>
-
-                            <label className="wb-field wb-field--full">
-                                <span>Tags</span>
-                                <input
-                                    type="text"
-                                    value={templateForm.tags}
-                                    onChange={(e) => setTemplateForm((prev) => ({ ...prev, tags: e.target.value }))}
-                                    placeholder="Ví dụ: quà tặng, in ảnh, sứ"
-                                />
-                            </label>
-
-                            <div className="wb-modal-actions">
-                                <button type="button" className="wb-mini-btn" onClick={closeCreateModal}>Hủy</button>
-                                <button type="submit" className="wb-btn wb-btn--primary" disabled={createTemplateLoading}>
-                                    {createTemplateLoading ? 'Đang tạo...' : 'Tạo sản phẩm'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };

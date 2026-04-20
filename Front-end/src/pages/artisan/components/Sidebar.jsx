@@ -34,7 +34,7 @@ const Sidebar = ({ user, activeView, setActiveView, onLogout, isOpen = false, on
             items: [
                 { id: 'dashboard', icon: <FiHome />, label: 'Bảng điều khiển', badge: null },
                 { id: 'profile', icon: <FiUser />, label: 'Hồ sơ cá nhân', badge: null },
-                { id: 'messages', icon: <FiMail />, label: 'Tin nhắn', badge: 2 },
+                { id: 'messages', icon: <FiMail />, label: 'Tin nhắn', badge: null },
             ],
         },
         {

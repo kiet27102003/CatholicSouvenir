@@ -132,7 +132,6 @@ const TemplatesView = ({ user }) => {
     const [templateForm, setTemplateForm] = useState(defaultTemplateForm);
     const [templateFormDirty, setTemplateFormDirty] = useState(false);
     const [pendingCloseTemplateModal, setPendingCloseTemplateModal] = useState(false);
-    const [templatePriceFocused, setTemplatePriceFocused] = useState(false);
     const [uploadingTemplateImage, setUploadingTemplateImage] = useState(false);
 
     const [zoneModalOpen, setZoneModalOpen] = useState(false);
@@ -236,7 +235,6 @@ const TemplatesView = ({ user }) => {
         setTemplateForm({ ...defaultTemplateForm, customZones: [createEmptyTemplateZone()] });
         setTemplateFormDirty(false);
         setPendingCloseTemplateModal(false);
-        setTemplatePriceFocused(false);
         setTemplateModalOpen(true);
     };
 
@@ -247,7 +245,6 @@ const TemplatesView = ({ user }) => {
         setTemplateModalMode('edit');
         setTemplateFormDirty(false);
         setPendingCloseTemplateModal(false);
-        setTemplatePriceFocused(false);
         setTemplateModalOpen(true);
 
         const result = await templateService.getTemplateById(templateId);
@@ -412,26 +409,8 @@ const TemplatesView = ({ user }) => {
         setTemplateForm(updater);
     };
 
-    const handleTemplatePriceFocus = () => {
-        setTemplatePriceFocused(true);
-    };
-
-    const handleTemplatePriceBlur = () => {
-        setTemplatePriceFocused(false);
-        setTemplateForm((prev) => ({
-            ...prev,
-            basePrice: formatNumberInput(prev.basePrice),
-        }));
-    };
-
-    const normalizeTemplatePrice = (value) => {
-        const digits = String(value ?? '').replace(/\D/g, '');
-        return digits;
-    };
-
     const handleTemplatePriceChange = (value) => {
-        const raw = String(value ?? '').replace(/,/g, '');
-        if (!/^\d*$/.test(raw)) return;
+        const raw = String(value ?? '').replace(/[^0-9]/g, '');
         markTemplateDirty((prev) => ({ ...prev, basePrice: raw }));
     };
 
@@ -792,13 +771,11 @@ const TemplatesView = ({ user }) => {
                                                 type="text"
                                                 inputMode="numeric"
                                                 autoComplete="off"
-                                                value={templatePriceFocused ? templateForm.basePrice : formatNumberInput(templateForm.basePrice)}
-                                                onFocus={handleTemplatePriceFocus}
-                                                onBlur={handleTemplatePriceBlur}
-                                                onChange={(e) => {
-                                                    const next = normalizeTemplatePrice(e.target.value);
-                                                    markTemplateDirty((p) => ({ ...p, basePrice: next }));
-                                                }}
+                                                type="text"
+                                                inputMode="numeric"
+                                                autoComplete="off"
+                                                value={templateForm.basePrice}
+                                                onChange={(e) => handleTemplatePriceChange(e.target.value)}
                                             />
                                         </div>
                                         <div className="form-field">

@@ -179,6 +179,50 @@ export const getOrderById = async (orderId) => {
     }
 };
 
+export const createFeedback = async (payload) => {
+    const orderId = payload?.orderId || '';
+    const customOrderId = payload?.customOrderId || '';
+    const rating = Number(payload?.rating || 0);
+    const comment = String(payload?.comment || '').trim();
+
+    if (!orderId) {
+        return { success: false, error: 'Thiếu mã đơn hàng.' };
+    }
+    if (!customOrderId) {
+        return { success: false, error: 'Thiếu mã đơn custom order.' };
+    }
+    if (!rating) {
+        return { success: false, error: 'Vui lòng chọn số sao đánh giá.' };
+    }
+
+    try {
+        const response = await api.post('/feedbacks', {
+            orderId,
+            customOrderId,
+            rating,
+            comment,
+        });
+
+        const normalized = normalizeResponse(response);
+        if (!isSuccessCode(normalized.code)) {
+            return {
+                success: false,
+                error: normalized.message || 'Gửi đánh giá thất bại.',
+            };
+        }
+
+        return {
+            success: true,
+            data: normalized.data ?? {},
+        };
+    } catch (error) {
+        return {
+            success: false,
+            error: mapError(error, 'Gửi đánh giá thất bại. Vui lòng thử lại.'),
+        };
+    }
+};
+
 export const getOrdersByArtisan = async (artisanId) => {
     if (!artisanId) {
         return { success: false, error: 'Thiếu mã artisan.', data: [] };

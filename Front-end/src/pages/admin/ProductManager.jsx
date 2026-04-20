@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { FiSearch, FiFilter, FiRefreshCw, FiPackage, FiCheck, FiX, FiTrash2, FiAlertTriangle, FiEye, FiMoreVertical } from 'react-icons/fi';
 import productService from '../../services/productService';
 import { appToast } from '../../lib/appToast';
@@ -23,6 +24,9 @@ const ProductManager = () => {
     // Xem chi tiết sản phẩm
     const [detailProduct, setDetailProduct] = useState(null);
     const [openActionMenuId, setOpenActionMenuId] = useState(null);
+    const [actionMenuAnchor, setActionMenuAnchor] = useState(null);
+    const [actionMenuPlacement, setActionMenuPlacement] = useState({ align: 'right', direction: 'down' });
+    const actionMenuRef = useRef(null);
 
     const fetchProducts = useCallback(async () => {
         setLoading(true);
@@ -52,13 +56,26 @@ const ProductManager = () => {
 
     useEffect(() => {
         const handleClickOutside = (event) => {
-            if (!event.target.closest('.action-dropdown')) {
+            if (!event.target.closest('.action-dropdown') && !event.target.closest('.action-menu-portal')) {
                 setOpenActionMenuId(null);
+                setActionMenuAnchor(null);
             }
         };
 
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    useEffect(() => {
+        const handleKeyDown = (event) => {
+            if (event.key === 'Escape') {
+                setOpenActionMenuId(null);
+                setActionMenuAnchor(null);
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
     }, []);
 
     const filteredProducts = products.filter((p) => {
@@ -158,6 +175,52 @@ const ProductManager = () => {
     const openDeleteModal = (p) => {
         setDeleteModal(p);
     };
+
+    const openActionMenu = (productId, target) => {
+        const rect = target?.getBoundingClientRect?.();
+        setOpenActionMenuId(productId);
+        if (rect) {
+            setActionMenuAnchor({
+                top: rect.bottom + window.scrollY + 8,
+                left: rect.left + window.scrollX,
+                width: rect.width,
+            });
+        } else {
+            setActionMenuAnchor(null);
+        }
+    };
+
+    const closeActionMenu = () => {
+        setOpenActionMenuId(null);
+        setActionMenuAnchor(null);
+        setActionMenuPlacement({ align: 'right', direction: 'down' });
+    };
+
+    useEffect(() => {
+        if (!actionMenuAnchor || !openActionMenuId) return undefined;
+
+        const menu = actionMenuRef.current;
+        if (!menu) return undefined;
+
+        const rect = menu.getBoundingClientRect();
+        const margin = 8;
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+
+        const fitsRight = actionMenuAnchor.left + rect.width <= viewportWidth - margin;
+        const fitsLeft = actionMenuAnchor.left + actionMenuAnchor.width - rect.width >= margin;
+        const align = fitsRight ? 'right' : fitsLeft ? 'left' : 'right';
+
+        const spaceBelow = viewportHeight - actionMenuAnchor.top;
+        const spaceAbove = actionMenuAnchor.top;
+        const direction = spaceBelow >= rect.height + margin || spaceBelow >= spaceAbove ? 'down' : 'up';
+
+        setActionMenuPlacement((prev) => (
+            prev.align === align && prev.direction === direction ? prev : { align, direction }
+        ));
+
+        return undefined;
+    }, [actionMenuAnchor, openActionMenuId]);
 
     const closeDeleteModal = () => {
         setDeleteModal(null);
@@ -324,33 +387,55 @@ const ProductManager = () => {
                                                     title="Mở menu hành động"
                                                     aria-expanded={openActionMenuId === p.productId}
                                                     aria-haspopup="menu"
-                                                    onClick={() => setOpenActionMenuId((current) => (current === p.productId ? null : p.productId))}
+                                                    onClick={(e) => {
+                                                        if (openActionMenuId === p.productId) {
+                                                            closeActionMenu();
+                                                            return;
+                                                        }
+                                                        openActionMenu(p.productId, e.currentTarget);
+                                                    }}
                                                 >
                                                     <FiMoreVertical />
                                                 </button>
-                                                {openActionMenuId === p.productId && (
-                                                    <div className="action-menu" role="menu">
-                                                        <button type="button" className="action-menu-item" onClick={() => { setDetailProduct(p); setOpenActionMenuId(null); }}>
+                                                {openActionMenuId === p.productId && actionMenuAnchor && createPortal(
+                                                    <div
+                                                        ref={actionMenuRef}
+                                                        className="action-menu action-menu-portal"
+                                                        role="menu"
+                                                        data-align={actionMenuPlacement.align}
+                                                        data-direction={actionMenuPlacement.direction}
+                                                        style={{
+                                                            top: actionMenuPlacement.direction === 'up'
+                                                                ? Math.max(8, actionMenuAnchor.top - 8 - 1)
+                                                                : actionMenuAnchor.top,
+                                                            left: actionMenuPlacement.align === 'left'
+                                                                ? Math.max(8, actionMenuAnchor.left + actionMenuAnchor.width - 208)
+                                                                : actionMenuAnchor.left,
+                                                            visibility: actionMenuPlacement.align ? 'visible' : 'hidden',
+                                                        }}
+                                                    >
+                                                        <button type="button" className="action-menu-item" onClick={() => { setDetailProduct(p); closeActionMenu(); }}>
                                                             <FiEye />
                                                             <span>Xem chi tiết</span>
                                                         </button>
                                                         {isPending(p) && (
                                                             <>
-                                                                <button type="button" className="action-menu-item" onClick={() => { openApproveModal(p); setOpenActionMenuId(null); }}>
+                                                                <button type="button" className="action-menu-item" onClick={() => { openApproveModal(p); closeActionMenu(); }}>
                                                                     <FiCheck />
                                                                     <span>Duyệt</span>
                                                                 </button>
-                                                                <button type="button" className="action-menu-item" onClick={() => { openRejectModal(p); setOpenActionMenuId(null); }}>
+                                                                <button type="button" className="action-menu-item" onClick={() => { openRejectModal(p); closeActionMenu(); }}>
                                                                     <FiX />
                                                                     <span>Từ chối</span>
                                                                 </button>
                                                             </>
                                                         )}
-                                                        <button type="button" className="action-menu-item danger" onClick={() => { openDeleteModal(p); setOpenActionMenuId(null); }}>
+                                                        <button type="button" className="action-menu-item danger" onClick={() => { openDeleteModal(p); closeActionMenu(); }}>
                                                             <FiTrash2 />
                                                             <span>Xóa</span>
                                                         </button>
-                                                    </div>
+                                                    </div>,
+                                                    document.body,
                                                 )}
                                             </div>
                                         </td>

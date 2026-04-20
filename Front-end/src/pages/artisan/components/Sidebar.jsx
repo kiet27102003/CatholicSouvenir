@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import logo from '../../../assets/logo.png';
 import {
     FiHome,
@@ -11,10 +12,12 @@ import {
     FiAlertTriangle,
     FiCreditCard,
     FiLogOut,
+    FiUser,
 } from 'react-icons/fi';
 import './Sidebar.css';
 
 const Sidebar = ({ user, activeView, setActiveView, onLogout, isOpen = false, onClose }) => {
+    const navigate = useNavigate();
     const [avatarFailed, setAvatarFailed] = useState(false);
     const safeUserName = user?.name || user?.fullName || 'Artisan';
     const avatarUrl = user?.avatar || user?.avatarUrl || '';
@@ -30,6 +33,7 @@ const Sidebar = ({ user, activeView, setActiveView, onLogout, isOpen = false, on
             title: 'Tổng quan',
             items: [
                 { id: 'dashboard', icon: <FiHome />, label: 'Bảng điều khiển', badge: null },
+                { id: 'profile', icon: <FiUser />, label: 'Hồ sơ cá nhân', badge: null },
                 { id: 'messages', icon: <FiMail />, label: 'Tin nhắn', badge: 2 },
             ],
         },
@@ -61,15 +65,21 @@ const Sidebar = ({ user, activeView, setActiveView, onLogout, isOpen = false, on
         <aside className={`artisan-sidebar ${isOpen ? 'open' : ''}`}>
             {onClose && <button type="button" className="sidebar-close-btn" aria-label="Đóng menu" onClick={onClose}>&times;</button>}
             <div className="sidebar-header">
-                <div className="sidebar-logo">
+                <button
+                    type="button"
+                    className="sidebar-logo"
+                    onClick={() => {
+                        if (onClose) onClose();
+                        navigate('/');
+                    }}
+                    aria-label="Về trang chủ"
+                >
                     <img src={logo} alt="Catholic Market" className="logo-image" />
                     <div className="logo-text">
                         <span className="logo-title">Catholic Market</span>
                         <span className="logo-subtitle">Nghệ nhân</span>
                     </div>
-                </div>
-
-                
+                </button>
             </div>
 
             <nav className="sidebar-nav">

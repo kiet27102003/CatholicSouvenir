@@ -156,11 +156,6 @@ const HomePage = () => {
                                 <button type="button" className="btn btn-outline" onClick={() => navigate('/templates')}>Cá nhân hóa</button>
                                 <button type="button" className="btn btn-outline" onClick={() => navigate('/custom-order')}>Đặt hàng riêng</button>
                             </div>
-                            <div className={`hero-stats fade-up stagger-4 ${heroVisible ? 'animate-in' : ''}`}>
-                                <div><strong>500+</strong><span>sản phẩm</span></div>
-                                <div><strong>120+</strong><span>nghệ nhân</span></div>
-                                <div><strong>2.000+</strong><span>khách hàng</span></div>
-                            </div>
                         </div>
 
                         <div className={`hero-gallery fade-in ${heroVisible ? 'animate-in' : ''}`}>
@@ -271,8 +266,8 @@ const HomePage = () => {
                                         <>
                                             <div className="artisan-avatar">{getInitials(artisan?.name || artisan?.fullName || artisan?.shopName)}</div>
                                             <div className="artisan-info">
-                                                <h3>{artisan?.shopName || artisan?.name || artisan?.fullName || 'Xưởng nghệ nhân'}</h3>
-                                                <p>{artisan?.specialty || artisan?.craft || 'Thủ công mỹ nghệ'}</p>
+                                                <h3>{artisan?.artisanName || artisan?.shopName || artisan?.name || artisan?.fullName || 'Xưởng nghệ nhân'}</h3>
+                                                <p>{`Chuyên môn: ${artisan?.specialization || artisan?.specialty || artisan?.craft || 'Chưa cập nhật'}`}</p>
                                                 <div className="artisan-stats">
                                                     <span>{artisan?.productCount ?? 0} sản phẩm</span>
                                                     <span><FiStar />{artisan?.rating ?? 4.8}</span>

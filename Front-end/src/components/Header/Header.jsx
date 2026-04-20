@@ -274,7 +274,7 @@ const Header = () => {
                                 <>
                                     <div className="user-menu-overlay" onClick={() => setUserMenuOpen(false)} aria-hidden="true" />
                                     <div className="user-dropdown" role="menu" aria-label="Tài khoản">
-                                        <button type="button" className="dropdown-item" onClick={() => { setUserMenuOpen(false); navigate('/profile'); }}>
+                                        <button type="button" className="dropdown-item" onClick={() => { setUserMenuOpen(false); navigate(user?.role === 'artisan' ? '/artisan/profile' : '/profile'); }}>
                                             <FiUser size={16} strokeWidth={2} />
                                             Hồ sơ cá nhân
                                         </button>

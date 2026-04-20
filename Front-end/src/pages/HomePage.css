@@ -62,8 +62,13 @@
     margin-bottom: 1.5rem;
 }
 
+.hero-copy {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
 .hero-actions,
-.hero-stats,
 .section-header-row,
 .cta-layout,
 .artisan-stats {
@@ -72,12 +77,23 @@
     flex-wrap: wrap;
 }
 
+.hero-actions {
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    margin-top: 0.25rem;
+}
+
 .btn {
     border-radius: 999px;
     padding: 0.9rem 1.35rem;
     border: 1px solid transparent;
     cursor: pointer;
     transition: transform 0.25s ease, background 0.25s ease, border-color 0.25s ease;
+}
+
+.hero-actions .btn {
+    min-width: 150px;
 }
 
 .btn:hover { transform: translateY(-1px); }
@@ -130,10 +146,26 @@
 .category-card svg { color: var(--homepage-accent); }
 .category-card h3,
 .product-body h3,
-.artisan-info h3 { margin: 0; }
+.artisan-info h3 {
+    margin: 0;
+}
+
+.artisan-info h3,
+.category-card h3,
+.product-body h3 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 .category-card p,
 .product-artisan,
-.artisan-info p { margin: 0; color: var(--color-text-light); }
+.artisan-info p {
+    margin: 0;
+    color: var(--color-text-light);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 
 .products-grid,
 .artisans-grid { display: grid; gap: 1.25rem; }

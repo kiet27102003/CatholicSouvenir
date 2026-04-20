@@ -4,6 +4,10 @@
     gap: var(--spacing-lg);
 }
 
+.wallet-page-shell {
+    margin: 0 2rem;
+}
+
 .wallet-header h1 {
     margin: 0;
     font-size: 1.7rem;
@@ -20,6 +24,38 @@
     justify-content: space-between;
     align-items: center;
     gap: var(--spacing-md);
+}
+
+.wallet-page-header {
+    padding-top: 0.5rem;
+}
+
+.wallet-page-header-content {
+    display: grid;
+    gap: 0.25rem;
+}
+
+.wallet-page-eyebrow {
+    margin: 0;
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-primary);
+    font-weight: 700;
+}
+
+.wallet-page-header-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.wallet-home-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
 }
 
 .wallet-withdraw-btn {
@@ -374,6 +410,10 @@
 }
 
 @media (max-width: 768px) {
+    .wallet-page-shell {
+        margin: 0 1rem;
+    }
+
     .wallet-top-grid {
         grid-template-columns: 1fr;
     }
@@ -390,7 +430,8 @@
 
     .wallet-header-row,
     .wallet-withdrawal-header,
-    .wallet-modal-actions {
+    .wallet-modal-actions,
+    .wallet-page-header-actions {
         flex-direction: column;
         align-items: stretch;
     }

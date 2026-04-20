@@ -12,9 +12,11 @@ import ArtisanQuoteCreatePage from './ArtisanQuoteCreatePage';
 import ShipmentManagementPage from './ShipmentManagementPage';
 import WalletPage from '../customer/WalletPage';
 import ChatPage from '../customer/ChatPage';
+import ArtisanProfilePage from './ArtisanProfilePage';
 import './ArtisanDashboard.css';
 
 const getViewFromPath = (pathname) => {
+    if (pathname === '/artisan/profile') return 'profile';
     if (pathname === '/artisan/templates') return 'templates';
     if (pathname === '/artisan/portfolio') return 'portfolio';
     if (pathname === '/artisan/requests') return 'requests';
@@ -28,6 +30,7 @@ const getViewFromPath = (pathname) => {
 };
 
 const viewToPath = (view) => {
+    if (view === 'profile') return '/artisan/profile';
     if (view === 'templates') return '/artisan/templates';
     if (view === 'portfolio') return '/artisan/portfolio';
     if (view === 'requests') return '/artisan/requests';
@@ -84,6 +87,7 @@ const ArtisanDashboard = () => {
                 ) : (
                     <div className="artisan-main-inner">
                         {activeView === 'dashboard' && <Workbench user={user} />}
+                        {activeView === 'profile' && <ArtisanProfilePage />}
                         {activeView === 'commissions' && <div className="view-placeholder">Commissions View</div>}
                         {activeView === 'portfolio' && <PortfolioView user={user} />}
                         {activeView === 'templates' && <TemplatesView user={user} />}

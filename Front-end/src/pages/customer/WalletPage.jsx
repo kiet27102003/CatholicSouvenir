@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import dayjs from 'dayjs';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { FiHome } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import { appToast } from '../../lib/appToast';
 import walletService from '../../services/walletService';
@@ -28,10 +29,13 @@ const formatShortDateTime = (value) => (value ? dayjs(value).format('DD/MM HH:mm
 
 const WalletPage = ({ embedded = false }) => {
     const location = useLocation();
+    const navigate = useNavigate();
     const { user, isAuthenticated } = useAuth();
 
     const role = String(user?.role || '').toLowerCase();
-    const canView = role === 'customer' || role === 'artisan';
+    const isCustomer = role === 'customer';
+    const isArtisan = role === 'artisan';
+    const canView = isCustomer || isArtisan;
 
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
@@ -61,11 +65,12 @@ const WalletPage = ({ embedded = false }) => {
         const fetchData = async () => {
             setLoading(true);
 
-            const [walletRes, transactionsRes, withdrawalsRes] = await Promise.all([
-                walletService.getMyWallet(),
-                walletService.getWalletTransactions(),
-                walletService.getMyWithdrawals(),
-            ]);
+            const requests = [walletService.getMyWallet(), walletService.getWalletTransactions()];
+            if (isArtisan) {
+                requests.push(walletService.getMyWithdrawals());
+            }
+
+            const [walletRes, transactionsRes, withdrawalsRes] = await Promise.all(requests);
 
             if (cancelled) return;
 
@@ -77,13 +82,13 @@ const WalletPage = ({ embedded = false }) => {
                 appToast.error('Không tải được giao dịch ví', transactionsRes.error || 'Vui lòng thử lại sau');
             }
 
-            if (!withdrawalsRes.success) {
+            if (isArtisan && withdrawalsRes && !withdrawalsRes.success) {
                 appToast.error('Không tải được danh sách rút tiền', withdrawalsRes.error || 'Vui lòng thử lại sau');
             }
 
             setWallet(walletRes.success ? walletRes.data : null);
             setTransactions(transactionsRes.success ? (transactionsRes.data || []) : []);
-            setWithdrawals(withdrawalsRes.success ? (withdrawalsRes.data || []) : []);
+            setWithdrawals(isArtisan && withdrawalsRes?.success ? (withdrawalsRes.data || []) : []);
 
             setLoading(false);
         };
@@ -246,15 +251,22 @@ const WalletPage = ({ embedded = false }) => {
     }
 
     return (
-        <div className="wallet-page">
-            <header className="wallet-header wallet-header-row">
-                <div>
+        <div className="wallet-page wallet-page-shell">
+            <header className="wallet-header wallet-header-row wallet-page-header">
+                <div className="wallet-page-header-content">
+                    <p className="wallet-page-eyebrow">Customer wallet</p>
                     <h1>Ví của tôi</h1>
                     <p>Quản lý số dư và lịch sử giao dịch</p>
                 </div>
-                <button type="button" className="btn btn-primary wallet-withdraw-btn" onClick={openWithdraw} disabled={loading || Number(wallet?.balance || 0) <= 0}>
-                    Rút số dư
-                </button>
+                <div className="wallet-page-header-actions">
+                    <button type="button" className="btn btn-outline wallet-home-btn" onClick={() => navigate('/')}>
+                        <FiHome size={16} />
+                        Về trang chủ
+                    </button>
+                    <button type="button" className="btn btn-primary wallet-withdraw-btn" onClick={openWithdraw} disabled={loading || Number(wallet?.balance || 0) <= 0}>
+                        Rút số dư
+                    </button>
+                </div>
             </header>
 
             {loading ? (
@@ -353,67 +365,69 @@ const WalletPage = ({ embedded = false }) => {
                         )}
                     </section>
 
-                    <section className="wallet-withdrawal-section">
-                        <div className="wallet-withdrawal-header">
-                            <h2>Quản lí rút tiền</h2>
-                            <p>Theo dõi các yêu cầu rút tiền của bạn.</p>
-                        </div>
-
-                        {withdrawals.length === 0 ? (
-                            <div className="wallet-empty">Chưa có yêu cầu rút tiền nào</div>
-                        ) : (
-                            <div className="wallet-table-wrapper">
-                                <table className="wallet-table">
-                                    <thead>
-                                        <tr>
-                                            <th>MÃ YÊU CẦU</th>
-                                            <th>SỐ TIỀN</th>
-                                            <th>NGÂN HÀNG</th>
-                                            <th>TRẠNG THÁI</th>
-                                            <th>THỜI GIAN</th>
-                                            <th>HÀNH ĐỘNG</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {withdrawals.map((withdrawal) => {
-                                            const status = String(withdrawal.status || 'PENDING').toLowerCase();
-                                            const canCancel = String(withdrawal.status || '').toUpperCase() === 'PENDING';
-
-                                            return (
-                                                <tr key={withdrawal.withdrawalId}>
-                                                    <td>
-                                                        <p className="wallet-main-cell">#{String(withdrawal.withdrawalId || '').slice(0, 8)}</p>
-                                                        <span className="wallet-sub-cell">{withdrawal.bankAccountName || '—'}</span>
-                                                    </td>
-                                                    <td><strong className="wallet-amount-minus">- {formatCurrency(withdrawal.amount)}</strong></td>
-                                                    <td>
-                                                        <p className="wallet-main-cell">{withdrawal.bankName || '—'}</p>
-                                                        <span className="wallet-sub-cell">{withdrawal.bankAccountNumber || '—'}</span>
-                                                    </td>
-                                                    <td>
-                                                        <span className={`wallet-status-badge wallet-status-${status}`}>
-                                                            {withdrawal.status || 'PENDING'}
-                                                        </span>
-                                                    </td>
-                                                    <td>{formatShortDateTime(withdrawal.createdAt)}</td>
-                                                    <td>
-                                                        <div className="wallet-actions-inline">
-                                                            <button type="button" className="btn btn-outline btn-sm" onClick={() => openWithdrawalDetail(withdrawal)}>
-                                                                Xem chi tiết
-                                                            </button>
-                                                            <button type="button" className="btn btn-outline btn-sm" disabled={!canCancel} onClick={() => openCancelWithdrawal(withdrawal)}>
-                                                                Huỷ rút
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
+                    {isArtisan && (
+                        <section className="wallet-withdrawal-section">
+                            <div className="wallet-withdrawal-header">
+                                <h2>Quản lí rút tiền</h2>
+                                <p>Theo dõi các yêu cầu rút tiền của bạn.</p>
                             </div>
-                        )}
-                    </section>
+
+                            {withdrawals.length === 0 ? (
+                                <div className="wallet-empty">Chưa có yêu cầu rút tiền nào</div>
+                            ) : (
+                                <div className="wallet-table-wrapper">
+                                    <table className="wallet-table">
+                                        <thead>
+                                            <tr>
+                                                <th>MÃ YÊU CẦU</th>
+                                                <th>SỐ TIỀN</th>
+                                                <th>NGÂN HÀNG</th>
+                                                <th>TRẠNG THÁI</th>
+                                                <th>THỜI GIAN</th>
+                                                <th>HÀNH ĐỘNG</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {withdrawals.map((withdrawal) => {
+                                                const status = String(withdrawal.status || 'PENDING').toLowerCase();
+                                                const canCancel = String(withdrawal.status || '').toUpperCase() === 'PENDING';
+
+                                                return (
+                                                    <tr key={withdrawal.withdrawalId}>
+                                                        <td>
+                                                            <p className="wallet-main-cell">#{String(withdrawal.withdrawalId || '').slice(0, 8)}</p>
+                                                            <span className="wallet-sub-cell">{withdrawal.bankAccountName || '—'}</span>
+                                                        </td>
+                                                        <td><strong className="wallet-amount-minus">- {formatCurrency(withdrawal.amount)}</strong></td>
+                                                        <td>
+                                                            <p className="wallet-main-cell">{withdrawal.bankName || '—'}</p>
+                                                            <span className="wallet-sub-cell">{withdrawal.bankAccountNumber || '—'}</span>
+                                                        </td>
+                                                        <td>
+                                                            <span className={`wallet-status-badge wallet-status-${status}`}>
+                                                                {withdrawal.status || 'PENDING'}
+                                                            </span>
+                                                        </td>
+                                                        <td>{formatShortDateTime(withdrawal.createdAt)}</td>
+                                                        <td>
+                                                            <div className="wallet-actions-inline">
+                                                                <button type="button" className="btn btn-outline btn-sm" onClick={() => openWithdrawalDetail(withdrawal)}>
+                                                                    Xem chi tiết
+                                                                </button>
+                                                                <button type="button" className="btn btn-outline btn-sm" disabled={!canCancel} onClick={() => openCancelWithdrawal(withdrawal)}>
+                                                                    Huỷ rút
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </section>
+                    )}
 
                     <section className="wallet-meta-foot">
                         <span>Tạo ví: {formatDateTime(wallet?.createdAt)}</span>

@@ -92,6 +92,33 @@ export const createCustomRequestV2 = async (payload) => {
     }
 };
 
+export const updateCustomRequest = async (requestId, payload) => {
+    if (!requestId) return { success: false, error: 'Thiếu mã yêu cầu.' };
+
+    try {
+        const body = {
+            title: String(payload?.title || '').trim(),
+            description: String(payload?.description || '').trim(),
+            minBudget: Number(payload?.minBudget || 0),
+            maxBudget: Number(payload?.maxBudget || 0),
+            referenceImages: Array.isArray(payload?.referenceImages) ? payload.referenceImages.filter(Boolean) : [],
+            aiConceptImageUrl: String(payload?.aiConceptImageUrl || '').trim(),
+            aiImagePrompt: String(payload?.aiImagePrompt || '').trim(),
+        };
+
+        const response = await api.put(`/custom-requests/${requestId}`, body);
+        const normalized = normalizeResponse(response);
+
+        if (!isSuccessCode(normalized.code)) {
+            return { success: false, error: normalized.message || 'Cập nhật yêu cầu thất bại.' };
+        }
+
+        return { success: true, data: normalized.data || {} };
+    } catch (error) {
+        return { success: false, error: mapError(error, 'Cập nhật yêu cầu thất bại.') };
+    }
+};
+
 export const publishCustomRequest = async (requestId) => {
     if (!requestId) return { success: false, error: 'Thiếu mã yêu cầu.' };
 

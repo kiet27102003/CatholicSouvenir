@@ -62,6 +62,14 @@ export default function ConversationList({ conversations, selectedConversation, 
             const isSelected = String(selectedConversation || '') === String(conversationId || '');
             const unread = Number(conversation?.unreadCount || 0);
             const name = conversation?.otherParticipantName || 'Người dùng';
+            const requestId =
+              conversation?.requestId ||
+              conversation?.customRequestId ||
+              conversation?.request?.requestId ||
+              conversation?.request?.id ||
+              conversation?.customRequest?.requestId ||
+              conversation?.customRequest?.id ||
+              '';
 
             return (
               <button
@@ -82,6 +90,7 @@ export default function ConversationList({ conversations, selectedConversation, 
 
                   <div className="conv-line-2">
                     <span className="request">{conversation?.requestTitle || 'Yêu cầu đặt riêng'}</span>
+                    {requestId ? <span className="request-id">#{String(requestId).slice(0, 8)}…</span> : null}
                     {unread > 0 && <span className="unread">{unread}</span>}
                   </div>
                 </div>

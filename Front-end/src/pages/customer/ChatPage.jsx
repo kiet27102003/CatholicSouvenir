@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { appToast } from '../../lib/appToast';
-import { selectCustomRequestArtisan } from '../../services/customRequestService';
+import { getCustomRequestDetail } from '../../services/customRequestService';
+import { getConversationDetail } from '../../services/chatService';
 import useChat from '../../hooks/useChat';
 import useWebSocket from '../../hooks/useWebSocket';
 import Header from '../../components/Header/Header';
@@ -48,7 +49,8 @@ export default function ChatPage({ hideHeader = false } = {}) {
   const [searchParams] = useSearchParams();
   const [mobileView, setMobileView] = useState('list');
   const [isTyping] = useState(false);
-  const [isSelectingArtisan, setIsSelectingArtisan] = useState(false);
+  const [requestDetail, setRequestDetail] = useState(null);
+  const [loadingRequestBudget, setLoadingRequestBudget] = useState(false);
 
   const token = useMemo(() => resolveToken(user), [user]);
   const currentUserId = user?.id;
@@ -80,6 +82,39 @@ export default function ChatPage({ hideHeader = false } = {}) {
   ), [conversations, selectedConversation]);
 
   useEffect(() => {
+    let active = true;
+    if (!selectedConversation || selectedConversationData?.requestId) return undefined;
+
+    (async () => {
+      const detailRes = await getConversationDetail(selectedConversation);
+      if (!active || !detailRes.success || !detailRes.data) return;
+
+      const detail = detailRes.data;
+      const mappedRequestId =
+        detail?.requestId ||
+        detail?.customRequestId ||
+        detail?.request?.requestId ||
+        detail?.request?.id ||
+        detail?.customRequest?.requestId ||
+        detail?.customRequest?.id ||
+        detail?.order?.requestId ||
+        detail?.order?.customRequestId ||
+        null;
+
+      if (mappedRequestId) {
+        setRequestDetail((prev) => prev || {
+          ...detail,
+          requestId: mappedRequestId,
+        });
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [selectedConversation, selectedConversationData?.requestId]);
+
+  useEffect(() => {
     if (!token) return;
     loadConversations();
   }, [loadConversations, token]);
@@ -100,6 +135,33 @@ export default function ChatPage({ hideHeader = false } = {}) {
     selectConversation(conversations[0].conversationId || conversations[0].id);
   }, [conversations, requestedConversationId, selectConversation, selectedConversation]);
 
+  useEffect(() => {
+    const requestId = selectedConversationData?.requestId || selectedConversationData?.customRequestId;
+    if (!requestId) {
+      setRequestDetail(null);
+      return;
+    }
+
+    let active = true;
+    setLoadingRequestBudget(true);
+
+    (async () => {
+      const res = await getCustomRequestDetail(requestId);
+      if (!active) return;
+
+      if (res.success && res.data) {
+        setRequestDetail(res.data);
+      } else {
+        setRequestDetail(selectedConversationData);
+      }
+      setLoadingRequestBudget(false);
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [selectedConversationData?.customRequestId, selectedConversationData?.maxBudget, selectedConversationData?.minBudget, selectedConversationData?.requestId]);
+
   if (!token) {
     return (
       <div className="chat-page">
@@ -113,34 +175,13 @@ export default function ChatPage({ hideHeader = false } = {}) {
     );
   }
 
-  const requestTitle = selectedConversationData?.requestTitle || 'Yêu cầu đặt riêng';
-  const requestDescription = selectedConversationData?.requestDescription || selectedConversationData?.description || '';
-  const minBudget = selectedConversationData?.minBudget;
-  const maxBudget = selectedConversationData?.maxBudget;
-  const selectedArtisanId = selectedConversationData?.selectedArtisanId || selectedConversationData?.selectedArtisan?.id;
-  const artisanCandidates = Array.isArray(selectedConversationData?.artisansInterested)
-    ? selectedConversationData.artisansInterested
-    : [];
-
+  const requestTitle = requestDetail?.title || selectedConversationData?.requestTitle || 'Yêu cầu đặt riêng';
+  const budgetLabel = useMemo(() => {
+    const min = Number(requestDetail?.minBudget ?? selectedConversationData?.minBudget ?? 0);
+    const max = Number(requestDetail?.maxBudget ?? selectedConversationData?.maxBudget ?? 0);
+    return formatBudget(min, max);
+  }, [requestDetail, selectedConversationData?.maxBudget, selectedConversationData?.minBudget]);
   const otherName = selectedConversationData?.otherParticipantName || 'Đối phương';
-  const requestStatus = selectedConversationData?.requestStatus || 'OPEN';
-
-  const handleSelectArtisan = async (artisanId) => {
-    const requestId = selectedConversationData?.requestId || selectedConversationData?.customRequestId;
-    if (!requestId || !artisanId || isSelectingArtisan) return;
-
-    setIsSelectingArtisan(true);
-    const res = await selectCustomRequestArtisan(requestId, artisanId);
-    setIsSelectingArtisan(false);
-
-    if (!res.success) {
-      appToast.error('Không thể chọn nghệ nhân', res.error || 'Vui lòng thử lại');
-      return;
-    }
-
-    appToast.success('Đã chọn nghệ nhân cho yêu cầu');
-    loadConversations();
-  };
 
   return (
     <div className={`chat-page ${hideHeader ? 'chat-page--embedded' : ''}`}>
@@ -188,64 +229,11 @@ export default function ChatPage({ hideHeader = false } = {}) {
             disabled={!isConnected || !selectedConversation}
             showTemplateButton={role === 'ARTISAN'}
             onUseTemplate={() => quoteTemplate}
+            budgetLabel={budgetLabel}
+            budgetLoading={loadingRequestBudget}
           />
         </section>
 
-          <aside className="chat-col right chat-info">
-          <div className="card-box info-section">
-            <h3>Thông tin yêu cầu</h3>
-            <p className="title">{requestTitle}</p>
-            <p className="desc">{truncate(requestDescription, 110)}</p>
-            <div className="budget-box">
-              <span className="budget-label">Ngân sách</span>
-              <span className="budget-value">{formatBudget(minBudget, maxBudget)}</span>
-            </div>
-          </div>
-
-          {role === 'CUSTOMER' && (
-            <div className="card-box info-section">
-              <h3>Nghệ nhân quan tâm</h3>
-              {artisanCandidates.length === 0 ? (
-                <p className="desc">Chưa có nghệ nhân quan tâm.</p>
-              ) : (
-                <div className="artisan-list">
-                  {artisanCandidates.map((artisan) => {
-                    const isSelected = String(artisan?.id || '') === String(selectedArtisanId || '');
-                    return (
-                      <div key={String(artisan?.id)} className="artisan-item">
-                        <div className="artisan-main">
-                          <div className="avatar small">{initials(artisan?.fullName || artisan?.name)}</div>
-                          <p>{artisan?.fullName || artisan?.name || 'Nghệ nhân'}</p>
-                        </div>
-                        {isSelected ? (
-                          <span className="picked">Đã chọn</span>
-                        ) : (
-                          <button
-                            type="button"
-                            className="pick-btn"
-                            disabled={isSelectingArtisan}
-                            onClick={() => handleSelectArtisan(artisan?.id)}
-                          >
-                            Chọn
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
-          <div className="card-box info-section">
-            <h3>Trạng thái</h3>
-            <span className="status-pill">{String(requestStatus || 'OPEN')}</span>
-            <p className={`ws ${isConnected ? 'ok' : 'bad'}`}>
-              <span className="ws-dot" aria-hidden="true" />
-              {isConnected ? 'Đã kết nối' : 'Mất kết nối'}
-            </p>
-          </div>
-        </aside>
         </div>
       </main>
     </div>

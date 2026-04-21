@@ -393,6 +393,8 @@
 
 .cancel-modal {
     width: min(560px, 100%);
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
     background: #fff;
     border-radius: 16px;
     border: 1px solid var(--color-border-light);
@@ -404,6 +406,8 @@
 
 .shipment-modal {
     width: min(880px, 100%);
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
 }
 
 .shipment-card-actions {
@@ -480,6 +484,11 @@
 }
 
 @media (max-width: 768px) {
+    .shipment-modal {
+        width: min(100%, 100vw - 1rem);
+        max-height: calc(100vh - 1rem);
+    }
+
     .shipment-form-grid {
         grid-template-columns: 1fr;
     }

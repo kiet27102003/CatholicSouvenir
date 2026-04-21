@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiGrid, FiLayers } from 'react-icons/fi';
+import { FiChevronDown, FiGrid, FiLayers } from 'react-icons/fi';
 import Header from '../components/Header/Header';
 import Footer from '../components/Footer/Footer';
 import ProductCard from '../components/ProductGrid/ProductCard';
@@ -23,6 +23,7 @@ const ShopPage = () => {
     const [selectedCategory, setSelectedCategory] = useState('all');
     const [selectedMaterial, setSelectedMaterial] = useState(null);
     const [sortBy, setSortBy] = useState('newest');
+    const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 8;
 
@@ -182,21 +183,31 @@ const ShopPage = () => {
                     {/* Sidebar */}
                     <aside className="shop-sidebar">
                         <div className="shop-sidebar-section">
-                            <h3 className="shop-sidebar-title">DANH MỤC</h3>
-                            <ul className="shop-category-list">
-                                {categories.map(({ id, label }) => (
-                                    <li key={id}>
-                                        <button
-                                            type="button"
-                                            className={`shop-category-btn ${selectedCategory === id ? 'active' : ''}`}
-                                            onClick={() => setSelectedCategory(id)}
-                                        >
-                                            <span className="shop-category-icon"><FiLayers size={18} strokeWidth={2} /></span>
-                                            {label}
-                                        </button>
-                                    </li>
-                                ))}
-                            </ul>
+                            <button
+                                type="button"
+                                className="shop-sidebar-title shop-dropdown-trigger"
+                                onClick={() => setCategoryDropdownOpen((prev) => !prev)}
+                                aria-expanded={categoryDropdownOpen}
+                            >
+                                <span>DANH MỤC</span>
+                                <FiChevronDown className={`shop-dropdown-icon ${categoryDropdownOpen ? 'open' : ''}`} />
+                            </button>
+                            {categoryDropdownOpen && (
+                                <ul className="shop-category-list">
+                                    {categories.map(({ id, label }) => (
+                                        <li key={id}>
+                                            <button
+                                                type="button"
+                                                className={`shop-category-btn ${selectedCategory === id ? 'active' : ''}`}
+                                                onClick={() => setSelectedCategory(id)}
+                                            >
+                                                <span className="shop-category-icon"><FiLayers size={18} strokeWidth={2} /></span>
+                                                {label}
+                                            </button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
                         </div>
                         <div className="shop-sidebar-section">
                             <h3 className="shop-sidebar-title">BỘ LỌC</h3>

@@ -1,16 +1,18 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { FiArrowLeft, FiClock, FiEdit3, FiEye, FiFilter, FiImage, FiLayers, FiPlus, FiRefreshCw, FiSearch, FiShield, FiStar } from 'react-icons/fi';
+import { FiArrowLeft, FiClock, FiEdit3, FiEye, FiFilter, FiImage, FiLayers, FiPlus, FiRefreshCw, FiSearch, FiShield } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import Header from '../../components/Header/Header';
 import { appToast } from '../../lib/appToast';
-import {
-    getCustomerCustomRequests,
-    publishCustomRequest,
-    regenerateCustomRequestImage,
-} from '../../services/customRequestService';
+import { getCustomerCustomRequests, publishCustomRequest, regenerateCustomRequestImage } from '../../services/customRequestService';
 import './CustomRequestsManagePage.css';
 
 const formatCurrency = (value) => `${new Intl.NumberFormat('vi-VN').format(Number(value || 0))} đ`;
+
+const truncate = (value, maxLength) => {
+    const text = String(value || '').trim();
+    if (!text) return 'Yêu cầu đặt làm riêng';
+    return text.length > maxLength ? `${text.slice(0, maxLength)}...` : text;
+};
 
 const formatDateTime = (value) => {
     if (!value) return '—';
@@ -27,13 +29,7 @@ const formatDateTime = (value) => {
     }
 };
 
-const truncate = (value, maxLength) => {
-    const text = String(value || '').trim();
-    if (!text) return 'Yêu cầu đặt làm riêng';
-    return text.length > maxLength ? `${text.slice(0, maxLength)}...` : text;
-};
-
-const getRequestId = (item) => item?.requestId ?? item?.id ?? item?.customRequestId;
+const getRequestId = (item) => item?.requestId ?? item?.id ?? item?.customRequestId ?? null;
 
 const getStatusMeta = (status) => {
     const s = String(status || '').toUpperCase();
@@ -78,7 +74,11 @@ const CustomRequestsManagePage = () => {
     };
 
     useEffect(() => {
-        fetchRequests();
+        const load = async () => {
+            await fetchRequests();
+        };
+
+        load();
     }, []);
 
     const filteredRequests = useMemo(() => {
@@ -86,15 +86,8 @@ const CustomRequestsManagePage = () => {
         return requests.filter((item) => {
             const status = String(item?.status || '').toUpperCase();
             const matchesTab = activeTab === 'ALL' || status === activeTab;
-            const haystack = [
-                item?.title,
-                item?.description,
-                item?.artisan?.artisanName,
-                item?.confirmedArtisan?.artisanName,
-                item?.selectedArtisan?.artisanName,
-            ].join(' ').toLowerCase();
-            const matchesSearch = !term || haystack.includes(term);
-            return matchesTab && matchesSearch;
+            const haystack = [item?.title, item?.description, item?.artisan?.artisanName, item?.confirmedArtisan?.artisanName, item?.selectedArtisan?.artisanName].join(' ').toLowerCase();
+            return matchesTab && (!term || haystack.includes(term));
         });
     }, [activeTab, requests, searchTerm]);
 
@@ -127,11 +120,7 @@ const CustomRequestsManagePage = () => {
 
         const newUrl = typeof res.data === 'string' ? res.data : '';
         if (newUrl) {
-            setRequests((prev) => prev.map((item) => {
-                const id = String(getRequestId(item));
-                if (id !== String(requestId)) return item;
-                return { ...item, aiGeneratedImageUrl: newUrl };
-            }));
+            setRequests((prev) => prev.map((item) => (String(getRequestId(item)) === String(requestId) ? { ...item, aiGeneratedImageUrl: newUrl } : item)));
         } else {
             fetchRequests();
         }
@@ -156,14 +145,12 @@ const CustomRequestsManagePage = () => {
                             </button>
                         </div>
                         <h1>Toàn bộ yêu cầu đặt riêng của bạn trong một nơi</h1>
-                        <p>
-                            Theo dõi bản nháp, yêu cầu đang mở, tiến độ thực hiện và cập nhật ảnh AI ngay trên một màn hình quản lý riêng.
-                        </p>
+                        <p>Theo dõi bản nháp, yêu cầu đang mở, tiến độ thực hiện và cập nhật ảnh AI ngay trên một màn hình quản lý riêng.</p>
                         <div className="manage-hero-actions">
                             <button type="button" className="btn btn-primary" onClick={() => navigate('/custom-order')}>
                                 <FiPlus /> Tạo yêu cầu mới
                             </button>
-                            <button type="button" className="btn btn-outline" onClick={() => fetchRequests()}>
+                            <button type="button" className="btn btn-outline" onClick={fetchRequests}>
                                 <FiRefreshCw /> Làm mới
                             </button>
                         </div>
@@ -182,8 +169,8 @@ const CustomRequestsManagePage = () => {
                         </div>
                         <div className="panel-card muted">
                             <div className="panel-card-icon"><FiEye /></div>
-                            <h3>Xem chi tiết tức thì</h3>
-                            <p>Bấm vào từng thẻ để xem chi tiết, tiến độ và trao đổi tiếp.</p>
+                            <h3>Xem chi tiết trên trang riêng</h3>
+                            <p>Bấm vào từng thẻ để mở trang chi tiết, theo dõi tiến độ và trao đổi tiếp.</p>
                         </div>
                     </div>
                 </section>
@@ -256,9 +243,7 @@ const CustomRequestsManagePage = () => {
                                     <header className="manage-card-header">
                                         <div>
                                             <h3>{truncate(item?.description, 50)}</h3>
-                                            <p>
-                                                {formatDateTime(item?.createdAt)} · {formatCurrency(item?.minBudget)} - {formatCurrency(item?.maxBudget)}
-                                            </p>
+                                            <p>{formatDateTime(item?.createdAt)} · {formatCurrency(item?.minBudget)} - {formatCurrency(item?.maxBudget)}</p>
                                         </div>
                                         <span className={`manage-status ${statusMeta.className}`}>{statusMeta.label}</span>
                                     </header>
@@ -283,19 +268,11 @@ const CustomRequestsManagePage = () => {
                                         <span className="manage-card-meta">{artisanName || 'Chưa có nghệ nhân'}</span>
                                         <div className="manage-card-actions">
                                             {status === 'IN_PROGRESS' && (
-                                                <button
-                                                    type="button"
-                                                    className="btn btn-outline btn-sm"
-                                                    onClick={() => navigate(`/custom-requests/${requestId}#stages`)}
-                                                >
+                                                <button type="button" className="btn btn-outline btn-sm" onClick={() => navigate(`/custom-requests/${requestId}#stages`)}>
                                                     Xem tiến độ
                                                 </button>
                                             )}
-                                            <button
-                                                type="button"
-                                                className="btn btn-outline btn-sm"
-                                                onClick={() => navigate(`/custom-requests/${requestId}`)}
-                                            >
+                                            <button type="button" className="btn btn-outline btn-sm" onClick={() => navigate(`/custom-requests/${requestId}`)}>
                                                 Chi tiết
                                             </button>
                                             {status === 'DRAFT' && (

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { FiGrid, FiLayers, FiImage, FiStar, FiArrowRight } from 'react-icons/fi';
+import { FiChevronDown, FiGrid, FiLayers, FiImage, FiStar, FiArrowRight } from 'react-icons/fi';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Header from '../components/Header/Header';
 import Footer from '../components/Footer/Footer';
@@ -22,6 +22,7 @@ const TemplateCatalogPage = () => {
     const [templates, setTemplates] = useState([]);
     const [loading, setLoading] = useState(true);
     const [loadingCategories, setLoadingCategories] = useState(true);
+    const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
 
     useEffect(() => {
         window.scrollTo(0, 0);
@@ -135,22 +136,32 @@ const TemplateCatalogPage = () => {
 
                 <section className="template-catalog-layout container">
                     <aside className="template-catalog-sidebar">
-                        <h3>Danh mục</h3>
-                        <div className="template-catalog-category-list">
-                            {loadingCategories ? (
-                                <div className="template-catalog-skeleton">Đang tải danh mục...</div>
-                            ) : categories.map((category) => (
-                                <button
-                                    key={category.id}
-                                    type="button"
-                                    className={`template-catalog-category-btn ${selectedCategory === category.id ? 'active' : ''}`}
-                                    onClick={() => handleSelectCategory(category.id)}
-                                >
-                                    <span><category.Icon /></span>
-                                    {category.label}
-                                </button>
-                            ))}
-                        </div>
+                        <button
+                            type="button"
+                            className="template-catalog-sidebar-title template-dropdown-trigger"
+                            onClick={() => setCategoryDropdownOpen((prev) => !prev)}
+                            aria-expanded={categoryDropdownOpen}
+                        >
+                            <span>Danh mục</span>
+                            <FiChevronDown className={`template-dropdown-icon ${categoryDropdownOpen ? 'open' : ''}`} />
+                        </button>
+                        {categoryDropdownOpen && (
+                            <div className="template-catalog-category-list">
+                                {loadingCategories ? (
+                                    <div className="template-catalog-skeleton">Đang tải danh mục...</div>
+                                ) : categories.map((category) => (
+                                    <button
+                                        key={category.id}
+                                        type="button"
+                                        className={`template-catalog-category-btn ${selectedCategory === category.id ? 'active' : ''}`}
+                                        onClick={() => handleSelectCategory(category.id)}
+                                    >
+                                        <span><category.Icon /></span>
+                                        {category.label}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </aside>
 
                     <div className="template-catalog-content">

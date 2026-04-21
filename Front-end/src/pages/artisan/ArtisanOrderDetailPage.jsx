@@ -354,41 +354,60 @@ const ArtisanOrderDetailPage = () => {
     }, [shipmentForm.districtCode]);
 
     const handleCreateShipment = async () => {
-        const shipmentOrderId = order?.orderId || order?.id;
+        const shipmentOrderId = order?.customOrderId || order?.orderId || order?.id;
+        const recipientName = String(shipmentForm.recipientName || '').trim();
+        const recipientPhone = String(shipmentForm.recipientPhone || '').trim();
+        const deliveryAddress = String(shipmentForm.deliveryAddress || '').trim();
+        const provinceCode = String(shipmentForm.provinceCode || '').trim();
+        const districtCode = String(shipmentForm.districtCode || '').trim();
+        const wardCode = String(shipmentForm.wardCode || '').trim();
+        const selectedProvinceName = selectedProvince?.name || '';
+        const selectedDistrictName = selectedDistrict?.name || '';
+        const fullAddress = [deliveryAddress, selectedDistrictName, selectedProvinceName].filter(Boolean).join(', ');
 
         console.groupCollapsed('[Shipment] Create shipment request');
         console.log('order detail:', order);
         console.log('shipment form:', shipmentForm);
         console.log('selected province:', selectedProvince);
         console.log('selected district:', selectedDistrict);
-        console.log('selected ward code:', shipmentForm.wardCode);
+        console.log('selected ward code:', wardCode);
         console.log('resolved orderId:', shipmentOrderId);
         console.groupEnd();
 
         if (!shipmentOrderId || shippingSubmitting) {
             console.warn('[Shipment] Skip create shipment because orderId is missing or request is already in progress.');
-            appToast.error('Thiếu mã đơn hàng', 'Không xác định được orderId để tạo vận đơn. Vui lòng kiểm tra console.');
+            appToast.error('Thiếu mã đơn hàng', 'Không xác định được orderId/customOrderId để tạo vận đơn.');
             return;
         }
 
-        if (!shipmentForm.recipientName.trim() || !shipmentForm.recipientPhone.trim() || !shipmentForm.deliveryAddress.trim()) {
+        if (!recipientName || !recipientPhone || !deliveryAddress) {
             console.warn('[Shipment] Skip create shipment because required recipient fields are missing.', {
-                recipientName: shipmentForm.recipientName,
-                recipientPhone: shipmentForm.recipientPhone,
-                deliveryAddress: shipmentForm.deliveryAddress,
+                recipientName,
+                recipientPhone,
+                deliveryAddress,
             });
             appToast.error('Thiếu thông tin giao hàng', 'Vui lòng nhập đầy đủ người nhận, số điện thoại và địa chỉ.');
+            return;
+        }
+
+        if (!provinceCode || !districtCode || !wardCode) {
+            appToast.error('Thiếu địa chỉ nhận', 'Vui lòng chọn đầy đủ tỉnh/thành, quận/huyện và phường/xã.');
+            return;
+        }
+
+        if (!selectedProvince || !selectedDistrict) {
+            appToast.error('Địa chỉ không hợp lệ', 'Vui lòng chọn lại tỉnh/thành và quận/huyện.');
             return;
         }
 
         const payload = {
             orderId: shipmentOrderId,
             customOrderId: order?.customOrderId || order?.id || undefined,
-            recipientName: shipmentForm.recipientName.trim(),
-            recipientPhone: shipmentForm.recipientPhone.trim(),
-            deliveryAddress: shipmentForm.deliveryAddress.trim(),
+            recipientName,
+            recipientPhone,
+            deliveryAddress: fullAddress,
             toDistrictId: selectedDistrict?.code || '',
-            toWardCode: shipmentForm.wardCode,
+            toWardCode: wardCode,
             orderValue: shipmentForm.orderValue || order?.totalPrice || 0,
             weight: shipmentForm.weight,
             length: shipmentForm.length,
@@ -669,9 +688,9 @@ const ArtisanOrderDetailPage = () => {
                     )}
 
                     {cancelModalOpen && (
-                        <div className="cancel-modal-overlay" onClick={() => setCancelModalOpen(false)} aria-hidden="true">
-                            <div className="cancel-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
-                                <h3>Xác nhận hủy đơn</h3>
+                        <div className="cancel-modal-overlay" onClick={() => setCancelModalOpen(false)}>
+                            <div className="cancel-modal" role="dialog" aria-modal="true" aria-labelledby="cancel-modal-title" onClick={(e) => e.stopPropagation()}>
+                                <h3 id="cancel-modal-title">Xác nhận hủy đơn</h3>
                                 <p>Để xác nhận, vui lòng nhập chính xác <strong>Hủy đơn</strong> vào ô bên dưới.</p>
                                 <input
                                     type="text"
@@ -696,12 +715,12 @@ const ArtisanOrderDetailPage = () => {
                     )}
 
                     {shipmentFormOpen && (
-                        <div className="cancel-modal-overlay" onClick={() => setShipmentFormOpen(false)} aria-hidden="true">
-                            <div className="cancel-modal shipment-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+                        <div className="cancel-modal-overlay" onClick={() => setShipmentFormOpen(false)}>
+                            <div className="cancel-modal shipment-modal" role="dialog" aria-modal="true" aria-labelledby="shipment-modal-title" onClick={(e) => e.stopPropagation()}>
                                 <div className="order-detail-modal-header">
                                     <div>
                                         <p className="page-kicker">Tạo vận đơn</p>
-                                        <h3>Điền thông tin giao hàng</h3>
+                                        <h3 id="shipment-modal-title">Điền thông tin giao hàng</h3>
                                     </div>
                                     <button type="button" className="btn btn-outline btn-sm" onClick={() => setShipmentFormOpen(false)} disabled={shippingSubmitting}>Đóng</button>
                                 </div>

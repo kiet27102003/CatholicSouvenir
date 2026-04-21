@@ -1,11 +1,25 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import {
+    FiArrowLeft,
+    FiCalendar,
+    FiClock,
+    FiFileText,
+    FiImage,
+    FiMessageSquare,
+    FiPackage,
+    FiRefreshCw,
+    FiShield,
+    FiStar,
+    FiUser,
+} from 'react-icons/fi';
 import { appToast } from '../../lib/appToast';
 import { useAuth } from '../../context/AuthContext';
 import { getConversationsByRequest, startConversation } from '../../services/chatService';
 import {
     getCustomOrderStages,
     getCustomRequestDetail,
+    getCustomerCustomOrders,
     getStageCanPay,
     initiateStagePayment,
     publishCustomRequest,
@@ -15,14 +29,60 @@ import {
 import './CustomRequestDetailPage.css';
 
 const formatCurrency = (value) => `${new Intl.NumberFormat('vi-VN').format(Number(value || 0))} đ`;
+
 const formatDate = (value) => {
     if (!value) return '—';
-    try { return new Date(value).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }); } catch { return value; }
+    try {
+        return new Date(value).toLocaleString('vi-VN', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+        });
+    } catch {
+        return value;
+    }
 };
-const truncate = (value, length) => { const text = String(value || '').trim(); if (!text) return 'Yêu cầu custom'; return text.length > length ? `${text.slice(0, length)}...` : text; };
-const getStatusMeta = (status) => { const s = String(status || '').toUpperCase(); return ({ DRAFT: { label: 'Bản nháp', className: 'status-draft' }, OPEN: { label: 'Đang mở', className: 'status-open' }, PUBLISHED: { label: 'Đang mở', className: 'status-open' }, ARTISAN_SELECTED: { label: 'Đã chọn artisan', className: 'status-selected' }, IN_PROGRESS: { label: 'Đang thực hiện', className: 'status-in-progress' }, COMPLETED: { label: 'Hoàn thành', className: 'status-completed' } }[s]) || { label: status || 'Không xác định', className: 'status-open' }; };
-const getStageStatusMeta = (status) => { const s = String(status || '').toUpperCase(); return ({ PAID: { label: 'Đã thanh toán', className: 'stage-paid' }, COMPLETED: { label: 'Hoàn thành', className: 'stage-completed' }, PENDING: { label: 'Chờ thanh toán', className: 'stage-pending' } }[s]) || { label: 'Chờ thanh toán', className: 'stage-pending' }; };
+
+const truncate = (value, length) => {
+    const text = String(value || '').trim();
+    if (!text) return 'Yêu cầu custom';
+    return text.length > length ? `${text.slice(0, length)}...` : text;
+};
+
+const getStatusMeta = (status) => {
+    const s = String(status || '').toUpperCase();
+    return ({
+        DRAFT: { label: 'Bản nháp', className: 'status-draft', icon: FiFileText },
+        OPEN: { label: 'Đang mở', className: 'status-open', icon: FiClock },
+        PUBLISHED: { label: 'Đang mở', className: 'status-open', icon: FiClock },
+        ARTISAN_SELECTED: { label: 'Đã chọn artisan', className: 'status-selected', icon: FiStar },
+        IN_PROGRESS: { label: 'Đang thực hiện', className: 'status-in-progress', icon: FiShield },
+        COMPLETED: { label: 'Hoàn thành', className: 'status-completed', icon: FiPackage },
+    }[s]) || { label: status || 'Không xác định', className: 'status-open', icon: FiClock };
+};
+
+const getStageStatusMeta = (status) => {
+    const s = String(status || '').toUpperCase();
+    return ({
+        PAID: { label: 'Đã thanh toán', className: 'stage-paid' },
+        COMPLETED: { label: 'Hoàn thành', className: 'stage-completed' },
+        PENDING: { label: 'Chờ thanh toán', className: 'stage-pending' },
+    }[s]) || { label: 'Chờ thanh toán', className: 'stage-pending' };
+};
+
 const getStageId = (stage) => stage?.stageId ?? stage?.id;
+
+const StatCard = ({ label, value, subtext }) => (
+    <div className="detail-stat-card">
+        <div>
+            <span>{label}</span>
+            <strong>{value}</strong>
+            {subtext ? <p>{subtext}</p> : null}
+        </div>
+    </div>
+);
 
 const CustomRequestDetailPage = () => {
     const { id } = useParams();
@@ -33,144 +93,486 @@ const CustomRequestDetailPage = () => {
     const [stagesLoading, setStagesLoading] = useState(false);
     const [stages, setStages] = useState([]);
     const [interestedArtisans, setInterestedArtisans] = useState([]);
-    const [requestUpdating, setRequestUpdating] = useState(false);
-    const [selectingArtisanId, setSelectingArtisanId] = useState('');
     const [startingConversationId, setStartingConversationId] = useState('');
     const [payingStageId, setPayingStageId] = useState('');
     const [regenerating, setRegenerating] = useState(false);
+    const [publishing, setPublishing] = useState(false);
+    const [selectingArtisanId, setSelectingArtisanId] = useState('');
+    const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+    const [pendingArtisan, setPendingArtisan] = useState(null);
 
     const requestStatus = String(request?.status || '').toUpperCase();
     const statusMeta = getStatusMeta(requestStatus);
+    const StatusIcon = statusMeta.icon;
     const aiImageUrl = request?.aiGeneratedImageUrl || request?.aiImageUrl || request?.generatedImageUrl || '';
     const artisan = request?.artisan || request?.confirmedArtisan || request?.selectedArtisan || null;
-    const isCustomer = String(user?.role || '').toUpperCase() === 'CUSTOMER';
-    const isDraft = requestStatus === 'DRAFT';
-    const isOpen = requestStatus === 'OPEN' || requestStatus === 'PUBLISHED';
-    const isArtisanSelected = requestStatus === 'ARTISAN_SELECTED';
-    const canManageRequest = isCustomer && (isDraft || isOpen || isArtisanSelected);
     const totalPrice = Number(request?.totalPrice || stages.reduce((sum, stage) => sum + Number(stage?.amount || 0), 0));
-    const paidAmount = useMemo(() => stages.filter((stage) => String(stage?.status || '').toUpperCase() === 'PAID').reduce((sum, stage) => sum + Number(stage?.amount || 0), 0), [stages]);
+    const paidAmount = useMemo(() => stages
+        .filter((stage) => ['PAID', 'COMPLETED'].includes(String(stage?.status || '').toUpperCase()))
+        .reduce((sum, stage) => sum + Number(stage?.amount || 0), 0), [stages]);
+    const completedAmount = useMemo(() => stages
+        .filter((stage) => String(stage?.status || '').toUpperCase() === 'COMPLETED')
+        .reduce((sum, stage) => sum + Number(stage?.amount || 0), 0), [stages]);
+    const completedStagesCount = useMemo(() => stages
+        .filter((stage) => String(stage?.status || '').toUpperCase() === 'COMPLETED').length, [stages]);
     const remainingAmount = Math.max(0, totalPrice - paidAmount);
-    const paidPercent = totalPrice > 0 ? Math.min(100, Math.round((paidAmount / totalPrice) * 100)) : 0;
+    const paidPercent = totalPrice > 0 ? Math.min(100, Math.round((completedAmount / totalPrice) * 100)) : 0;
     const selectedArtisanId = String(request?.selectedArtisanId || artisan?.artisanId || artisan?.id || '');
+    const hasStages = stages.length > 0;
 
-    const refreshInterestedArtisans = async () => { const res = await getConversationsByRequest(id); if (res.success) setInterestedArtisans(Array.isArray(res.data) ? res.data : []); };
-    const refreshDetail = async () => { const detailRes = await getCustomRequestDetail(id); if (detailRes.success) setRequest(detailRes.data || null); };
+    const refreshInterestedArtisans = async () => {
+        const res = await getConversationsByRequest(id);
+        if (res.success) setInterestedArtisans(Array.isArray(res.data) ? res.data : []);
+    };
+
+    const loadOrderStages = async (requestId) => {
+        if (!requestId) {
+            setStages([]);
+            return;
+        }
+
+        setStagesLoading(true);
+        const [pendingRes, inProgressRes] = await Promise.all([
+            getCustomerCustomOrders({ status: 'PENDING_PAYMENT', page: 0, size: 10 }),
+            getCustomerCustomOrders({ status: 'IN_PROGRESS', page: 0, size: 10 }),
+            getCustomerCustomOrders({ status: 'COMPLETED', page: 0, size: 10 }),
+        ]);
+
+        const pendingOrders = pendingRes.success ? (pendingRes.data?.content || []) : [];
+        const inProgressOrders = inProgressRes.success ? (inProgressRes.data?.content || []) : [];
+        const allOrders = [...pendingOrders, ...inProgressOrders];
+        const matchedOrders = allOrders.filter((order) => String(order?.requestId || '') === String(requestId));
+
+        const scoreOrder = (order) => {
+            const stagesList = Array.isArray(order?.stages) ? order.stages : [];
+            const completedCount = stagesList.filter((stage) => String(stage?.status || '').toUpperCase() === 'COMPLETED').length;
+            const paidCount = stagesList.filter((stage) => String(stage?.status || '').toUpperCase() === 'PAID').length;
+            return (stagesList.length * 10) + completedCount + paidCount + (String(order?.status || '').toUpperCase() === 'IN_PROGRESS' ? 5 : 0);
+        };
+
+        const bestOrder = matchedOrders.sort((a, b) => scoreOrder(b) - scoreOrder(a))[0] || null;
+        const orderStages = Array.isArray(bestOrder?.stages) ? bestOrder.stages : [];
+
+        setStages(orderStages);
+        setRequest((prev) => ({
+            ...(prev || {}),
+            customOrderId: bestOrder?.customOrderId || bestOrder?.orderId || prev?.customOrderId || null,
+        }));
+        setStagesLoading(false);
+    };
+
+    const refreshDetail = async () => {
+        const detailRes = await getCustomRequestDetail(id);
+        if (detailRes.success) setRequest(detailRes.data || null);
+    };
 
     useEffect(() => {
         if (!id) return;
         let cancelled = false;
+
         const fetchData = async () => {
             setLoading(true);
             const detailRes = await getCustomRequestDetail(id);
             if (cancelled) return;
-            if (!detailRes.success) { setLoading(false); appToast.error('Không tải được chi tiết', detailRes.error || 'Vui lòng thử lại'); return; }
-            setRequest(detailRes.data || null); setLoading(false);
+
+            if (!detailRes.success) {
+                setLoading(false);
+                appToast.error('Không tải được chi tiết', detailRes.error || 'Vui lòng thử lại');
+                return;
+            }
+
+            setRequest(detailRes.data || null);
+            setLoading(false);
+
             const nextStatus = String(detailRes.data?.status || '').toUpperCase();
-            if (nextStatus === 'OPEN' || nextStatus === 'PUBLISHED' || nextStatus === 'ARTISAN_SELECTED') await refreshInterestedArtisans(); else setInterestedArtisans([]);
+            if (nextStatus === 'OPEN' || nextStatus === 'PUBLISHED' || nextStatus === 'ARTISAN_SELECTED') {
+                await refreshInterestedArtisans();
+            } else {
+                setInterestedArtisans([]);
+            }
+
             const nextOrderId = detailRes.data?.customOrderId ?? detailRes.data?.orderId ?? detailRes.data?.customOrder?.orderId;
-            if (nextOrderId && nextStatus === 'IN_PROGRESS') {
-                setStagesLoading(true);
-                const stagesRes = await getCustomOrderStages(nextOrderId);
-                if (cancelled) return;
-                setStagesLoading(false);
-                if (stagesRes.success) setStages(Array.isArray(stagesRes.data) ? stagesRes.data : []); else { setStages([]); appToast.error('Không tải được tiến độ', stagesRes.error || 'Vui lòng thử lại'); }
-            } else setStages([]);
+            if (nextStatus === 'ARTISAN_SELECTED' || nextStatus === 'IN_PROGRESS') {
+                if (nextOrderId) {
+                    setStagesLoading(true);
+                    const stagesRes = await getCustomOrderStages(nextOrderId);
+                    if (cancelled) return;
+                    setStagesLoading(false);
+
+                    if (stagesRes.success) {
+                        setStages(Array.isArray(stagesRes.data) ? stagesRes.data : []);
+                    } else {
+                        setStages([]);
+                        await loadOrderStages(detailRes.data?.requestId || id);
+                    }
+                } else {
+                    await loadOrderStages(detailRes.data?.requestId || id);
+                }
+            } else {
+                setStages([]);
+            }
         };
-        fetchData(); return () => { cancelled = true; };
+
+        fetchData();
+        return () => {
+            cancelled = true;
+        };
     }, [id]);
 
-    const handleRegenerateAi = async () => { if (!id || regenerating) return; setRegenerating(true); const res = await regenerateCustomRequestImage(id); setRegenerating(false); if (!res.success) { appToast.error('Tạo lại ảnh thất bại', res.error || 'Vui lòng thử lại'); return; } const url = typeof res.data === 'string' ? res.data : ''; if (url) setRequest((prev) => ({ ...prev, aiGeneratedImageUrl: url })); else await refreshDetail(); appToast.success('Đã tạo lại ảnh AI'); };
-    const handlePublish = async () => { if (!id || requestUpdating) return; setRequestUpdating(true); const res = await publishCustomRequest(id); setRequestUpdating(false); if (!res.success) { appToast.error('Publish thất bại', res.error || 'Vui lòng thử lại'); return; } appToast.success('Yêu cầu đã được publish'); await refreshDetail(); await refreshInterestedArtisans(); };
-    const handleStartConversation = async () => { if (!id || startingConversationId) return; setStartingConversationId(String(id)); const res = await startConversation(id); setStartingConversationId(''); if (!res.success) { appToast.error('Không thể bắt đầu trò chuyện', res.error || 'Vui lòng thử lại'); return; } const conversationId = res.data?.conversationId || res.data?.id; appToast.success('Đã tạo cuộc trò chuyện'); navigate(conversationId ? `/messages?conversationId=${conversationId}` : '/messages'); };
-    const handleSelectArtisan = async (artisanId) => { if (!id || !artisanId || selectingArtisanId) return; if (!window.confirm('Chọn nghệ nhân này? Các cuộc trò chuyện khác sẽ bị đóng.')) return; setSelectingArtisanId(String(artisanId)); const res = await selectCustomRequestArtisan(id, artisanId); setSelectingArtisanId(''); if (!res.success) { appToast.error('Chọn nghệ nhân thất bại', res.error || 'Vui lòng thử lại'); return; } appToast.success('Đã chọn nghệ nhân'); await refreshDetail(); await refreshInterestedArtisans(); };
-    const handlePayStage = async (stageId) => { if (!stageId || payingStageId) return; setPayingStageId(String(stageId)); const canPayRes = await getStageCanPay(stageId); if (!canPayRes.success || !canPayRes.data) { setPayingStageId(''); appToast.info('Chưa thể thanh toán', canPayRes.error || 'Chờ thanh toán giai đoạn trước'); return; } const initiateRes = await initiateStagePayment(stageId, { paymentMethod: 'VNPAY', returnUrl: `${window.location.origin}/payment/success`, cancelUrl: `${window.location.origin}/payment/failed` }); setPayingStageId(''); if (!initiateRes.success) { appToast.error('Không khởi tạo được thanh toán', initiateRes.error || 'Vui lòng thử lại'); return; } const paymentUrl = initiateRes.data?.paymentUrl || initiateRes.data?.url; if (!paymentUrl) { appToast.error('Thiếu link thanh toán', 'Vui lòng thử lại sau'); return; } window.location.href = paymentUrl; };
+    const handleRegenerateAi = async () => {
+        if (!id || regenerating) return;
+        setRegenerating(true);
+        const res = await regenerateCustomRequestImage(id);
+        setRegenerating(false);
 
-    if (loading) return <div className="custom-request-detail-page"><div className="custom-request-detail-skeleton" /><div className="custom-request-detail-skeleton" /></div>;
-    if (!request) return <div className="custom-request-detail-page"><button type="button" className="btn btn-outline" onClick={() => navigate('/custom-requests')}>← Quay lại danh sách</button><div className="custom-request-detail-empty">Không tìm thấy yêu cầu.</div></div>;
+        if (!res.success) {
+            appToast.error('Tạo lại ảnh thất bại', res.error || 'Vui lòng thử lại');
+            return;
+        }
+
+        const url = typeof res.data === 'string' ? res.data : '';
+        if (url) setRequest((prev) => ({ ...prev, aiGeneratedImageUrl: url }));
+        else await refreshDetail();
+        appToast.success('Đã tạo lại ảnh AI');
+    };
+
+    const handlePublish = async () => {
+        if (!id || publishing) return;
+        setPublishing(true);
+        const res = await publishCustomRequest(id);
+        setPublishing(false);
+
+        if (!res.success) {
+            appToast.error('Publish thất bại', res.error || 'Vui lòng thử lại');
+            return;
+        }
+
+        appToast.success('Yêu cầu đã được publish');
+        await refreshDetail();
+        await refreshInterestedArtisans();
+    };
+
+    const handleStartConversation = async () => {
+        if (!id || startingConversationId) return;
+        setStartingConversationId(String(id));
+        const res = await startConversation(id);
+        setStartingConversationId('');
+
+        if (!res.success) {
+            appToast.error('Không thể bắt đầu trò chuyện', res.error || 'Vui lòng thử lại');
+            return;
+        }
+
+        const conversationId = res.data?.conversationId || res.data?.id;
+        appToast.success('Đã tạo cuộc trò chuyện');
+        navigate(conversationId ? `/messages?conversationId=${conversationId}` : '/messages');
+    };
+
+    const handleViewConversation = () => {
+        if (!id) return;
+        navigate('/messages');
+    };
+
+    const handleSelectArtisanRequest = (artisanId, artisanName) => {
+        if (!artisanId || selectingArtisanId) return;
+        setPendingArtisan({ artisanId, artisanName });
+        setConfirmModalOpen(true);
+    };
+
+    const closeConfirmModal = () => {
+        if (selectingArtisanId) return;
+        setConfirmModalOpen(false);
+        setPendingArtisan(null);
+    };
+
+    const confirmSelectArtisan = async () => {
+        if (!id || !pendingArtisan?.artisanId || selectingArtisanId) return;
+
+        setSelectingArtisanId(String(pendingArtisan.artisanId));
+        const res = await selectCustomRequestArtisan(id, pendingArtisan.artisanId);
+        setSelectingArtisanId('');
+
+        if (!res.success) {
+            appToast.error('Chọn nghệ nhân thất bại', res.error || 'Vui lòng thử lại');
+            return;
+        }
+
+        appToast.success('Đã chọn nghệ nhân');
+        setConfirmModalOpen(false);
+        setPendingArtisan(null);
+        await refreshDetail();
+        await refreshInterestedArtisans();
+    };
+
+    const handlePayStage = async (stageId) => {
+        if (!stageId || payingStageId) return;
+        setPayingStageId(String(stageId));
+        const canPayRes = await getStageCanPay(stageId);
+        if (!canPayRes.success || !canPayRes.data) {
+            setPayingStageId('');
+            appToast.info('Chưa thể thanh toán', canPayRes.error || 'Chờ thanh toán giai đoạn trước');
+            return;
+        }
+
+        const initiateRes = await initiateStagePayment(stageId, {
+            paymentMethod: 'VNPAY',
+            returnUrl: `${window.location.origin}/payment/success`,
+            cancelUrl: `${window.location.origin}/payment/failed`,
+        });
+        setPayingStageId('');
+
+        if (!initiateRes.success) {
+            appToast.error('Không khởi tạo được thanh toán', initiateRes.error || 'Vui lòng thử lại');
+            return;
+        }
+
+        const paymentUrl = initiateRes.data?.paymentUrl || initiateRes.data?.url;
+        if (!paymentUrl) {
+            appToast.error('Thiếu link thanh toán', 'Vui lòng thử lại sau');
+            return;
+        }
+
+        window.location.href = paymentUrl;
+    };
+
+    if (loading) {
+        return (
+            <div className="custom-request-detail-page">
+                <div className="detail-skeleton-hero" />
+                <div className="detail-skeleton-grid">
+                    <div className="detail-skeleton-card" />
+                    <div className="detail-skeleton-card" />
+                </div>
+            </div>
+        );
+    }
+
+    if (!request) {
+        return (
+            <div className="custom-request-detail-page">
+                <div className="detail-empty-state">
+                    <h2>Không tìm thấy yêu cầu</h2>
+                    <p>Yêu cầu bạn đang xem không tồn tại hoặc đã bị xoá.</p>
+                    <button type="button" className="btn btn-primary" onClick={() => navigate('/custom-requests')}>
+                        Quay lại danh sách
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="custom-request-detail-page">
-            <main className="custom-request-main">
-                <header className="custom-request-topbar">
-                    <button type="button" className="back-link" onClick={() => navigate('/custom-requests')}>← Quay lại danh sách</button>
-                </header>
-
-                <section className="hero-section">
-                    <div className="hero-left">
-                        <div className="hero-badges">
-                            <span className={`custom-request-detail-status ${statusMeta.className}`}>{statusMeta.label}</span>
-                            <span className="hero-date">Ngày tạo: {formatDate(request?.createdAt)}</span>
-                        </div>
-                        <h1>{truncate(request?.description, 120)}</h1>
-                        <p className="hero-description">{request?.description}</p>
-                    </div>
-
-                    <div className="hero-cta">
-                        <button type="button" className="btn btn-primary btn-block" onClick={handleStartConversation} disabled={startingConversationId === String(id)}>
-                            {startingConversationId === String(id) ? 'Đang tạo...' : 'Bắt đầu trò chuyện'}
+            <main className="custom-request-detail-layout">
+                <section className="detail-hero">
+                    <div className="detail-hero-main">
+                        <button type="button" className="detail-back-btn" onClick={() => navigate('/custom-requests')}>
+                            <FiArrowLeft /> Quay lại danh sách
                         </button>
+
+                        <div className="detail-hero-badges">
+                            <span className={`detail-status-pill ${statusMeta.className}`}>
+                                <StatusIcon /> {statusMeta.label}
+                            </span>
+                            <span className="detail-date-pill">
+                                <FiCalendar /> {formatDate(request?.createdAt)}
+                            </span>
+                        </div>
+
+                        <h1>{request?.title || truncate(request?.description, 120)}</h1>
+                        <p className="detail-hero-description">{request?.description || '—'}</p>
+
+                        <div className="detail-hero-actions">
+                            <button type="button" className="btn btn-primary" onClick={handleStartConversation} disabled={startingConversationId === String(id)}>
+                                <FiMessageSquare /> {startingConversationId === String(id) ? 'Đang tạo...' : 'Bắt đầu trò chuyện'}
+                            </button>
+                            {requestStatus === 'DRAFT' && (
+                                <button type="button" className="btn btn-outline" onClick={handlePublish} disabled={publishing}>
+                                    <FiRefreshCw /> {publishing ? 'Đang publish...' : 'Publish yêu cầu'}
+                                </button>
+                            )}
+                            <button type="button" className="btn btn-outline" onClick={handleViewConversation}>
+                                <FiUser /> Xem tin nhắn
+                            </button>
+                        </div>
                     </div>
+
+                    <aside className="detail-hero-side">
+                        <div className="detail-image-card">
+                            {aiImageUrl ? <img src={aiImageUrl} alt="Ảnh AI gợi ý" /> : <div className="detail-image-placeholder"><FiImage /><span>Chưa có ảnh AI</span></div>}
+                        </div>
+                        <div className="detail-mini-summary">
+                            <StatCard label="Ngân sách" value={`${formatCurrency(request?.minBudget)} - ${formatCurrency(request?.maxBudget)}`} />
+                            <StatCard label="Nghệ nhân" value={request?.artisanName || 'Chưa có nghệ nhân'} />
+                        </div>
+                    </aside>
                 </section>
 
-                <section className="content-grid">
-                    <div className="main-column">
-                        <article className="info-card request-summary-card">
-                            <div className="section-head"><h3>Thông tin yêu cầu</h3></div>
-                            <p className="request-summary-text">{request?.description}</p>
-                            <div className="request-summary-meta">
-                                <div>
-                                    <span className="meta-label">Ngân sách</span>
-                                    <strong>{formatCurrency(request?.minBudget)} - {formatCurrency(request?.maxBudget)}</strong>
+                <section className="detail-content-grid">
+                    <div className="detail-content-main">
+                        <div className="detail-info-grid">
+                            <article className="detail-card">
+                                <div className="detail-card-header">
+                                    <h3>Thông tin yêu cầu</h3>
                                 </div>
-                                <div>
-                                    <span className="meta-label">Nghệ nhân</span>
-                                    <strong>{artisan?.artisanName || 'Chưa có nghệ nhân'}</strong>
+                                <p>{request?.description || '—'}</p>
+                                <div className="detail-meta-grid">
+                                    <div><span>Trạng thái</span><strong>{statusMeta.label}</strong></div>
+                                    <div><span>Tạo lúc</span><strong>{formatDate(request?.createdAt)}</strong></div>
+                                    <div><span>Cập nhật</span><strong>{formatDate(request?.updatedAt)}</strong></div>
+                                    <div><span>Nghệ nhân</span><strong>{artisan?.artisanName || 'Chưa có nghệ nhân'}</strong></div>
                                 </div>
-                            </div>
-                        </article>
+                            </article>
 
-                        <div className="gallery-row">
-                            <div className="gallery-card">
-                                {aiImageUrl ? <img src={aiImageUrl} alt="AI gợi ý" /> : <div className="gallery-placeholder">AI image</div>}
-                            </div>
-                            <div className="gallery-card dark">
-                                {request?.referenceImages?.[0] ? <img src={request.referenceImages[0]} alt="Reference" /> : <div className="gallery-placeholder">Reference</div>}
-                            </div>
+                            <article className="detail-card">
+                                <div className="detail-card-header">
+                                    <h3>Hình ảnh</h3>
+                                </div>
+                                <div className="detail-gallery">
+                                    <div className="detail-gallery-item">
+                                        <span className="detail-gallery-label">Ảnh AI</span>
+                                        {aiImageUrl ? <img src={aiImageUrl} alt="AI gợi ý" /> : <div className="detail-gallery-placeholder">Không có ảnh</div>}
+                                        <button type="button" className="btn btn-outline btn-sm" onClick={handleRegenerateAi} disabled={regenerating}>
+                                            {regenerating ? 'Đang tạo...' : 'Tạo lại ảnh AI'}
+                                        </button>
+                                    </div>
+                                    <div className="detail-gallery-item">
+                                        <span className="detail-gallery-label">Ảnh tham khảo</span>
+                                        {request?.referenceImages?.[0] ? <img src={request.referenceImages[0]} alt="Ảnh tham khảo" /> : <div className="detail-gallery-placeholder">Không có ảnh</div>}
+                                    </div>
+                                </div>
+                            </article>
                         </div>
 
-                        {requestStatus === 'IN_PROGRESS' && (
-                            <article className="info-card stages-card">
-                                <div className="section-head"><h3>Tiến độ thực hiện</h3><span>{paidPercent}% đã thanh toán</span></div>
-                                <div className="progress-track"><div className="progress-value" style={{ width: `${paidPercent}%` }} /></div>
-                                <div className="stages-list">
-                                    {stagesLoading ? [1, 2, 3].map((item) => <div key={item} className="custom-request-stage-skeleton" />) : stages.map((stage, index) => {
-                                        const stageId = getStageId(stage); const stageStatus = String(stage?.status || '').toUpperCase(); const stageMeta = getStageStatusMeta(stageStatus); const canPay = stage?.canPay === true; const isPending = stageStatus === 'PENDING';
-                                        return (<div key={String(stageId)} className="stage-row"><div className="stage-index">{index + 1}</div><div className="stage-body"><div className="section-head"><h4>{stage?.stageName || `Giai đoạn ${index + 1}`}</h4><span className={`custom-request-stage-badge ${stageMeta.className}`}>{stageMeta.label}</span></div><p>{stage?.description || '—'}</p><div className="stage-footer"><span>{formatCurrency(stage?.amount)}</span>{canPay && <button type="button" className="btn btn-primary btn-sm" onClick={() => handlePayStage(stageId)} disabled={payingStageId === String(stageId)}>{payingStageId === String(stageId) ? 'Đang chuyển hướng...' : 'Thanh toán'}</button>}{!canPay && isPending && <span className="muted">Chờ giai đoạn trước</span>}</div></div></div>);
-                                    })}
+                        {(requestStatus === 'IN_PROGRESS' || requestStatus === 'ARTISAN_SELECTED') && (
+                            <article className="detail-card detail-stages-card">
+                                <div className="detail-card-header detail-card-header-row">
+                                    <h3>Tiến độ thực hiện</h3>
+                                    <span className="detail-progress-label">{paidPercent}% hoàn thành · Còn {formatCurrency(remainingAmount)}</span>
+                                </div>
+                                <div className="detail-progress-bar">
+                                    <div className="detail-progress-fill" style={{ width: `${paidPercent}%` }} />
+                                </div>
+
+                                <div className="detail-stages-list">
+                                    {stagesLoading ? (
+                                        [1, 2, 3].map((item) => <div key={item} className="detail-stage-skeleton" />)
+                                    ) : hasStages ? (
+                                        stages.map((stage, index) => {
+                                            const stageId = getStageId(stage);
+                                            const stageStatus = String(stage?.status || '').toUpperCase();
+                                            const stageMeta = getStageStatusMeta(stageStatus);
+                                            const canPay = stage?.canPay === true;
+                                            const isPending = stageStatus === 'PENDING';
+
+                                            return (
+                                                <div key={String(stageId)} className="detail-stage-item">
+                                                    <div className="detail-stage-index">{index + 1}</div>
+                                                    <div className="detail-stage-body">
+                                                        <div className="detail-stage-head">
+                                                            <h4>{stage?.stageName || `Giai đoạn ${index + 1}`}</h4>
+                                                            <span className={`detail-stage-pill ${stageMeta.className}`}>{stageMeta.label}</span>
+                                                        </div>
+                                                        <p>{stage?.description || '—'}</p>
+                                                        <div className="detail-stage-foot">
+                                                            <strong>{formatCurrency(stage?.amount)}</strong>
+                                                            {canPay && (
+                                                                <button type="button" className="btn btn-primary btn-sm" onClick={() => handlePayStage(stageId)} disabled={payingStageId === String(stageId)}>
+                                                                    {payingStageId === String(stageId) ? 'Đang chuyển...' : 'Thanh toán'}
+                                                                </button>
+                                                            )}
+                                                            {stageStatus === 'PAID' && <span className="detail-muted-text">Đã thanh toán</span>}
+                                                            {!canPay && isPending && <span className="detail-muted-text">Chờ giai đoạn trước</span>}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })
+                                    ) : (
+                                        <div className="detail-empty-inline">Chưa có thông tin tiến độ cho yêu cầu này.</div>
+                                    )}
                                 </div>
                             </article>
                         )}
                     </div>
 
-                    <aside className="right-column">
-                        <article className="info-card interested-card">
-                            <div className="section-head"><h3>Các nghệ nhân quan tâm</h3><span className="info-dot">{interestedArtisans.length}</span></div>
-                            <div className="artisan-list">
-                                {interestedArtisans.length === 0 ? <p className="muted">Chưa có nghệ nhân nào bắt đầu trò chuyện.</p> : interestedArtisans.map((item) => {
-                                    const artisanId = item?.artisanId || item?.artisan?.id; const artisanName = item?.artisanName || item?.artisan?.name || 'Nghệ nhân'; const isSelected = String(selectedArtisanId) === String(artisanId);
-                                    return (<div key={String(artisanId)} className="artisan-card"><div className="artisan-avatar">{String(artisanName).trim().charAt(0).toUpperCase()}</div><div className="artisan-card-body"><strong>{artisanName}</strong><small>{item?.artisanEmail || item?.artisan?.email || 'Đang trao đổi'}</small></div>{isSelected ? <span className="selected-chip">Đã chọn</span> : <button type="button" className="btn btn-outline btn-sm" onClick={() => handleSelectArtisan(artisanId)} disabled={selectingArtisanId === String(artisanId)}>{selectingArtisanId === String(artisanId) ? 'Đang chọn...' : 'Chọn artisan này'}</button>}</div>);
-                                })}
+                    <aside className="detail-content-side">
+                        <article className="detail-card">
+                            <div className="detail-card-header detail-card-header-row">
+                                <h3>Nghệ nhân quan tâm</h3>
+                                <span className="detail-count-pill">{interestedArtisans.length}</span>
                             </div>
-                            <button type="button" className="btn btn-ghost view-all-link" onClick={() => navigate('/messages')}>Xem tất cả các nghệ nhân</button>
+
+                            <div className="detail-artisan-list">
+                                {interestedArtisans.length === 0 ? (
+                                    <div className="detail-empty-inline">Chưa có nghệ nhân nào bắt đầu trò chuyện.</div>
+                                ) : (
+                                    interestedArtisans.map((item) => {
+                                        const artisanId = item?.artisanId || item?.artisan?.id;
+                                        const artisanName = item?.artisanName || item?.artisan?.name || 'Nghệ nhân';
+                                        const isSelected = String(selectedArtisanId) === String(artisanId);
+
+                                        return (
+                                            <div key={String(artisanId)} className={`detail-artisan-item ${isSelected ? 'selected' : ''}`}>
+                                                <div className="detail-artisan-avatar">{String(artisanName).trim().charAt(0).toUpperCase()}</div>
+                                                <div className="detail-artisan-body">
+                                                    <strong>{artisanName}</strong>
+                                                    <small>{item?.artisanEmail || item?.artisan?.email || 'Đang trao đổi'}</small>
+                                                </div>
+                                                {isSelected || requestStatus === 'ARTISAN_SELECTED' ? (
+                                                    <span className="detail-selected-chip">Đã chọn nghệ nhân này</span>
+                                                ) : (
+                                                    <button
+                                                        type="button"
+                                                        className="btn btn-outline btn-sm"
+                                                        onClick={() => handleSelectArtisanRequest(artisanId, artisanName)}
+                                                        disabled={selectingArtisanId === String(artisanId)}
+                                                    >
+                                                        {selectingArtisanId === String(artisanId) ? 'Đang chọn...' : 'Chọn nghệ nhân này'}
+                                                    </button>
+                                                )}
+                                            </div>
+                                        );
+                                    })
+                                )}
+                            </div>
+
+                            <button type="button" className="btn btn-ghost detail-view-all-btn" onClick={() => navigate('/messages')}>
+                                <FiUser /> Xem tất cả các nghệ nhân
+                            </button>
                         </article>
 
-                        {aiImageUrl && (
-                            <article className="info-card advice-card"><h3>Lời khuyên từ chuyên gia</h3><p>Các yêu cầu có mood board trực quan thường kết hợp ý tưởng tốt nhất khi bạn định hình văn phong rõ ràng ngay từ đầu.</p></article>
-                        )}
+                        <article className="detail-card detail-tip-card">
+                            <div className="detail-card-header">
+                                <h3>Gợi ý</h3>
+                            </div>
+                            <p>
+                                Việc chọn nghệ nhân ngay khi có trao đổi phù hợp sẽ giúp bạn theo dõi tiến độ và thanh toán từng giai đoạn rõ ràng hơn.
+                            </p>
+                        </article>
                     </aside>
                 </section>
             </main>
+
+            {confirmModalOpen && (
+                <div className="detail-confirm-overlay" onClick={closeConfirmModal} role="dialog" aria-modal="true" aria-labelledby="detail-confirm-title">
+                    <div className="detail-confirm-modal" onClick={(e) => e.stopPropagation()}>
+                        <h3 id="detail-confirm-title">Xác nhận chọn nghệ nhân</h3>
+                        <p>
+                            Chọn nghệ nhân này? Các cuộc trò chuyện khác sẽ bị đóng.
+                            {pendingArtisan?.artisanName ? `\nNghệ nhân: ${pendingArtisan.artisanName}` : ''}
+                        </p>
+                        <div className="detail-confirm-actions">
+                            <button type="button" className="btn btn-outline" onClick={closeConfirmModal} disabled={Boolean(selectingArtisanId)}>
+                                Hủy
+                            </button>
+                            <button type="button" className="btn btn-primary" onClick={confirmSelectArtisan} disabled={Boolean(selectingArtisanId)}>
+                                {selectingArtisanId ? 'Đang chọn...' : 'Xác nhận chọn'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

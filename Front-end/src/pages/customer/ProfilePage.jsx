@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { FiUser, FiShield, FiBell, FiMail, FiMessageCircle, FiShoppingBag } from 'react-icons/fi';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { FiCamera, FiUser, FiShield, FiBell, FiMail, FiMessageCircle, FiShoppingBag } from 'react-icons/fi';
 import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../../cofig/api';
+import { getSupabaseConfig, isSupabaseConfigured, SUPABASE_STORAGE_BUCKET } from '../../lib/supabase';
 import './ProfilePage.css';
 
 const formatDate = (value) => {
@@ -41,6 +42,7 @@ const ProfilePage = () => {
         fullName: '',
         email: '',
         phone: '',
+        avatarUrl: '',
         address: '',
         city: '',
         district: '',
@@ -65,6 +67,7 @@ const ProfilePage = () => {
     const [notifEmail, setNotifEmail] = useState(true);
     const [notifSMS, setNotifSMS] = useState(false);
     const [notifPromo, setNotifPromo] = useState(true);
+    const avatarInputRef = useRef(null);
 
     useEffect(() => {
         let mounted = true;
@@ -80,6 +83,7 @@ const ProfilePage = () => {
                     fullName: data?.fullName || '',
                     email: data?.email || '',
                     phone: data?.phone || '',
+                    avatarUrl: data?.avatarUrl || '',
                     address: data?.address || '',
                     city: data?.city || '',
                     district: data?.district || '',
@@ -112,6 +116,58 @@ const ProfilePage = () => {
         setFormData((prev) => ({ ...prev, [name]: value }));
     };
 
+    const handleAvatarSelect = () => {
+        if (avatarInputRef.current) {
+            avatarInputRef.current.click();
+        }
+    };
+
+    const uploadAvatarToSupabase = async (file) => {
+        const config = getSupabaseConfig();
+        if (!isSupabaseConfigured()) {
+            throw new Error('Supabase chưa được cấu hình.');
+        }
+
+        const extension = file.name?.includes('.') ? file.name.split('.').pop() : 'png';
+        const fileName = `profiles/${crypto.randomUUID()}-${Date.now()}.${extension}`;
+        const uploadUrl = `${config.url}/storage/v1/object/${SUPABASE_STORAGE_BUCKET}/${fileName}`;
+
+        const response = await fetch(uploadUrl, {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${config.anonKey}`,
+                apikey: config.anonKey,
+                'x-upsert': 'true',
+            },
+            body: file,
+        });
+
+        if (!response.ok) {
+            const text = await response.text();
+            throw new Error(text || 'Tải ảnh lên Supabase thất bại.');
+        }
+
+        return `${config.url}/storage/v1/object/public/${SUPABASE_STORAGE_BUCKET}/${fileName}`;
+    };
+
+    const handleAvatarFileChange = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setSaving(true);
+        setError('');
+
+        try {
+            const avatarUrl = await uploadAvatarToSupabase(file);
+            setFormData((prev) => ({ ...prev, avatarUrl }));
+        } catch (uploadError) {
+            setError(uploadError?.message || 'Không thể tải ảnh lên Supabase.');
+        } finally {
+            setSaving(false);
+            if (avatarInputRef.current) avatarInputRef.current.value = '';
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setSaving(true);
@@ -122,6 +178,7 @@ const ProfilePage = () => {
             phone: formData.phone?.trim() || undefined,
             gender: formData.gender || undefined,
             dateOfBirth: formData.dateOfBirth || undefined,
+            avatarUrl: formData.avatarUrl?.trim() || undefined,
             bio: formData.bio?.trim() || undefined,
             address: formData.address?.trim() || undefined,
             city: formData.city?.trim() || undefined,
@@ -184,8 +241,16 @@ const ProfilePage = () => {
     return (
         <div className="profile-page">
             <div className="profile-block profile-block-header profile-hero">
-                <div className="profile-hero-avatar">
-                    {profile?.avatarUrl ? <img src={profile.avatarUrl} alt={profile?.fullName || 'Avatar'} /> : <span>{(profile?.fullName || 'U').charAt(0)}</span>}
+                <div className="profile-hero-avatar-wrap">
+                    <div className="profile-hero-avatar">
+                        {profile?.avatarUrl || formData.avatarUrl ? <img src={formData.avatarUrl || profile.avatarUrl} alt={profile?.fullName || 'Avatar'} /> : <span>{(profile?.fullName || 'U').charAt(0)}</span>}
+                    </div>
+                    {editMode && (
+                        <button type="button" className="profile-avatar-edit-btn" onClick={handleAvatarSelect} aria-label="Chọn ảnh đại diện">
+                            <FiCamera size={16} />
+                        </button>
+                    )}
+                    <input ref={avatarInputRef} type="file" accept="image/*" className="profile-avatar-input" onChange={handleAvatarFileChange} />
                 </div>
                 <div className="profile-hero-content">
                     <h1 className="profile-title">Cài đặt tài khoản</h1>
@@ -222,6 +287,7 @@ const ProfilePage = () => {
                         <form onSubmit={handleSubmit} className="profile-form">
                             <div className="profile-form-grid">
                                 <div className="profile-field"><label>HỌ VÀ TÊN</label><input type="text" name="fullName" value={formData.fullName} onChange={handleChange} readOnly={!editMode} className={!editMode ? 'readonly' : ''} /></div>
+                                <div className="profile-field"><label>AVATAR URL</label><input type="url" name="avatarUrl" value={formData.avatarUrl} onChange={handleChange} readOnly={!editMode} className={!editMode ? 'readonly' : ''} placeholder="https://..." /></div>
                                 <div className="profile-field">
                                     <label>GIỚI TÍNH</label>
                                     {editMode ? (

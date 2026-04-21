@@ -4,6 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Header from '../components/Header/Header';
 import Footer from '../components/Footer/Footer';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 import productService from '../services/productService';
 import { appToast } from '../lib/appToast';
 import './ProductDetailsPage.css';
@@ -27,6 +28,7 @@ const ProductDetailsPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const { addToCart } = useCart();
+    const { user } = useAuth();
 
     const [product, setProduct] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -76,6 +78,12 @@ const ProductDetailsPage = () => {
 
     const handleAddToCart = () => {
         if (!product) return;
+
+        if (!user) {
+            appToast.warning('Bạn cần phải đăng nhập để mua hàng');
+            navigate('/login');
+            return;
+        }
 
         const productId = product.productId ?? product.id;
         const price = product.productPrice ?? product.price;

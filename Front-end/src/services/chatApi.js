@@ -58,6 +58,23 @@ export const getConversationsApi = async (token) => {
   }
 };
 
+export const getConversationDetailApi = async (conversationId, token) => {
+  if (!conversationId) return { success: false, error: 'Thiếu mã cuộc trò chuyện.', data: null };
+
+  try {
+    const response = await api.get(`${CHAT_BASE}/conversation/${conversationId}`, authConfig(token));
+    const normalized = normalizeResponse(response);
+
+    if (!isSuccessCode(normalized.code)) {
+      return { success: false, error: normalized.message || 'Không tải được chi tiết cuộc trò chuyện.', data: null };
+    }
+
+    return { success: true, data: normalized.data || null };
+  } catch (error) {
+    return { success: false, error: mapError(error, 'Không tải được chi tiết cuộc trò chuyện.'), data: null };
+  }
+};
+
 export const getConversationMessagesApi = async (conversationId, { page = 0, size = 50 } = {}, token) => {
   if (!conversationId) return { success: false, error: 'Thiếu mã cuộc trò chuyện.', data: [] };
 
@@ -138,6 +155,7 @@ export const getUnreadCountApi = async (token) => {
 
 export default {
   getConversationsApi,
+  getConversationDetailApi,
   getConversationMessagesApi,
   sendMessageApi,
   markConversationReadApi,

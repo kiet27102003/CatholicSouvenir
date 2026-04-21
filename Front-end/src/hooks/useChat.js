@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
+  getConversationDetailApi,
   getConversationMessagesApi,
   getConversationsApi,
   getUnreadCountApi,
@@ -9,9 +10,47 @@ import {
 
 const sortBySentAt = (list) => [...list].sort((a, b) => new Date(a?.sentAt || 0) - new Date(b?.sentAt || 0));
 
+const pickRequestId = (conversation) => (
+  conversation?.requestId ||
+  conversation?.customRequestId ||
+  conversation?.request?.requestId ||
+  conversation?.request?.id ||
+  conversation?.customRequest?.requestId ||
+  conversation?.customRequest?.id ||
+  conversation?.customRequestId ||
+  conversation?.order?.requestId ||
+  conversation?.order?.customRequestId ||
+  null
+);
+
 const normalizeConversation = (conversation) => ({
   ...conversation,
   conversationId: conversation?.conversationId || conversation?.id,
+  requestId: pickRequestId(conversation),
+  requestTitle:
+    conversation?.requestTitle ||
+    conversation?.title ||
+    conversation?.request?.title ||
+    conversation?.customRequest?.title ||
+    conversation?.customRequest?.requestTitle ||
+    'Yêu cầu đặt riêng',
+  requestDescription:
+    conversation?.requestDescription ||
+    conversation?.description ||
+    conversation?.request?.description ||
+    conversation?.customRequest?.description ||
+    conversation?.customRequest?.requestDescription ||
+    '',
+  minBudget:
+    conversation?.minBudget ??
+    conversation?.request?.minBudget ??
+    conversation?.customRequest?.minBudget ??
+    0,
+  maxBudget:
+    conversation?.maxBudget ??
+    conversation?.request?.maxBudget ??
+    conversation?.customRequest?.maxBudget ??
+    0,
   unreadCount: Number(conversation?.unreadCount || 0),
   isRead: conversation?.isRead ?? Number(conversation?.unreadCount || 0) === 0,
 });

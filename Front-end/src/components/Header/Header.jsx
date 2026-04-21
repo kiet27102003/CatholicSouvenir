@@ -284,6 +284,10 @@ const Header = () => {
                                                     <FiShoppingCart size={16} strokeWidth={2} />
                                                     Đơn hàng của tôi
                                                 </button>
+                                                <button type="button" className="dropdown-item" onClick={() => { setUserMenuOpen(false); navigate('/custom-requests'); }}>
+                                                    <FiStar size={16} strokeWidth={2} />
+                                                    Yêu cầu của tôi
+                                                </button>
                                                 <button type="button" className="dropdown-item" onClick={() => { setUserMenuOpen(false); navigate('/wallet'); }}>
                                                     <FiMessageSquare size={16} strokeWidth={2} />
                                                     Ví của tôi

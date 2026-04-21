@@ -233,18 +233,7 @@
   background: #fff;
 }
 
-.cb-input {
-  flex: 1;
-  resize: none;
-  border: 1px solid #d1d5db;
-  border-radius: 12px;
-  padding: 10px 12px;
-  font: inherit;
-  outline: none;
-  min-height: 42px;
-  max-height: 120px;
-}
-
+undefined
 .cb-input:focus {
   border-color: #2d5a3d;
   box-shadow: 0 0 0 3px rgba(45, 90, 61, 0.12);

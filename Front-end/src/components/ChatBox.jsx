@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { appToast } from '../lib/appToast'
 import './ChatBox.css'
@@ -40,7 +40,17 @@ export default function ChatBox() {
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
+  const [textareaHeight, setTextareaHeight] = useState(42)
   const messagesEndRef = useRef(null)
+  const inputRef = useRef(null)
+
+  const adjustTextareaHeight = (element) => {
+    if (!element) return
+    element.style.height = '0px'
+    const nextHeight = Math.max(element.scrollHeight, 42)
+    element.style.height = `${nextHeight}px`
+    setTextareaHeight(nextHeight)
+  }
 
   const token = useMemo(() => {
     if (user?.token) return user.token
@@ -55,6 +65,10 @@ export default function ChatBox() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, isLoading])
+
+  useLayoutEffect(() => {
+    adjustTextareaHeight(inputRef.current)
+  }, [input, isOpen])
 
   const handleOpen = () => {
     setIsOpen(true)
@@ -73,6 +87,10 @@ export default function ChatBox() {
     const userMsg = { id: `${Date.now()}`, role: 'user', content: text, time: new Date() }
     setMessages((prev) => [...prev, userMsg])
     setInput('')
+    if (inputRef.current) {
+      inputRef.current.style.height = '42px'
+    }
+    setTextareaHeight(42)
     setIsLoading(true)
 
     try {
@@ -181,11 +199,16 @@ export default function ChatBox() {
 
         <div className="cb-input-area">
           <textarea
+            ref={inputRef}
             rows={1}
             className="cb-input"
+            style={{ height: `${textareaHeight}px` }}
             placeholder="Nhập tin nhắn..."
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={(e) => {
+              setInput(e.target.value)
+              adjustTextareaHeight(e.target)
+            }}
             onKeyDown={handleKeyDown}
             disabled={isLoading}
           />

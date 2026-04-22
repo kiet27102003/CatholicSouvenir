@@ -102,7 +102,7 @@ function App() {
         <Route path="/artisans/:id" element={<ArtisanProfilePage />} />
         <Route path="/artisan-centre" element={<ArtisanCentrePage />} />
         <Route path="/checkout" element={<CheckoutPage />} />
-        <Route path="/payment-result" element={<PaymentSuccessPage />} />
+        <Route path="/payment/result" element={<PaymentSuccessPage />} />
         <Route path="/payment/error" element={<PaymentFailedPage />} />
         <Route path="/cart" element={<CartPage />} />
 

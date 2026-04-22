@@ -215,6 +215,11 @@ export const CartProvider = ({ children }) => {
     );
 
     const addItem = async (item) => {
+        if (!isValidCustomerSession(user)) {
+            appToast.warning('Vui lòng đăng nhập trước khi dùng chức năng này');
+            return;
+        }
+
         const normalized = normalizeIncomingItem(item);
         dispatch({ type: 'ADD_ITEM', payload: normalized });
 
@@ -295,6 +300,11 @@ export const CartProvider = ({ children }) => {
     const setCartOpen = (isOpen) => dispatch({ type: 'SET_CART_OPEN', payload: isOpen });
 
     const addToCart = (product, quantity = 1) => {
+        if (!isValidCustomerSession(user)) {
+            appToast.warning('Vui lòng đăng nhập trước khi dùng chức năng này');
+            return;
+        }
+
         const zonePriceBreakdown = Array.isArray(product.zonePriceBreakdown) ? product.zonePriceBreakdown : [];
         const customizationSource = product.customizationData ?? product.customRequests ?? {};
         const zoneInputs = zonePriceBreakdown

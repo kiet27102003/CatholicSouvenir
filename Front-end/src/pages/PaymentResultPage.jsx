@@ -26,6 +26,7 @@ const PaymentSuccessPage = () => {
     const txnRef = params.get('txnRef');
     const responseCode = params.get('code');
     const success = params.get('success');
+    const amount = Number(params.get('amount') || 0);
 
     const isSuccess = success === 'true' && responseCode === '00';
 
@@ -33,7 +34,7 @@ const PaymentSuccessPage = () => {
         ? { status: 'INVALID' }
         : {
             transactionId: txnRef,
-            amount: 0,
+            amount,
             paymentMethod: 'VNPAY',
             status: isSuccess ? 'SUCCESS' : 'FAILED',
             paidAt: new Date().toISOString(),

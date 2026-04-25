@@ -150,7 +150,7 @@ export const getOrders = async () => {
 };
 
 /**
- * Lấy chi tiết đơn hàng theo ID (GET /api/order/{orderId}).
+ * Lấy chi tiết đánh giá theo ID (GET /api/feedbacks/{feedbackId}).
  */
 export const getFeedbackById = async (feedbackId) => {
     if (!feedbackId) {

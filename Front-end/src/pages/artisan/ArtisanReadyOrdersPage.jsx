@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { FiCalendar, FiPackage, FiUser } from 'react-icons/fi';
+import { FiCalendar, FiEye, FiPackage, FiUser } from 'react-icons/fi';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { appToast } from '../../lib/appToast';
 import { getOrdersByArtisan } from '../../services/orderService';
@@ -33,7 +34,8 @@ const getStatusClass = (status) => {
     return 'pending';
 };
 
-const ArtisanReadyOrdersPage = ({ embedded = false }) => {
+const ArtisanReadyOrdersPage = () => {
+    const navigate = useNavigate();
     const { user } = useAuth();
     const artisanId = user?.accountId || user?.id || user?.userId || '';
     const [loading, setLoading] = useState(true);
@@ -119,6 +121,13 @@ const ArtisanReadyOrdersPage = ({ embedded = false }) => {
                                     <p className="card-description">Mã đơn: {id}</p>
                                     <p className="card-description">Sản phẩm: {firstItem?.productName || '—'}</p>
                                     <div className="card-compact-stat">{details.length} sản phẩm • {order?.paymentMethod || '—'}</div>
+                                    <button
+                                        type="button"
+                                        className="btn btn-outline btn-sm"
+                                        onClick={() => navigate(`/artisan/orders/${id}`)}
+                                    >
+                                        <FiEye /> Xem chi tiết
+                                    </button>
                                 </div>
                             </article>
                         );

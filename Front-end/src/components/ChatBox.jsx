@@ -41,7 +41,13 @@ export default function ChatBox() {
   const [isLoading, setIsLoading] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
   const [textareaHeight, setTextareaHeight] = useState(42)
-  const [position, setPosition] = useState({ x: window.innerWidth - 80, y: window.innerHeight - 80 })
+  const [position, setPosition] = useState(() => {
+    if (typeof window === 'undefined') return { x: 24, y: 24 }
+    return {
+      x: Math.max(24, window.innerWidth - 24 - 52),
+      y: Math.max(24, window.innerHeight - 24 - 52),
+    }
+  })
   const [isDragging, setIsDragging] = useState(false)
   const [isHidden, setIsHidden] = useState(false)
   const messagesEndRef = useRef(null)

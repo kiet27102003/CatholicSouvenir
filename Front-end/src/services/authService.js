@@ -151,6 +151,84 @@ export const authService = {
         }
     },
 
+    async forgotPassword(email) {
+        try {
+            const response = await api.post('/authen/forgot-password', { email });
+            const code = response.data?.code;
+            if (code !== undefined && code !== 200) {
+                return {
+                    success: false,
+                    error: response.data?.message || 'Gửi yêu cầu quên mật khẩu thất bại.',
+                };
+            }
+            return {
+                success: true,
+                message: response.data?.message || 'Đã gửi yêu cầu quên mật khẩu.',
+            };
+        } catch (error) {
+            const message =
+                error.response?.data?.message ??
+                error.message ??
+                'Gửi yêu cầu quên mật khẩu thất bại. Vui lòng thử lại.';
+            return {
+                success: false,
+                error: typeof message === 'string' ? message : 'Gửi yêu cầu quên mật khẩu thất bại. Vui lòng thử lại.',
+            };
+        }
+    },
+
+    async forgotPassword(email) {
+        try {
+            const response = await api.post('/authen/forgot-password', { email });
+            const code = response.data?.code;
+            if (code !== undefined && code !== 200) {
+                return {
+                    success: false,
+                    error: response.data?.message || 'Gửi email đặt lại mật khẩu thất bại.',
+                };
+            }
+            return {
+                success: true,
+                message: response.data?.message || 'Email đặt lại mật khẩu đã được gửi.',
+            };
+        } catch (error) {
+            const message =
+                error.response?.data?.message ??
+                error.message ??
+                'Gửi email đặt lại mật khẩu thất bại. Vui lòng thử lại.';
+            return {
+                success: false,
+                error: typeof message === 'string' ? message : 'Gửi email đặt lại mật khẩu thất bại. Vui lòng thử lại.',
+            };
+        }
+    },
+
+    async resetPassword(payload) {
+        try {
+            const response = await api.post('/authen/reset-password', payload);
+            const code = response.data?.code;
+            if (code !== undefined && code !== 200) {
+                return {
+                    success: false,
+                    error: response.data?.message || 'Đặt lại mật khẩu thất bại.',
+                };
+            }
+            return {
+                success: true,
+                message: response.data?.message || 'Đặt lại mật khẩu thành công.',
+            };
+        } catch (error) {
+            const message =
+                error.response?.data?.message ??
+                error.message ??
+                'Đặt lại mật khẩu thất bại. Vui lòng thử lại.';
+            return {
+                success: false,
+                error: typeof message === 'string' ? message : 'Đặt lại mật khẩu thất bại. Vui lòng thử lại.',
+            };
+        }
+    },
+
     async registerArtisan(payload) {
         try {
             const response = await api.post('/artisan-applications/register', payload);

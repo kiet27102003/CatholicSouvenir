@@ -7,6 +7,7 @@ import ArtisanDashboard from './pages/artisan/ArtisanDashboard'
 import ArtisanOrderDetailPage from './pages/artisan/ArtisanOrderDetailPage'
 
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
+import ResetPasswordPage from './pages/ResetPasswordPage'
 import CustomerLayout from './pages/customer/CustomerLayout'
 import ProfilePage from './pages/customer/ProfilePage'
 import PaymentPage from './pages/customer/PaymentPage'
@@ -98,6 +99,7 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterForm />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/product/:id" element={<ProductDetailsPage />} />
         <Route path="/artisans" element={<ArtisanDirectoryPage />} />
         <Route path="/artisans/:id" element={<ArtisanProfilePage />} />

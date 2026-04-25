@@ -1,6 +1,18 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { FiSearch, FiFilter, FiRefreshCw, FiPackage, FiCheck, FiX, FiTrash2, FiAlertTriangle, FiEye, FiMoreVertical } from 'react-icons/fi';
+import {
+    FiSearch,
+    FiRefreshCw,
+    FiPackage,
+    FiCheck,
+    FiX,
+    FiTrash2,
+    FiAlertTriangle,
+    FiEye,
+    FiMoreVertical,
+    FiChevronDown,
+    FiSliders,
+} from 'react-icons/fi';
 import productService from '../../services/productService';
 import { appToast } from '../../lib/appToast';
 import './admin-common.css';
@@ -12,19 +24,17 @@ const ProductManager = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('All');
 
-    // Status change modal (approve/reject)
-    const [statusModal, setStatusModal] = useState(null); // { product, action: 'approve' | 'reject' }
+    const [statusModal, setStatusModal] = useState(null);
     const [rejectionReason, setRejectionReason] = useState('');
     const [statusLoading, setStatusLoading] = useState(false);
 
-    // Delete confirmation
-    const [deleteModal, setDeleteModal] = useState(null); // product
+    const [deleteModal, setDeleteModal] = useState(null);
     const [deleteLoading, setDeleteLoading] = useState(false);
 
-    // Xem chi tiết sản phẩm
     const [detailProduct, setDetailProduct] = useState(null);
     const [detailLoading, setDetailLoading] = useState(false);
     const [detailError, setDetailError] = useState('');
+    const [detailClosing, setDetailClosing] = useState(false);
     const [openActionMenuId, setOpenActionMenuId] = useState(null);
     const [actionMenuAnchor, setActionMenuAnchor] = useState(null);
     const [actionMenuPlacement, setActionMenuPlacement] = useState({ align: 'right', direction: 'down' });
@@ -81,23 +91,17 @@ const ProductManager = () => {
     }, []);
 
     const filteredProducts = products.filter((p) => {
-        const nameMatch = (p.productName || '')
-            .toLowerCase()
-            .includes(searchTerm.toLowerCase());
-        const artisanMatch = (p.artisanName || '')
-            .toLowerCase()
-            .includes(searchTerm.toLowerCase());
+        const query = searchTerm.toLowerCase();
+        const nameMatch = (p.productName || '').toLowerCase().includes(query);
+        const artisanMatch = (p.artisanName || '').toLowerCase().includes(query);
         const matchesSearch = nameMatch || artisanMatch;
-        const matchesStatus =
-            statusFilter === 'All' || (p.status || '').toUpperCase() === statusFilter;
+        const matchesStatus = statusFilter === 'All' || (p.status || '').toUpperCase() === statusFilter;
         return matchesSearch && matchesStatus;
     });
 
     const formatPrice = (val) => {
         if (val == null) return '—';
-        return typeof val === 'number'
-            ? val.toLocaleString('vi-VN') + ' VNĐ'
-            : String(val) + ' VNĐ';
+        return typeof val === 'number' ? `${val.toLocaleString('vi-VN')} VNĐ` : `${String(val)} VNĐ`;
     };
 
     const formatDate = (val) => {
@@ -117,7 +121,6 @@ const ProductManager = () => {
     };
 
     const statusOptions = ['All', 'PENDING', 'APPROVED', 'REJECTED'];
-
     const isPending = (p) => (p.status || '').toUpperCase() === 'PENDING';
 
     const openApproveModal = (p) => {
@@ -144,23 +147,18 @@ const ProductManager = () => {
 
         setStatusLoading(true);
         try {
-            const payload = statusModal.action === 'approve'
-                ? { status: 'APPROVED' }
-                : { status: 'REJECTED', rejectionReason: rejectionReason.trim() };
+            const payload =
+                statusModal.action === 'approve'
+                    ? { status: 'APPROVED' }
+                    : { status: 'REJECTED', rejectionReason: rejectionReason.trim() };
             const result = await productService.updateProductStatus(statusModal.product.productId, payload);
             if (result.success) {
                 setProducts((prev) =>
                     prev.map((p) =>
-                        p.productId === statusModal.product.productId
-                            ? { ...p, status: payload.status }
-                            : p
-                    )
+                        p.productId === statusModal.product.productId ? { ...p, status: payload.status } : p,
+                    ),
                 );
-                if (statusModal.action === 'approve') {
-                    appToast.success('Đã cập nhật', 'Sản phẩm đã được duyệt');
-                } else {
-                    appToast.success('Đã cập nhật', 'Sản phẩm đã bị từ chối');
-                }
+                appToast.success('Đã cập nhật', statusModal.action === 'approve' ? 'Sản phẩm đã được duyệt' : 'Sản phẩm đã bị từ chối');
                 closeStatusModal();
             } else {
                 const msg = result.error != null ? String(result.error) : 'Vui lòng thử lại';
@@ -174,32 +172,9 @@ const ProductManager = () => {
         }
     };
 
-    const openDeleteModal = (p) => {
-        setDeleteModal(p);
-    };
-
-    const openActionMenu = (productId, target) => {
-        const rect = target?.getBoundingClientRect?.();
-        setOpenActionMenuId(productId);
-        if (rect) {
-            setActionMenuAnchor({
-                top: rect.bottom + window.scrollY + 8,
-                left: rect.left + window.scrollX,
-                width: rect.width,
-            });
-        } else {
-            setActionMenuAnchor(null);
-        }
-    };
-
-    const closeActionMenu = () => {
-        setOpenActionMenuId(null);
-        setActionMenuAnchor(null);
-        setActionMenuPlacement({ align: 'right', direction: 'down' });
-    };
-
-    const openDetailModal = async (product) => {
+    const openDetailDrawer = async (product) => {
         if (!product?.productId) return;
+        setDetailClosing(false);
         setDetailProduct(null);
         setDetailError('');
         setDetailLoading(true);
@@ -220,9 +195,40 @@ const ProductManager = () => {
         }
     };
 
+    const closeDetailDrawer = () => {
+        if (!detailProduct && !detailLoading && !detailError) return;
+        setDetailClosing(true);
+        window.setTimeout(() => {
+            setDetailProduct(null);
+            setDetailError('');
+            setDetailLoading(false);
+            setDetailClosing(false);
+        }, 280);
+    };
+
+    const openDeleteModal = (p) => {
+        setDeleteModal(p);
+    };
+
+    const openActionMenu = (productId, target) => {
+        const rect = target?.getBoundingClientRect?.();
+        setOpenActionMenuId(productId);
+        if (rect) {
+            setActionMenuAnchor({ top: rect.bottom + window.scrollY + 8, left: rect.left + window.scrollX, width: rect.width });
+        } else {
+            setActionMenuAnchor(null);
+        }
+    };
+
+    const closeActionMenu = () => {
+        setOpenActionMenuId(null);
+        setActionMenuAnchor(null);
+        setActionMenuPlacement({ align: 'right', direction: 'down' });
+    };
+
+
     useEffect(() => {
         if (!actionMenuAnchor || !openActionMenuId) return undefined;
-
         const menu = actionMenuRef.current;
         if (!menu) return undefined;
 
@@ -239,10 +245,7 @@ const ProductManager = () => {
         const spaceAbove = actionMenuAnchor.top;
         const direction = spaceBelow >= rect.height + margin || spaceBelow >= spaceAbove ? 'down' : 'up';
 
-        setActionMenuPlacement((prev) => (
-            prev.align === align && prev.direction === direction ? prev : { align, direction }
-        ));
-
+        setActionMenuPlacement((prev) => (prev.align === align && prev.direction === direction ? prev : { align, direction }));
         return undefined;
     }, [actionMenuAnchor, openActionMenuId]);
 
@@ -274,63 +277,72 @@ const ProductManager = () => {
 
     return (
         <div className="admin-page product-manager-page">
-            <div className="admin-page-header product-manager-header">
-                <div>
+            <section className="pm-hero admin-page-header">
+                <div className="pm-hero-copy">
+                    <div className="pm-breadcrumb">Admin / Product Manager</div>
                     <h1 className="admin-page-title">Quản lý sản phẩm</h1>
-                    <p className="admin-page-subtitle">
-                        Xem và quản lý toàn bộ sản phẩm từ các artisan.
-                    </p>
+                    <p className="admin-page-subtitle">Theo dõi, duyệt và xử lý toàn bộ sản phẩm từ artisan trong một giao diện trực quan hơn.</p>
                 </div>
-                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                    <button
-                        type="button"
-                        className="btn btn-outline btn-icon"
-                        onClick={fetchProducts}
-                        disabled={loading}
-                    >
+                <div className="pm-hero-actions">
+                    <button type="button" className="btn btn-outline btn-icon pm-refresh-btn" onClick={fetchProducts} disabled={loading}>
                         <FiRefreshCw className={loading ? 'spin' : ''} />
                         {loading ? 'Đang tải...' : 'Làm mới'}
                     </button>
                 </div>
-            </div>
+            </section>
 
-            <div className="controls-bar">
-                <div className="search-box">
-                    <FiSearch className="control-icon" />
+            <section className="pm-toolbar admin-card">
+                <div className="pm-search-group">
+                    <span className="pm-input-icon"><FiSearch /></span>
                     <input
                         type="text"
+                        className="pm-search-input"
                         placeholder="Tìm theo tên sản phẩm hoặc artisan..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
-                <div className="filter-box">
-                    <FiFilter className="control-icon" />
-                    <select
-                        value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
-                    >
+
+                <div className="pm-filter-group">
+                    <span className="pm-chip-icon"><FiSliders /></span>
+                    <select className="pm-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
                         {statusOptions.map((opt) => (
                             <option key={opt} value={opt}>
                                 {opt === 'All' ? 'Tất cả trạng thái' : opt}
                             </option>
                         ))}
                     </select>
+                    <FiChevronDown className="pm-select-caret" />
                 </div>
-            </div>
+            </section>
 
-            <div className="admin-card table-card">
-                <div className="table-responsive">
-                    <table className="admin-table">
+            <section className="pm-summary-row">
+                <div className="pm-summary-card">
+                    <span>Tổng sản phẩm</span>
+                    <strong>{products.length}</strong>
+                </div>
+                <div className="pm-summary-card">
+                    <span>Đang hiển thị</span>
+                    <strong>{filteredProducts.length}</strong>
+                </div>
+                <div className="pm-summary-card">
+                    <span>Chờ duyệt</span>
+                    <strong>{products.filter((p) => (p.status || '').toUpperCase() === 'PENDING').length}</strong>
+                </div>
+            </section>
+
+            <div className="admin-card pm-table-card">
+                <div className="table-responsive pm-table-wrap">
+                    <table className="admin-table pm-table">
                         <thead>
                             <tr>
-                                <th width="60">#</th>
+                                <th width="56">#</th>
                                 <th width="120">Ảnh</th>
-                                <th width="200">Sản phẩm</th>
-                                <th width="120">Artisan</th>
-                                <th width="120">Giá</th>
-                                <th width="100">Trạng thái</th>
-                                <th width="160" className="text-center">Hành động</th>
+                                <th>Sản phẩm</th>
+                                <th width="160">Artisan</th>
+                                <th width="140">Giá</th>
+                                <th width="120">Trạng thái</th>
+                                <th width="120" className="text-center">Hành động</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -338,10 +350,7 @@ const ProductManager = () => {
                                 <tr>
                                     <td colSpan="7" className="empty-state">
                                         <div className="admin-empty-state">
-                                            <FiRefreshCw
-                                                className="spin"
-                                                style={{ fontSize: '2rem' }}
-                                            />
+                                            <FiRefreshCw className="spin pm-empty-icon" />
                                             <p>Đang tải...</p>
                                         </div>
                                     </td>
@@ -350,56 +359,39 @@ const ProductManager = () => {
                                 <tr>
                                     <td colSpan="7" className="empty-state">
                                         <div className="admin-empty-state">
-                                            <FiPackage
-                                                style={{
-                                                    fontSize: '2.5rem',
-                                                    color: 'var(--admin-border)',
-                                                }}
-                                            />
+                                            <FiPackage className="pm-empty-icon" />
                                             <h4>Không có sản phẩm</h4>
-                                            <p>
-                                                Thử thay đổi từ khóa hoặc bộ lọc.
-                                            </p>
+                                            <p>Thử thay đổi từ khóa hoặc bộ lọc.</p>
                                         </div>
                                     </td>
                                 </tr>
                             ) : (
                                 filteredProducts.map((p, index) => (
-                                    <tr
-                                        key={p.productId}
-                                        className="animate-fade-in row-delay"
-                                    >
+                                    <tr key={p.productId} className="pm-row">
                                         <td className="text-muted">{index + 1}</td>
                                         <td>
-                                            <div className="product-thumb-cell">
+                                            <div className="pm-thumb-cell">
                                                 {p.images && p.images.length > 0 ? (
                                                     <img
                                                         src={p.images[0].image_url || p.images[0].imageUrl}
                                                         alt={p.productName || ''}
-                                                        className="product-thumb"
+                                                        className="pm-thumb"
                                                     />
                                                 ) : (
-                                                    <div className="product-thumb-placeholder">
-                                                        —
-                                                    </div>
+                                                    <div className="pm-thumb-placeholder">—</div>
                                                 )}
                                             </div>
                                         </td>
                                         <td>
-                                            <div className="product-info-cell">
-                                                <span className="product-name">{p.productName || '—'}</span>
+                                            <div className="pm-product-cell">
+                                                <span className="pm-product-name">{p.productName || '—'}</span>
+                                                <span className="pm-product-meta">ID: {p.productId}</span>
                                             </div>
                                         </td>
+                                        <td><span className="pm-pill">{p.artisanName || '—'}</span></td>
+                                        <td className="pm-price-cell">{formatPrice(p.productPrice)}</td>
                                         <td>
-                                            <span className="role-tag">{p.artisanName || '—'}</span>
-                                        </td>
-                                        <td className="product-price-cell">
-                                            {formatPrice(p.productPrice)}
-                                        </td>
-                                        <td>
-                                            <span
-                                                className={`status-badge ${getStatusBadgeClass(p.status)}`}
-                                            >
+                                            <span className={`status-badge ${getStatusBadgeClass(p.status)}`}>
                                                 {p.status || '—'}
                                             </span>
                                         </td>
@@ -438,7 +430,7 @@ const ProductManager = () => {
                                                             visibility: actionMenuPlacement.align ? 'visible' : 'hidden',
                                                         }}
                                                     >
-                                                        <button type="button" className="action-menu-item" onClick={() => { closeActionMenu(); void openDetailModal(p); }}>
+                                                        <button type="button" className="action-menu-item" onClick={() => { closeActionMenu(); void openDetailDrawer(p); }}>
                                                             <FiEye />
                                                             <span>Xem chi tiết</span>
                                                         </button>
@@ -471,40 +463,31 @@ const ProductManager = () => {
                 </div>
 
                 {!loading && filteredProducts.length > 0 && (
-                    <div className="table-footer">
-                        <span className="showing-text">
-                            Hiển thị {filteredProducts.length} / {products.length} sản phẩm
-                        </span>
+                    <div className="table-footer pm-table-footer">
+                        <span className="showing-text">Hiển thị {filteredProducts.length} / {products.length} sản phẩm</span>
                     </div>
                 )}
             </div>
 
-            {/* Modal xem chi tiết sản phẩm */}
             {(detailLoading || detailProduct || detailError) && (
-                <div
-                    className="detail-overlay"
-                    onClick={() => { setDetailProduct(null); setDetailError(''); setDetailLoading(false); }}
-                    role="presentation"
-                >
-                    <div
-                        className="detail-modal product-detail-modal"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <div className="detail-modal-header product-detail-header">
-                            <div className="product-detail-title-group">
-                                <span className="product-detail-eyebrow">Admin • Chi tiết sản phẩm</span>
+                <div className="pm-detail-drawer-shell" role="presentation">
+                    <div className="pm-detail-drawer-backdrop" onClick={() => { setDetailProduct(null); setDetailError(''); setDetailLoading(false); }} />
+                    <aside className="pm-detail-drawer" onClick={(e) => e.stopPropagation()} aria-label="Chi tiết sản phẩm">
+                        <div className="pm-detail-drawer-header">
+                            <div className="pm-detail-drawer-title-group">
+                                <span className="pm-detail-drawer-eyebrow">Admin • Chi tiết sản phẩm</span>
                                 <h3>{detailProduct?.productName || 'Chi tiết sản phẩm'}</h3>
+                                <p>Xem nhanh thông tin, ảnh, mô tả và tag mà không cần mở modal.</p>
                             </div>
                             <button type="button" className="detail-close" onClick={() => { setDetailProduct(null); setDetailError(''); setDetailLoading(false); }} aria-label="Đóng">
                                 &times;
                             </button>
                         </div>
-                        <div className="detail-modal-body product-detail-body">
+
+                        <div className="pm-detail-drawer-body">
                             {detailLoading ? (
                                 <div className="detail-loading-state">
-                                    <div className="detail-loading-spinner">
-                                        <FiRefreshCw className="spin" />
-                                    </div>
+                                    <div className="detail-loading-spinner"><FiRefreshCw className="spin" /></div>
                                     <div>
                                         <h4>Đang tải thông tin sản phẩm</h4>
                                         <p>Vui lòng chờ trong giây lát.</p>
@@ -518,49 +501,58 @@ const ProductManager = () => {
                                 </div>
                             ) : detailProduct ? (
                                 <>
-                                    <div className="product-detail-left">
-                                        <div className="product-detail-images">
-                                            {detailProduct.images && detailProduct.images.length > 0 ? (
-                                                <>
-                                                    <div className="product-detail-hero-image">
-                                                        <img
-                                                            src={detailProduct.images[0].image_url || detailProduct.images[0].imageUrl}
-                                                            alt={detailProduct.productName || 'Ảnh sản phẩm'}
-                                                            className="product-detail-img product-detail-img-main"
-                                                        />
+                                    <div className="pm-detail-preview-panel">
+                                        <div className="create-preview-card">
+                                            <div className="create-preview-cover">
+                                                {detailProduct.images && detailProduct.images.length > 0 ? (
+                                                    <img
+                                                        src={detailProduct.images[0].image_url || detailProduct.images[0].imageUrl}
+                                                        alt={detailProduct.productName || 'Ảnh sản phẩm'}
+                                                    />
+                                                ) : (
+                                                    <div className="create-preview-empty">
+                                                        <span>Chưa có ảnh</span>
+                                                        <small>Sản phẩm chưa có ảnh đại diện</small>
                                                     </div>
-                                                    {detailProduct.images.length > 1 && (
-                                                        <div className="product-detail-thumbnails">
-                                                            {detailProduct.images.map((img, i) => (
-                                                                <button
-                                                                    key={img.id || i}
-                                                                    type="button"
-                                                                    className={`product-detail-thumb-button ${i === 0 ? 'active' : ''}`}
-                                                                >
-                                                                    <img
-                                                                        src={img.image_url || img.imageUrl}
-                                                                        alt={`${detailProduct.productName || 'Ảnh sản phẩm'} ${i + 1}`}
-                                                                        className="product-detail-thumb-image"
-                                                                    />
-                                                                </button>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                </>
-                                            ) : (
-                                                <div className="product-detail-img-placeholder">Chưa có ảnh</div>
-                                            )}
+                                                )}
+                                            </div>
+                                            <div className="create-preview-content">
+                                                <div className="create-preview-line create-preview-line--name">{detailProduct.productName || '—'}</div>
+                                                <div className="create-preview-line create-preview-line--price">{formatPrice(detailProduct.productPrice)}</div>
+                                                <div className="create-preview-meta">
+                                                    <span>{detailProduct.size || 'Kích thước'}</span>
+                                                    <span>{detailProduct.quantity ?? '—'} tồn kho</span>
+                                                    <span>{detailProduct.status || '—'}</span>
+                                                </div>
+                                                <div className="create-preview-tags">
+                                                    {Array.isArray(detailProduct.tags) && detailProduct.tags.length > 0
+                                                        ? detailProduct.tags.slice(0, 4).map((tag) => <span key={tag}>{tag}</span>)
+                                                        : <span>Chưa có tag</span>}
+                                                </div>
+                                            </div>
                                         </div>
+                                        {detailProduct.images && detailProduct.images.length > 1 && (
+                                            <div className="pm-detail-thumbs">
+                                                {detailProduct.images.map((img, i) => (
+                                                    <button key={img.id || i} type="button" className={`pm-detail-thumb ${i === 0 ? 'active' : ''}`}>
+                                                        <img src={img.image_url || img.imageUrl} alt={`${detailProduct.productName || 'Ảnh sản phẩm'} ${i + 1}`} />
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
-                                    <div className="product-detail-right">
-                                        <div className="detail-summary-grid">
+
+                                    <div className="pm-detail-info-panel">
+                                        <div className="detail-summary-grid pm-summary-grid">
                                             <div className="detail-summary-card">
                                                 <span className="detail-label">Giá</span>
                                                 <strong>{formatPrice(detailProduct.productPrice)}</strong>
                                             </div>
                                             <div className="detail-summary-card">
                                                 <span className="detail-label">Trạng thái</span>
-                                                <span className={`status-badge ${getStatusBadgeClass(detailProduct.status)}`}>{detailProduct.status || '—'}</span>
+                                                <span className={`status-badge ${getStatusBadgeClass(detailProduct.status)}`}>
+                                                    {detailProduct.status || '—'}
+                                                </span>
                                             </div>
                                             <div className="detail-summary-card">
                                                 <span className="detail-label">Số lượng</span>
@@ -571,9 +563,10 @@ const ProductManager = () => {
                                                 <strong>{detailProduct.size || '—'}</strong>
                                             </div>
                                         </div>
-                                        <div className="detail-section">
+
+                                        <div className="detail-section pm-detail-section">
                                             <div className="detail-section-title">Thông tin cơ bản</div>
-                                            <div className="detail-fields-grid">
+                                            <div className="detail-fields-grid pm-detail-grid">
                                                 <div className="detail-row">
                                                     <span className="detail-label">Mã sản phẩm</span>
                                                     <span className="detail-value detail-code">{detailProduct.productId || '—'}</span>
@@ -596,7 +589,11 @@ const ProductManager = () => {
                                                 </div>
                                                 <div className="detail-row detail-row-full">
                                                     <span className="detail-label">Tags</span>
-                                                    <span className="detail-value detail-tags">{Array.isArray(detailProduct.tags) && detailProduct.tags.length > 0 ? detailProduct.tags.map((tag) => <span key={tag} className="detail-tag">{tag}</span>) : '—'}</span>
+                                                    <span className="detail-value detail-tags">
+                                                        {Array.isArray(detailProduct.tags) && detailProduct.tags.length > 0
+                                                            ? detailProduct.tags.map((tag) => <span key={tag} className="detail-tag">{tag}</span>)
+                                                            : '—'}
+                                                    </span>
                                                 </div>
                                                 <div className="detail-row detail-row-full">
                                                     <span className="detail-label">Ngày tạo</span>
@@ -608,38 +605,19 @@ const ProductManager = () => {
                                 </>
                             ) : null}
                         </div>
-                        <div className="detail-modal-footer product-detail-footer-sticky">
-                            <div className="detail-footer-actions">
-                                <button type="button" className="btn btn-outline" onClick={() => { setDetailProduct(null); setDetailError(''); setDetailLoading(false); }}>
-                                    Đóng
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+                    </aside>
                 </div>
             )}
 
-            {/* Modal đổi trạng thái (Duyệt / Từ chối) */}
             {statusModal && (
-                <div
-                    className="detail-overlay"
-                    onClick={closeStatusModal}
-                    role="presentation"
-                >
-                    <div
-                        className="detail-modal"
-                        onClick={(e) => e.stopPropagation()}
-                    >
+                <div className="detail-overlay pm-overlay" onClick={closeStatusModal} role="presentation">
+                    <div className="detail-modal pm-confirm-modal" onClick={(e) => e.stopPropagation()}>
                         <div className="detail-modal-header">
-                            <h3>
-                                {statusModal.action === 'approve' ? 'Duyệt sản phẩm' : 'Từ chối sản phẩm'}
-                            </h3>
-                            <button type="button" className="detail-close" onClick={closeStatusModal} aria-label="Đóng">
-                                &times;
-                            </button>
+                            <h3>{statusModal.action === 'approve' ? 'Duyệt sản phẩm' : 'Từ chối sản phẩm'}</h3>
+                            <button type="button" className="detail-close" onClick={closeStatusModal} aria-label="Đóng">&times;</button>
                         </div>
                         <div className="detail-modal-body">
-                            <p style={{ marginBottom: 16 }}>
+                            <p className="pm-confirm-text">
                                 Sản phẩm: <strong>{statusModal.product.productName}</strong>
                             </p>
                             {statusModal.action === 'reject' && (
@@ -651,20 +629,12 @@ const ProductManager = () => {
                                         placeholder="Nhập lý do từ chối..."
                                         value={rejectionReason}
                                         onChange={(e) => setRejectionReason(e.target.value)}
-                                        style={{ width: '100%', resize: 'vertical', minHeight: 80 }}
                                     />
                                 </div>
                             )}
                         </div>
                         <div className="detail-modal-footer">
-                            <button
-                                type="button"
-                                className="btn btn-outline"
-                                onClick={closeStatusModal}
-                                disabled={statusLoading}
-                            >
-                                Hủy
-                            </button>
+                            <button type="button" className="btn btn-outline" onClick={closeStatusModal} disabled={statusLoading}>Hủy</button>
                             <button
                                 type="button"
                                 className={`btn ${statusModal.action === 'approve' ? 'btn-primary' : 'btn-danger'}`}
@@ -678,51 +648,23 @@ const ProductManager = () => {
                 </div>
             )}
 
-            {/* Modal xác nhận xóa */}
             {deleteModal && (
-                <div className="detail-overlay" style={{ zIndex: 1100 }} role="presentation">
-                    <div
-                        className="detail-modal delete-confirm-modal"
-                        style={{ maxWidth: 420 }}
-                        onClick={(e) => e.stopPropagation()}
-                    >
+                <div className="detail-overlay pm-overlay" style={{ zIndex: 1100 }} role="presentation">
+                    <div className="detail-modal pm-delete-modal" onClick={(e) => e.stopPropagation()}>
                         <div className="detail-modal-header">
-                            <h3 style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--admin-danger, #dc2626)' }}>
-                                <FiAlertTriangle />
-                                Xác nhận xóa
-                            </h3>
-                            <button
-                                type="button"
-                                className="detail-close"
-                                onClick={closeDeleteModal}
-                                disabled={deleteLoading}
-                                aria-label="Đóng"
-                            >
-                                &times;
-                            </button>
+                            <h3 className="pm-danger-title"><FiAlertTriangle /> Xác nhận xóa</h3>
+                            <button type="button" className="detail-close" onClick={closeDeleteModal} disabled={deleteLoading} aria-label="Đóng">&times;</button>
                         </div>
                         <div className="detail-modal-body">
-                            <p style={{ margin: 0, lineHeight: 1.6 }}>
+                            <p className="pm-confirm-text">
                                 Bạn có chắc chắn muốn xóa sản phẩm <strong>{deleteModal.productName}</strong>?
                                 <br />
                                 Hành động này <strong>không thể hoàn tác</strong>.
                             </p>
                         </div>
                         <div className="detail-modal-footer">
-                            <button
-                                type="button"
-                                className="btn btn-outline"
-                                onClick={closeDeleteModal}
-                                disabled={deleteLoading}
-                            >
-                                Hủy
-                            </button>
-                            <button
-                                type="button"
-                                className="btn btn-danger"
-                                onClick={handleDelete}
-                                disabled={deleteLoading}
-                            >
+                            <button type="button" className="btn btn-outline" onClick={closeDeleteModal} disabled={deleteLoading}>Hủy</button>
+                            <button type="button" className="btn btn-danger" onClick={handleDelete} disabled={deleteLoading}>
                                 <FiTrash2 style={{ marginRight: 4 }} />
                                 {deleteLoading ? 'Đang xóa...' : 'Xóa sản phẩm'}
                             </button>

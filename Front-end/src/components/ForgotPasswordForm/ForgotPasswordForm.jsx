@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import authService from '../../services/authService';
 import { appToast } from '../../lib/appToast';
 import './ForgotPasswordForm.css';
 
@@ -12,12 +13,20 @@ const ForgotPasswordForm = () => {
         e.preventDefault();
         setLoading(true);
 
-        // Simulate API call to send reset link
-        setTimeout(() => {
+        try {
+            const result = await authService.forgotPassword(email);
+
+            if (result.success) {
+                appToast.success('Đã gửi', 'Kiểm tra hộp thư của bạn');
+                setIsSubmitted(true);
+            } else {
+                appToast.error('Có lỗi xảy ra', result.error || 'Gửi yêu cầu quên mật khẩu thất bại.');
+            }
+        } catch {
+            appToast.error('Có lỗi xảy ra', 'Vui lòng thử lại');
+        } finally {
             setLoading(false);
-            appToast.success('Đã gửi', 'Kiểm tra hộp thư của bạn');
-            setIsSubmitted(true);
-        }, 1500);
+        }
     };
 
     if (isSubmitted) {

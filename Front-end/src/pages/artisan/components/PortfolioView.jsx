@@ -442,7 +442,7 @@ const PortfolioView = ({ user }) => {
             </header>
 
             {editingProduct && (
-                <div className="edit-modal-overlay" onClick={closeEditForm}>
+                <div className="edit-modal-overlay" onClick={closeEditForm} role="dialog" aria-modal="true" aria-labelledby="edit-product-title">
                     <div className="edit-modal" onClick={(e) => e.stopPropagation()}>
                         <button
                             type="button"
@@ -450,169 +450,156 @@ const PortfolioView = ({ user }) => {
                             onClick={closeEditForm}
                             aria-label="Đóng"
                         >
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25">
                                 <line x1="18" y1="6" x2="6" y2="18" />
                                 <line x1="6" y1="6" x2="18" y2="18" />
                             </svg>
                         </button>
+
                         <div className="edit-modal-body">
-                            <div className="edit-modal-image edit-modal-images-section">
-                                <span className="edit-modal-images-label">Ảnh sản phẩm</span>
-                                <div className="edit-modal-images-list">
-                                    {editingProduct.productImages
-                                        ?.filter((img) => !(editingProduct.deletedImageIds || []).includes(img.id))
-                                        .map((img) => (
-                                            <div key={img.id} className="edit-modal-image-item">
-                                                <img
-                                                    src={img.image_url || img.imageUrl}
-                                                    alt=""
-                                                />
-                                                <button
-                                                    type="button"
-                                                    className="edit-modal-image-remove"
-                                                    onClick={() => markImageForDeletion(img.id)}
-                                                    title="Gỡ ảnh (sẽ xóa khi lưu)"
-                                                >
-                                                    ×
-                                                </button>
-                                            </div>
-                                        ))}
-                                    {(editingProduct.newImageItems || []).map((item, idx) => (
-                                        <div key={`new-${idx}`} className="edit-modal-image-item edit-modal-image-item-new">
-                                            <img src={item.preview} alt="" />
-                                            <button
-                                                type="button"
-                                                className="edit-modal-image-remove"
-                                                onClick={() => removeNewImage(idx)}
-                                                title="Bỏ ảnh"
-                                            >
-                                                ×
-                                            </button>
+                            <aside className="edit-modal-preview-panel">
+                                <div className="create-preview-card">
+                                    <div className="create-preview-cover">
+                                        {(() => {
+                                            const visibleImages = editingProduct.productImages
+                                                ?.filter((img) => !(editingProduct.deletedImageIds || []).includes(img.id)) || [];
+                                            const cover = visibleImages[0]?.image_url || visibleImages[0]?.imageUrl || visibleImages[0]?.image || editingProduct.newImageItems?.[0]?.preview;
+                                            return cover ? (
+                                                <img src={cover} alt={editingProduct.productName || 'Ảnh sản phẩm'} />
+                                            ) : (
+                                                <div className="create-preview-empty">
+                                                    <span>Chưa có ảnh</span>
+                                                    <small>Chọn ảnh để nhìn thấy preview ở đây</small>
+                                                </div>
+                                            );
+                                        })()}
+                                    </div>
+                                    <div className="create-preview-content">
+                                        <div className="create-preview-line create-preview-line--name">
+                                            {editingProduct.productName || 'Tên sản phẩm sẽ hiển thị ở đây'}
                                         </div>
-                                    ))}
+                                        <div className="create-preview-line create-preview-line--price">
+                                            {editingProduct.productPrice ? Number(editingProduct.productPrice).toLocaleString('vi-VN') : '0'} VNĐ
+                                        </div>
+                                        <div className="create-preview-meta">
+                                            <span>{editingProduct.size?.trim() || 'Kích thước'}</span>
+                                            <span>{editingProduct.quantity !== '' ? editingProduct.quantity : 0} tồn kho</span>
+                                        </div>
+                                        <div className="create-preview-tags">
+                                            {(editingProduct.tags || [])
+                                                .map((tag) => (tag || '').trim())
+                                                .filter(Boolean)
+                                                .slice(0, 4)
+                                                .map((tag) => (
+                                                    <span key={tag}>{tag}</span>
+                                                ))}
+                                            {!(editingProduct.tags || []).some((tag) => (tag || '').trim()) && <span>Tag mẫu</span>}
+                                        </div>
+                                    </div>
                                 </div>
-                                {(editingProduct.deletedImageIds || []).length > 0 && (
-                                    <div className="edit-modal-deleted-hint">
-                                        {editingProduct.deletedImageIds.length} ảnh sẽ bị xóa khi lưu.
-                                    </div>
-                                )}
-                                <div className="edit-modal-add-images">
-                                    <label className="form-label">Thêm ảnh mới</label>
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        multiple
-                                        className="form-input"
-                                        onChange={(e) => {
-                                            const files = Array.from(e.target.files || []);
-                                            files.forEach((f) => addNewImageFile(f));
-                                            e.target.value = '';
-                                        }}
-                                    />
-                                </div>
-                                {(!editingProduct.productImages?.length || editingProduct.productImages.every((img) => (editingProduct.deletedImageIds || []).includes(img.id))) &&
-                                (!editingProduct.newImageItems || editingProduct.newImageItems.length === 0) ? (
-                                    <div className="edit-modal-image-placeholder">Chưa có ảnh — chọn file để thêm</div>
-                                ) : null}
-                            </div>
-                            <div className="edit-modal-form">
-                                <form onSubmit={handleEditSubmit}>
-                                    <h3 className="portfolio-form-title">Chỉnh sửa sản phẩm</h3>
-                                    <div className="form-group">
-                                        <label className="form-label">Tên sản phẩm <span className="required">*</span></label>
-                                        <input
-                                            type="text"
-                                            className="form-input"
-                                            required
-                                            value={editingProduct.productName}
-                                            onChange={(e) => updateEditField('productName', e.target.value)}
-                                        />
-                                    </div>
-                                    <div className="form-row">
-                                        <div className="form-group">
-                                            <label className="form-label">Giá (VNĐ) <span className="required">*</span></label>
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                step="1000"
-                                                className="form-input"
-                                                value={editingProduct.productPrice === '' ? '' : editingProduct.productPrice}
-                                                onChange={(e) => updateEditField('productPrice', e.target.value)}
-                                            />
-                                        </div>
-                                        <div className="form-group">
-                                            <label className="form-label">Số lượng <span className="required">*</span></label>
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                step="1"
-                                                className="form-input"
-                                                value={editingProduct.quantity === '' ? '' : editingProduct.quantity}
-                                                onChange={(e) => updateEditField('quantity', e.target.value)}
-                                            />
-                                        </div>
-                                    </div>
-                                    <div className="form-group">
-                                        <label className="form-label">Mô tả</label>
-                                        <textarea
-                                            className="form-textarea"
-                                            rows={4}
-                                            value={editingProduct.productDescription}
-                                            onChange={(e) => updateEditField('productDescription', e.target.value)}
-                                        />
-                                    </div>
-                                    <div className="form-row">
-                                        <div className="form-group">
-                                            <label className="form-label">Kích thước</label>
+
+                            </aside>
+
+                            <div className="edit-modal-form-panel">
+                                <form onSubmit={handleEditSubmit} className="create-modal-form edit-modal-form">
+                                    <div className="create-form-section">
+                                        <div className="form-group form-group--full">
+                                            <label className="form-label">Tên sản phẩm <span className="required">*</span></label>
                                             <input
                                                 type="text"
                                                 className="form-input"
-                                                placeholder="VD: 50cm"
-                                                value={editingProduct.size}
-                                                onChange={(e) => updateEditField('size', e.target.value)}
+                                                required
+                                                value={editingProduct.productName}
+                                                onChange={(e) => updateEditField('productName', e.target.value)}
                                             />
                                         </div>
-                                        <div className="form-group">
-                                            <label className="form-label">Danh mục</label>
-                                            <select
-                                                className="form-input"
-                                                value={editingProduct.categoryId || ''}
-                                                onChange={(e) => updateEditField('categoryId', e.target.value)}
-                                                disabled={categoryLoading}
-                                            >
-                                                <option value="">-- Chọn danh mục --</option>
-                                                {categories.map((category) => (
-                                                    <option key={category.id} value={category.id}>
-                                                        {category.name}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div className="form-group">
-                                        <label className="form-label">Tags</label>
-                                        {(editingProduct.tags || []).map((tag, index) => (
-                                            <div key={`edit-tag-${index}`} className="form-row" style={{ marginBottom: 8 }}>
+                                        <div className="create-grid-2">
+                                            <div className="form-group">
+                                                <label className="form-label">Giá (VNĐ) <span className="required">*</span></label>
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    step="1000"
+                                                    className="form-input"
+                                                    value={editingProduct.productPrice === '' ? '' : editingProduct.productPrice}
+                                                    onChange={(e) => updateEditField('productPrice', e.target.value)}
+                                                />
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label">Số lượng <span className="required">*</span></label>
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    step="1"
+                                                    className="form-input"
+                                                    value={editingProduct.quantity === '' ? '' : editingProduct.quantity}
+                                                    onChange={(e) => updateEditField('quantity', e.target.value)}
+                                                />
+                                            </div>
+                                            <div className="form-group form-group--full">
+                                                <label className="form-label">Mô tả</label>
+                                                <textarea
+                                                    className="form-textarea"
+                                                    rows={4}
+                                                    value={editingProduct.productDescription}
+                                                    onChange={(e) => updateEditField('productDescription', e.target.value)}
+                                                />
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label">Kích thước</label>
                                                 <input
                                                     type="text"
                                                     className="form-input"
-                                                    value={tag}
-                                                    onChange={(e) => updateEditTagField(index, e.target.value)}
-                                                    placeholder={`Tag ${index + 1}`}
+                                                    placeholder="VD: 50cm"
+                                                    value={editingProduct.size}
+                                                    onChange={(e) => updateEditField('size', e.target.value)}
                                                 />
-                                                <button
-                                                    type="button"
-                                                    className="btn-outline"
-                                                    onClick={() => removeEditTagField(index)}
-                                                    style={{ minWidth: 44 }}
-                                                >
-                                                    -
-                                                </button>
                                             </div>
-                                        ))}
-                                        <button type="button" className="btn-outline" onClick={addEditTagField}>
-                                            + Thêm tag
-                                        </button>
+                                            <div className="form-group">
+                                                <label className="form-label">Danh mục</label>
+                                                <select
+                                                    className="form-input"
+                                                    value={editingProduct.categoryId || ''}
+                                                    onChange={(e) => updateEditField('categoryId', e.target.value)}
+                                                    disabled={categoryLoading}
+                                                >
+                                                    <option value="">-- Chọn danh mục --</option>
+                                                    {categories.map((category) => (
+                                                        <option key={category.id} value={category.id}>
+                                                            {category.name}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div className="form-group form-group--full">
+                                                <div className="create-section-head">
+                                                    <label className="form-label">Tags</label>
+                                                    <button type="button" className="btn-chip" onClick={addEditTagField}>
+                                                        + Thêm tag
+                                                    </button>
+                                                </div>
+                                                <div className="create-tags-list">
+                                                    {(editingProduct.tags || []).map((tag, index) => (
+                                                        <div key={`edit-tag-${index}`} className="create-tag-row">
+                                                            <input
+                                                                type="text"
+                                                                className="form-input tag-input"
+                                                                value={tag}
+                                                                onChange={(e) => updateEditTagField(index, e.target.value)}
+                                                                placeholder={`Tag ${index + 1}`}
+                                                            />
+                                                            <button
+                                                                type="button"
+                                                                className="btn-outline tag-remove-btn"
+                                                                onClick={() => removeEditTagField(index)}
+                                                            >
+                                                                -
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                     <div className="form-actions">
                                         <button type="button" className="btn-outline" onClick={closeEditForm}>
@@ -630,160 +617,212 @@ const PortfolioView = ({ user }) => {
             )}
 
             {showForm && (
-                <div className="edit-modal-overlay" onClick={closeCreateForm}>
-                    <div className="edit-modal" onClick={(e) => e.stopPropagation()}>
+                <div className="create-modal-overlay" onClick={closeCreateForm} role="dialog" aria-modal="true" aria-labelledby="create-product-title">
+                    <div className="create-modal" onClick={(e) => e.stopPropagation()}>
                         <button
                             type="button"
-                            className="edit-modal-close"
+                            className="create-modal-close"
                             onClick={closeCreateForm}
                             aria-label="Đóng"
                         >
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25">
                                 <line x1="18" y1="6" x2="6" y2="18" />
                                 <line x1="6" y1="6" x2="18" y2="18" />
                             </svg>
                         </button>
-                        <div className="edit-modal-body edit-modal-body--create">
-                            <div className="edit-modal-form edit-modal-form--create">
-                                <form onSubmit={handleSubmit}>
-                                    <div className="form-group">
-                                        <label className="form-label">Tên sản phẩm <span className="required">*</span></label>
-                                        <input
-                                            type="text"
-                                            className="form-input"
-                                            value={form.productName}
-                                            onChange={(e) => updateField('productName', e.target.value)}
-                                        />
-                                        {formErrors.productName && <span className="form-hint" style={{ color: '#dc2626' }}>{formErrors.productName}</span>}
-                                    </div>
 
-                                    <div className="form-row">
-                                        <div className="form-group">
-                                            <label className="form-label">Giá (VNĐ) <span className="required">*</span></label>
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                step="1000"
-                                                className="form-input"
-                                                value={form.productPrice === '' ? '' : form.productPrice}
-                                                onChange={(e) => updateField('productPrice', e.target.value)}
-                                            />
-                                            {formErrors.productPrice && <span className="form-hint" style={{ color: '#dc2626' }}>{formErrors.productPrice}</span>}
-                                        </div>
-                                        <div className="form-group">
-                                            <label className="form-label">Số lượng <span className="required">*</span></label>
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                step="1"
-                                                className="form-input"
-                                                value={form.quantity === '' ? '' : form.quantity}
-                                                onChange={(e) => updateField('quantity', e.target.value)}
-                                            />
-                                            {formErrors.quantity && <span className="form-hint" style={{ color: '#dc2626' }}>{formErrors.quantity}</span>}
-                                        </div>
-                                    </div>
-
-                                    <div className="form-group">
-                                        <label className="form-label">Mô tả</label>
-                                        <textarea
-                                            className="form-textarea"
-                                            rows={4}
-                                            value={form.productDescription}
-                                            onChange={(e) => updateField('productDescription', e.target.value)}
-                                        />
-                                    </div>
-
-                                    <div className="form-row">
-                                        <div className="form-group">
-                                            <label className="form-label">Kích thước</label>
-                                            <input
-                                                type="text"
-                                                className="form-input"
-                                                placeholder="VD: 50cm"
-                                                value={form.size}
-                                                onChange={(e) => updateField('size', e.target.value)}
-                                            />
-                                        </div>
-                                        <div className="form-group">
-                                            <label className="form-label">Danh mục</label>
-                                            <select
-                                                className="form-input"
-                                                value={form.categoryId}
-                                                onChange={(e) => updateField('categoryId', e.target.value)}
-                                                disabled={categoryLoading}
-                                            >
-                                                <option value="">-- Chọn danh mục --</option>
-                                                {categories.map((category) => (
-                                                    <option key={category.id} value={category.id}>
-                                                        {category.name}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                            {categoryLoading && <span className="form-hint">Đang tải...</span>}
-                                            {categoryLoadError && <span className="form-hint" style={{ color: '#dc2626' }}>{categoryLoadError}</span>}
-                                        </div>
-                                    </div>
-
-                                    <div className="form-group">
-                                        <label className="form-label">Tags</label>
-                                        {(form.tags || []).map((tag, index) => (
-                                            <div key={`tag-${index}`} className="form-row" style={{ marginBottom: 8 }}>
-                                                <div className="form-group" style={{ marginBottom: 0, flex: 1 }}>
-                                                    <input
-                                                        type="text"
-                                                        className="form-input"
-                                                        placeholder={`Tag ${index + 1}`}
-                                                        value={tag}
-                                                        onChange={(e) => updateTagField(index, e.target.value)}
-                                                    />
-                                                </div>
-                                                <button
-                                                    type="button"
-                                                    className="btn-outline"
-                                                    onClick={() => removeTagField(index)}
-                                                >
-                                                    -
-                                                </button>
-                                            </div>
-                                        ))}
-                                        <button type="button" className="btn-outline" onClick={addTagField}>
-                                            + Thêm tag
-                                        </button>
-                                    </div>
-
-                                    <div className="form-group">
-                                        <label className="form-label">Ảnh sản phẩm</label>
-                                        <input
-                                            type="file"
-                                            className="form-input"
-                                            accept="image/*"
-                                            multiple
-                                            onChange={(e) => {
-                                                addCreateImages(e.target.files);
-                                                e.target.value = '';
-                                            }}
-                                        />
-                                        {(form.images || []).length > 0 && (
-                                            <div className="edit-modal-images-list" style={{ marginTop: 10 }}>
-                                                {form.images.map((img, idx) => (
-                                                    <div key={`create-image-${idx}`} className="edit-modal-image-item">
-                                                        <img src={img.preview} alt={`Ảnh ${idx + 1}`} />
-                                                        <button
-                                                            type="button"
-                                                            className="edit-modal-image-remove"
-                                                            onClick={() => removeCreateImage(idx)}
-                                                            title="Xóa ảnh"
-                                                        >
-                                                            ×
-                                                        </button>
-                                                    </div>
-                                                ))}
+                        <div className="create-modal-body">
+                            <aside className="create-modal-preview-panel">
+                                <div className="create-preview-card">
+                                    <div className="create-preview-cover">
+                                        {(form.images || []).length > 0 ? (
+                                            <img src={form.images[0].preview} alt="Ảnh xem trước" />
+                                        ) : (
+                                            <div className="create-preview-empty">
+                                                <span>Chưa có ảnh</span>
+                                                <small>Chọn ảnh để nhìn thấy preview ở đây</small>
                                             </div>
                                         )}
                                     </div>
+                                    <div className="create-preview-content">
+                                        <div className="create-preview-line create-preview-line--name">
+                                            {form.productName || 'Tên sản phẩm sẽ hiển thị ở đây'}
+                                        </div>
+                                        <div className="create-preview-line create-preview-line--price">
+                                            {form.productPrice ? Number(form.productPrice).toLocaleString('vi-VN') : '0'} VNĐ
+                                        </div>
+                                        <div className="create-preview-meta">
+                                            <span>{form.size?.trim() || 'Kích thước'}</span>
+                                            <span>{form.quantity !== '' ? form.quantity : 0} tồn kho</span>
+                                        </div>
+                                        <div className="create-preview-tags">
+                                            {(form.tags || [])
+                                                .map((tag) => (tag || '').trim())
+                                                .filter(Boolean)
+                                                .slice(0, 4)
+                                                .map((tag) => (
+                                                    <span key={tag}>{tag}</span>
+                                                ))}
+                                            {!(form.tags || []).some((tag) => (tag || '').trim()) && <span>Tag mẫu</span>}
+                                        </div>
+                                    </div>
+                                </div>
+                            </aside>
 
-                                    <div className="form-actions">
+                            <div className="create-modal-form-panel">
+                                <form onSubmit={handleSubmit} className="create-modal-form">
+                                    <div className="create-form-section">
+                                        <div className="form-group">
+                                            <label className="form-label">Tên sản phẩm <span className="required">*</span></label>
+                                            <input
+                                                type="text"
+                                                className="form-input"
+                                                placeholder="VD: Bộ ly gốm thủ công"
+                                                value={form.productName}
+                                                onChange={(e) => updateField('productName', e.target.value)}
+                                            />
+                                            {formErrors.productName && <span className="form-hint form-hint--error">{formErrors.productName}</span>}
+                                        </div>
+
+                                        <div className="create-grid-2">
+                                            <div className="form-group">
+                                                <label className="form-label">Giá (VNĐ) <span className="required">*</span></label>
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    step="1000"
+                                                    className="form-input"
+                                                    placeholder="0"
+                                                    value={form.productPrice === '' ? '' : form.productPrice}
+                                                    onChange={(e) => updateField('productPrice', e.target.value)}
+                                                />
+                                                {formErrors.productPrice && <span className="form-hint form-hint--error">{formErrors.productPrice}</span>}
+                                            </div>
+
+                                            <div className="form-group">
+                                                <label className="form-label">Số lượng <span className="required">*</span></label>
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    step="1"
+                                                    className="form-input"
+                                                    placeholder="0"
+                                                    value={form.quantity === '' ? '' : form.quantity}
+                                                    onChange={(e) => updateField('quantity', e.target.value)}
+                                                />
+                                                {formErrors.quantity && <span className="form-hint form-hint--error">{formErrors.quantity}</span>}
+                                            </div>
+
+                                            <div className="form-group form-group--full">
+                                                <label className="form-label">Mô tả</label>
+                                                <textarea
+                                                    className="form-textarea"
+                                                    rows={4}
+                                                    value={form.productDescription}
+                                                    onChange={(e) => updateField('productDescription', e.target.value)}
+                                                />
+                                            </div>
+
+                                            <div className="form-group">
+                                                <label className="form-label">Kích thước</label>
+                                                <input
+                                                    type="text"
+                                                    className="form-input"
+                                                    placeholder="VD: 50cm"
+                                                    value={form.size}
+                                                    onChange={(e) => updateField('size', e.target.value)}
+                                                />
+                                            </div>
+
+                                            <div className="form-group">
+                                                <label className="form-label">Danh mục</label>
+                                                <select
+                                                    className="form-input"
+                                                    value={form.categoryId}
+                                                    onChange={(e) => updateField('categoryId', e.target.value)}
+                                                    disabled={categoryLoading}
+                                                >
+                                                    <option value="">-- Chọn danh mục --</option>
+                                                    {categories.map((category) => (
+                                                        <option key={category.id} value={category.id}>
+                                                            {category.name}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                {categoryLoading && <span className="form-hint">Đang tải...</span>}
+                                                {categoryLoadError && <span className="form-hint form-hint--error">{categoryLoadError}</span>}
+                                            </div>
+
+                                            <div className="form-group form-group--full">
+                                                <div className="create-section-head">
+                                                    <label className="form-label">Tags</label>
+                                                    <button type="button" className="btn-chip" onClick={addTagField}>
+                                                        + Thêm tag
+                                                    </button>
+                                                </div>
+                                                <div className="create-tags-list">
+                                                    {(form.tags || []).map((tag, index) => (
+                                                        <div key={`tag-${index}`} className="create-tag-row">
+                                                            <input
+                                                                type="text"
+                                                                className="form-input tag-input"
+                                                                placeholder={`Tag ${index + 1}`}
+                                                                value={tag}
+                                                                onChange={(e) => updateTagField(index, e.target.value)}
+                                                            />
+                                                            <button
+                                                                type="button"
+                                                                className="btn-icon tag-remove-btn"
+                                                                onClick={() => removeTagField(index)}
+                                                                aria-label={`Xóa tag ${index + 1}`}
+                                                            >
+                                                                ×
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="form-group">
+                                            <div className="create-section-head">
+                                                <label className="form-label">Ảnh sản phẩm</label>
+                                                <span className="form-hint">Tối đa nhiều ảnh, ảnh đầu sẽ là ảnh đại diện</span>
+                                            </div>
+                                            <label className="create-upload-zone">
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    multiple
+                                                    onChange={(e) => {
+                                                        addCreateImages(e.target.files);
+                                                        e.target.value = '';
+                                                    }}
+                                                />
+                                                <strong>Chọn ảnh hoặc kéo thả theo cách bạn thích</strong>
+                                                <span>PNG, JPG, WEBP. Hỗ trợ xem trước ngay.</span>
+                                            </label>
+                                            {(form.images || []).length > 0 && (
+                                                <div className="create-image-grid">
+                                                    {form.images.map((img, idx) => (
+                                                        <div key={`create-image-${idx}`} className="create-image-item">
+                                                            <img src={img.preview} alt={`Ảnh ${idx + 1}`} />
+                                                            <button
+                                                                type="button"
+                                                                className="edit-modal-image-remove"
+                                                                onClick={() => removeCreateImage(idx)}
+                                                                title="Xóa ảnh"
+                                                            >
+                                                                ×
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="create-modal-actions">
                                         <button type="button" className="btn-outline" onClick={closeCreateForm}>
                                             Hủy
                                         </button>

@@ -152,6 +152,33 @@ export const getOrders = async () => {
 /**
  * Lấy chi tiết đơn hàng theo ID (GET /api/order/{orderId}).
  */
+export const getFeedbackById = async (feedbackId) => {
+    if (!feedbackId) {
+        return { success: false, error: 'Thiếu mã đánh giá.' };
+    }
+    try {
+        const response = await api.get(`/feedbacks/${feedbackId}`);
+        const normalized = normalizeResponse(response);
+
+        if (!isSuccessCode(normalized.code)) {
+            return {
+                success: false,
+                error: normalized.message || 'Lấy chi tiết đánh giá thất bại.',
+            };
+        }
+
+        return {
+            success: true,
+            data: normalized.data || null,
+        };
+    } catch (error) {
+        return {
+            success: false,
+            error: mapError(error, 'Lấy chi tiết đánh giá thất bại. Vui lòng thử lại.'),
+        };
+    }
+};
+
 export const getOrderById = async (orderId) => {
     if (!orderId) {
         return { success: false, error: 'Thiếu mã đơn hàng.' };
@@ -180,19 +207,16 @@ export const getOrderById = async (orderId) => {
 };
 
 export const createFeedback = async (payload) => {
-    const orderId = payload?.orderId || '';
-    const customOrderId = payload?.customOrderId || '';
+    const orderId = payload?.orderId || null;
+    const customOrderId = payload?.customOrderId || null;
     const rating = Number(payload?.rating || 0);
-    const comment = String(payload?.comment || '').trim();
+    const comment = String(payload?.comment || payload?.textComment || '').trim();
 
-    if (!orderId) {
-        return { success: false, error: 'Thiếu mã đơn hàng.' };
+    if (!orderId && !customOrderId) {
+        return { success: false, error: 'Thiếu mã đơn hàng hoặc đơn custom order.' };
     }
-    if (!customOrderId) {
-        return { success: false, error: 'Thiếu mã đơn custom order.' };
-    }
-    if (!rating) {
-        return { success: false, error: 'Vui lòng chọn số sao đánh giá.' };
+    if (!rating || rating < 1 || rating > 5) {
+        return { success: false, error: 'Vui lòng chọn số sao đánh giá hợp lệ.' };
     }
 
     try {
@@ -223,31 +247,42 @@ export const createFeedback = async (payload) => {
     }
 };
 
-export const getOrdersByArtisan = async (artisanId) => {
+export const getOrdersByArtisan = async (artisanId, { page = 0, size = 10, sortBy = 'createAt', sortDirection = 'DESC' } = {}) => {
     if (!artisanId) {
         return { success: false, error: 'Thiếu mã artisan.', data: [] };
     }
     try {
-        const response = await api.get(`/order/artisan/${artisanId}`);
+        const response = await api.get(`/order/artisan/${artisanId}`, {
+            params: { page, size, sortBy, sortDirection },
+        });
         const normalized = normalizeResponse(response);
 
         if (!isSuccessCode(normalized.code)) {
             return {
                 success: false,
                 error: normalized.message || 'Lấy danh sách đơn hàng thất bại.',
-                data: [],
+                data: { content: [], totalElements: 0, totalPages: 0, pageNumber: page, pageSize: size },
             };
         }
 
+        const raw = normalized.data ?? {};
+        const content = toArray(raw);
+
         return {
             success: true,
-            data: toArray(normalized.data),
+            data: {
+                content,
+                totalElements: Number(raw?.totalElements ?? content.length ?? 0),
+                totalPages: Number(raw?.totalPages ?? (content.length > 0 ? 1 : 0)),
+                pageNumber: Number(raw?.number ?? raw?.pageNumber ?? page),
+                pageSize: Number(raw?.size ?? raw?.pageSize ?? size),
+            },
         };
     } catch (error) {
         return {
             success: false,
             error: mapError(error, 'Lấy danh sách đơn hàng thất bại. Vui lòng thử lại.'),
-            data: [],
+            data: { content: [], totalElements: 0, totalPages: 0, pageNumber: page, pageSize: size },
         };
     }
 };
@@ -420,6 +455,7 @@ export default {
     createOrder,
     getOrdersByAccount,
     getOrders,
+    getFeedbackById,
     getOrderById,
     getOrdersByArtisan,
     deleteOrder,

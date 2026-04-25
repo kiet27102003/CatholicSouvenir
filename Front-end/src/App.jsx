@@ -30,6 +30,7 @@ import CartPage from './pages/CartPage'
 import PaymentSuccessPage from './pages/PaymentResultPage'
 import PaymentFailedPage from './pages/PaymentFailedPage'
 import OrderTrackingPage from './pages/customer/OrderTrackingPage'
+import MyFeedbacksPage from './pages/customer/MyFeedbacksPage'
 import WalletPage from './pages/customer/WalletPage'
 import ComplaintCenterPage from './pages/customer/ComplaintCenterPage'
 import ComplaintHistoryPage from './pages/customer/ComplaintHistoryPage'
@@ -115,6 +116,7 @@ function App() {
         <Route path="/artisan/messages" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
         <Route path="/artisan/requests/:id/custom-order" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
         <Route path="/artisan/orders" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
+        <Route path="/artisan/ready-orders" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
         <Route path="/artisan/complaints" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
         <Route path="/artisan/shipments" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
         <Route path="/artisan/orders/:id" element={<ArtisanOnlyRoute><ArtisanOrderDetailPage /></ArtisanOnlyRoute>} />
@@ -154,6 +156,7 @@ function App() {
           <Route path="/payments" element={<PaymentPage />} />
           <Route path="/payments/:paymentId" element={<PaymentDetailPage />} />
           <Route path="/orders" element={<OrderHistoryPage />} />
+          <Route path="/my-feedbacks" element={<MyFeedbacksPage />} />
           <Route path="/orders/:orderId" element={<OrderTrackingPage />} />
           <Route path="/orders/:orderId/tracking" element={<OrderTrackingPage />} />
         </Route>

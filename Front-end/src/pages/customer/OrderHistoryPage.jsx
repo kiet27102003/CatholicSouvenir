@@ -227,7 +227,6 @@ const OrderHistoryPage = () => {
                                         <div>
                                             <p>Tổng tiền: <strong>{formatCurrency(order.total)}</strong></p>
                                             <p>Thanh toán: {order.paymentMethod || '—'}</p>
-                                            <p>Khách hàng: {order.fullName || '—'}</p>
                                         </div>
 
                                         <div className="orders-v2-actions">

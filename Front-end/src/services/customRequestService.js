@@ -336,7 +336,6 @@ export const createCustomOrder = async (payload) => {
                     name: String(stage?.name || '').trim(),
                     description: String(stage?.description || '').trim(),
                     paymentPercentage: Number(stage?.paymentPercentage || 0),
-                    amount: Number(stage?.amount || 0),
                     estimatedDays: Number(stage?.estimatedDays || 0),
                 }))
                 : [],

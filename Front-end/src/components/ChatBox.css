@@ -1,7 +1,5 @@
 .cb-fab {
   position: fixed;
-  right: 24px;
-  bottom: 24px;
   width: 52px;
   height: 52px;
   border: none;
@@ -12,13 +10,22 @@
   place-items: center;
   box-shadow: 0 14px 34px rgba(10, 20, 15, 0.25);
   z-index: 9999;
-  cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: grab;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+  touch-action: none;
+  user-select: none;
+  transform: translate(-50%, -50%);
 }
 
 .cb-fab:hover {
-  transform: scale(1.08);
+  transform: translate(-50%, -50%) scale(1.08);
   box-shadow: 0 16px 38px rgba(10, 20, 15, 0.28);
+}
+
+.cb-fab-dragging {
+  cursor: grabbing;
+  opacity: 0.95;
+  box-shadow: 0 18px 42px rgba(10, 20, 15, 0.3);
 }
 
 .cb-fab-icon {
@@ -39,6 +46,22 @@
   font-size: 11px;
   line-height: 18px;
   text-align: center;
+}
+
+.cb-fab-close {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #111827;
+  color: #fff;
+  font-size: 12px;
+  line-height: 18px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+  cursor: pointer;
 }
 
 .cb-panel {
@@ -233,7 +256,18 @@
   background: #fff;
 }
 
-undefined
+.cb-input {
+  width: 100%;
+  min-height: 42px;
+  max-height: 140px;
+  resize: none;
+  border: 1px solid #d1d5db;
+  border-radius: 14px;
+  padding: 10px 12px;
+  font: inherit;
+  outline: none;
+}
+
 .cb-input:focus {
   border-color: #2d5a3d;
   box-shadow: 0 0 0 3px rgba(45, 90, 61, 0.12);

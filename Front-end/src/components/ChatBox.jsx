@@ -41,8 +41,13 @@ export default function ChatBox() {
   const [isLoading, setIsLoading] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
   const [textareaHeight, setTextareaHeight] = useState(42)
+  const [position, setPosition] = useState({ x: window.innerWidth - 80, y: window.innerHeight - 80 })
+  const [isDragging, setIsDragging] = useState(false)
+  const [isHidden, setIsHidden] = useState(false)
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
+  const dragStateRef = useRef({ offsetX: 0, offsetY: 0, moved: false })
+  const fabRef = useRef(null)
 
   const adjustTextareaHeight = (element) => {
     if (!element) return
@@ -70,9 +75,79 @@ export default function ChatBox() {
     adjustTextareaHeight(inputRef.current)
   }, [input, isOpen])
 
+  useEffect(() => {
+    const handleResize = () => {
+      setPosition((prev) => ({
+        x: Math.min(prev.x, Math.max(24, window.innerWidth - 80)),
+        y: Math.min(prev.y, Math.max(24, window.innerHeight - 80)),
+      }))
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
   const handleOpen = () => {
     setIsOpen(true)
     setUnreadCount(0)
+    setIsHidden(false)
+  }
+
+  const handleCloseFab = () => {
+    setIsOpen(false)
+    setIsHidden(true)
+  }
+
+  const handleCloseFabClick = (event) => {
+    event.stopPropagation()
+    handleCloseFab()
+  }
+
+  const startDrag = (event) => {
+    if (event.button !== 0) return
+    const rect = fabRef.current?.getBoundingClientRect()
+    if (!rect) return
+
+    dragStateRef.current = {
+      offsetX: event.clientX - rect.left,
+      offsetY: event.clientY - rect.top,
+      moved: false,
+    }
+    setIsDragging(true)
+  }
+
+  const handlePointerMove = (event) => {
+    if (!isDragging) return
+
+    dragStateRef.current.moved = true
+    const size = fabRef.current?.offsetWidth ?? 52
+    const maxX = window.innerWidth - size - 12
+    const maxY = window.innerHeight - size - 12
+    const nextX = Math.min(Math.max(12, event.clientX - dragStateRef.current.offsetX), maxX)
+    const nextY = Math.min(Math.max(12, event.clientY - dragStateRef.current.offsetY), maxY)
+    setPosition({ x: nextX, y: nextY })
+  }
+
+  const endDrag = () => {
+    if (!isDragging) return
+    setIsDragging(false)
+  }
+
+  useEffect(() => {
+    window.addEventListener('pointermove', handlePointerMove)
+    window.addEventListener('pointerup', endDrag)
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove)
+      window.removeEventListener('pointerup', endDrag)
+    }
+  }, [isDragging])
+
+  const handleFabClick = () => {
+    if (dragStateRef.current.moved) {
+      dragStateRef.current.moved = false
+      return
+    }
+    isOpen ? setIsOpen(false) : handleOpen()
   }
 
   const sendMessage = async (textValue) => {
@@ -136,10 +211,26 @@ export default function ChatBox() {
 
   return (
     <>
-      <button type="button" className="cb-fab" onClick={() => (isOpen ? setIsOpen(false) : handleOpen())} aria-label="Mở chat hỗ trợ">
+      {!isHidden ? (
+        <button
+          ref={fabRef}
+          type="button"
+          className={`cb-fab ${isDragging ? 'cb-fab-dragging' : ''}`}
+          style={{ left: `${position.x}px`, top: `${position.y}px` }}
+          onPointerDown={startDrag}
+          onPointerUp={() => {
+            if (!dragStateRef.current.moved) handleFabClick()
+            dragStateRef.current.moved = false
+          }}
+          aria-label="Mở chat hỗ trợ"
+        >
         <ChatIcon />
         {unreadCount > 0 ? <span className="cb-badge">{unreadCount}</span> : null}
-      </button>
+          <span className="cb-fab-close" onClick={handleCloseFabClick} role="button" aria-label="Đóng chat">
+            ×
+          </span>
+        </button>
+      ) : null}
 
       <div className={`cb-panel ${isOpen ? 'cb-panel-open' : 'cb-panel-closed'}`} aria-hidden={!isOpen}>
         <div className="cb-header">

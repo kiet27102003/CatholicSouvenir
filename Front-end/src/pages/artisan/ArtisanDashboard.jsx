@@ -7,6 +7,7 @@ import PortfolioView from './components/PortfolioView';
 import TemplatesView from './components/TemplatesView';
 import ArtisanRequestsPage from './ArtisanRequestsPage';
 import ArtisanOrdersPage from './ArtisanOrdersPage';
+import ArtisanReadyOrdersPage from './ArtisanReadyOrdersPage';
 import ComplaintManagementPage from './ComplaintManagementPage';
 import ArtisanQuoteCreatePage from './ArtisanQuoteCreatePage';
 import ShipmentManagementPage from './ShipmentManagementPage';
@@ -22,6 +23,7 @@ const getViewFromPath = (pathname) => {
     if (pathname === '/artisan/requests') return 'requests';
     if (/^\/artisan\/requests\/[^/]+\/custom-order$/.test(pathname)) return 'customOrderCreate';
     if (pathname === '/artisan/orders') return 'customOrders';
+    if (pathname === '/artisan/ready-orders') return 'readyOrders';
     if (pathname === '/artisan/complaints') return 'complaints';
     if (pathname === '/artisan/wallet') return 'wallet';
     if (pathname === '/artisan/shipments') return 'shipments';
@@ -35,6 +37,7 @@ const viewToPath = (view) => {
     if (view === 'portfolio') return '/artisan/portfolio';
     if (view === 'requests') return '/artisan/requests';
     if (view === 'customOrders') return '/artisan/orders';
+    if (view === 'readyOrders') return '/artisan/ready-orders';
     if (view === 'complaints') return '/artisan/complaints';
     if (view === 'wallet') return '/artisan/wallet';
     if (view === 'shipments') return '/artisan/shipments';
@@ -94,6 +97,7 @@ const ArtisanDashboard = () => {
                         {activeView === 'requests' && <ArtisanRequestsPage embedded />}
                         {activeView === 'customOrderCreate' && <ArtisanQuoteCreatePage embedded />}
                         {activeView === 'customOrders' && <ArtisanOrdersPage embedded />}
+                        {activeView === 'readyOrders' && <ArtisanReadyOrdersPage embedded />}
                         {activeView === 'complaints' && <ComplaintManagementPage />}
                         {activeView === 'shipments' && <ShipmentManagementPage user={user} embedded />}
                         {activeView === 'wallet' && <WalletPage embedded />}

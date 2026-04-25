@@ -94,6 +94,16 @@
 .panel-head span { color: #64748b; font-size: 14px; }
 .panel-head-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .btn-feedback { display: inline-flex; align-items: center; gap: 8px; }
+.feedback-status {
+    display: inline-flex;
+    align-items: center;
+    padding: 7px 12px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 700;
+}
+.feedback-status.is-pending { background: #fff7ed; color: #c2410c; }
+.feedback-status.is-done { background: #ecfdf5; color: #047857; }
 
 .items-list { display: grid; gap: 14px; }
 .item-card {

@@ -47,6 +47,7 @@ const Sidebar = ({ user, activeView, setActiveView, onLogout, isOpen = false, on
         {
             title: 'Đơn hàng',
             items: [
+                { id: 'readyOrders', icon: <FiPackage />, label: 'Quản lí đơn hàng', badge: null },
                 { id: 'requests', icon: <FiFileText />, label: 'Yêu cầu từ khách', badge: null },
                 { id: 'customOrders', icon: <FiClipboard />, label: 'Đơn tùy chỉnh', badge: null },
                 { id: 'shipments', icon: <FiRepeat />, label: 'Vận đơn', badge: null },

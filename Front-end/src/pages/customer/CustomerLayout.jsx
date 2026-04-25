@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, Outlet, Navigate, useLocation } from 'react-router-dom';
-import { FiUser, FiShield, FiBell, FiCreditCard, FiTruck, FiAlertCircle, FiChevronDown, FiChevronRight } from 'react-icons/fi';
+import { FiUser, FiShield, FiBell, FiCreditCard, FiTruck, FiAlertCircle, FiChevronDown, FiChevronRight, FiAward } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import Header from '../../components/Header/Header';
 import Footer from '../../components/Footer/Footer';
@@ -55,6 +55,10 @@ const CustomerLayout = () => {
                         <NavLink to="/orders" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
                             <FiTruck size={20} strokeWidth={2} />
                             Đơn hàng của tôi
+                        </NavLink>
+                        <NavLink to="/my-feedbacks" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+                            <FiAward size={20} strokeWidth={2} />
+                            Đánh giá của tôi
                         </NavLink>
 
                         <button type="button" className={`sidebar-link sidebar-link--group ${isSupportActive ? 'active' : ''}`} onClick={() => setSupportOpen((prev) => !prev)} aria-expanded={supportOpen}>

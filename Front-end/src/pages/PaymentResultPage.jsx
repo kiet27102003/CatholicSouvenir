@@ -27,7 +27,6 @@ const PaymentSuccessPage = () => {
     const responseCode = params.get('code');
     const success = params.get('success');
     const amount = Number(params.get('amount') || 0);
-
     const isSuccess = success === 'true' && responseCode === '00';
 
     const payment = !txnRef

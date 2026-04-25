@@ -23,6 +23,8 @@ const ProductManager = () => {
 
     // Xem chi tiết sản phẩm
     const [detailProduct, setDetailProduct] = useState(null);
+    const [detailLoading, setDetailLoading] = useState(false);
+    const [detailError, setDetailError] = useState('');
     const [openActionMenuId, setOpenActionMenuId] = useState(null);
     const [actionMenuAnchor, setActionMenuAnchor] = useState(null);
     const [actionMenuPlacement, setActionMenuPlacement] = useState({ align: 'right', direction: 'down' });
@@ -194,6 +196,28 @@ const ProductManager = () => {
         setOpenActionMenuId(null);
         setActionMenuAnchor(null);
         setActionMenuPlacement({ align: 'right', direction: 'down' });
+    };
+
+    const openDetailModal = async (product) => {
+        if (!product?.productId) return;
+        setDetailProduct(null);
+        setDetailError('');
+        setDetailLoading(true);
+        try {
+            const result = await productService.getProductById(product.productId);
+            if (result.success) {
+                setDetailProduct(result.data || product);
+            } else {
+                setDetailError(result.error || 'Không tải được thông tin sản phẩm.');
+                appToast.error('Không tải được', result.error || 'Không tải được thông tin sản phẩm.');
+            }
+        } catch (err) {
+            const msg = err.message || 'Không tải được thông tin sản phẩm.';
+            setDetailError(msg);
+            appToast.error('Không tải được', msg);
+        } finally {
+            setDetailLoading(false);
+        }
     };
 
     useEffect(() => {
@@ -414,7 +438,7 @@ const ProductManager = () => {
                                                             visibility: actionMenuPlacement.align ? 'visible' : 'hidden',
                                                         }}
                                                     >
-                                                        <button type="button" className="action-menu-item" onClick={() => { setDetailProduct(p); closeActionMenu(); }}>
+                                                        <button type="button" className="action-menu-item" onClick={() => { closeActionMenu(); void openDetailModal(p); }}>
                                                             <FiEye />
                                                             <span>Xem chi tiết</span>
                                                         </button>
@@ -456,61 +480,140 @@ const ProductManager = () => {
             </div>
 
             {/* Modal xem chi tiết sản phẩm */}
-            {detailProduct && (
+            {(detailLoading || detailProduct || detailError) && (
                 <div
                     className="detail-overlay"
-                    onClick={() => setDetailProduct(null)}
+                    onClick={() => { setDetailProduct(null); setDetailError(''); setDetailLoading(false); }}
                     role="presentation"
                 >
                     <div
                         className="detail-modal product-detail-modal"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="detail-modal-header">
-                            <h3>Chi tiết sản phẩm</h3>
-                            <button type="button" className="detail-close" onClick={() => setDetailProduct(null)} aria-label="Đóng">
+                        <div className="detail-modal-header product-detail-header">
+                            <div className="product-detail-title-group">
+                                <span className="product-detail-eyebrow">Admin • Chi tiết sản phẩm</span>
+                                <h3>{detailProduct?.productName || 'Chi tiết sản phẩm'}</h3>
+                            </div>
+                            <button type="button" className="detail-close" onClick={() => { setDetailProduct(null); setDetailError(''); setDetailLoading(false); }} aria-label="Đóng">
                                 &times;
                             </button>
                         </div>
                         <div className="detail-modal-body product-detail-body">
-                            <div className="product-detail-left">
-                                <div className="product-detail-images">
-                                    {detailProduct.images && detailProduct.images.length > 0 ? (
-                                        detailProduct.images.map((img, i) => (
-                                            <img key={img.id || i} src={img.image_url || img.imageUrl} alt={`${detailProduct.productName} ${i + 1}`} className="product-detail-img" />
-                                        ))
-                                    ) : (
-                                        <div className="product-detail-img-placeholder">Chưa có ảnh</div>
-                                    )}
+                            {detailLoading ? (
+                                <div className="detail-loading-state">
+                                    <div className="detail-loading-spinner">
+                                        <FiRefreshCw className="spin" />
+                                    </div>
+                                    <div>
+                                        <h4>Đang tải thông tin sản phẩm</h4>
+                                        <p>Vui lòng chờ trong giây lát.</p>
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="product-detail-right">
-                                <div className="detail-row">
-                                    <span className="detail-label">Mô tả</span>
-                                    <span className="detail-value">{detailProduct.productDescription || '—'}</span>
+                            ) : detailError ? (
+                                <div className="detail-error-state">
+                                    <FiAlertTriangle />
+                                    <h4>Không thể tải chi tiết sản phẩm</h4>
+                                    <p>{detailError}</p>
                                 </div>
-                                <div className="detail-row">
-                                    <span className="detail-label">Chất liệu</span>
-                                    <span className="detail-value">{detailProduct.material || '—'}</span>
-                                </div>
-                                <div className="detail-row">
-                                    <span className="detail-label">Kích thước</span>
-                                    <span className="detail-value">{detailProduct.size || '—'}</span>
-                                </div>
-                                <div className="detail-row">
-                                    <span className="detail-label">Số lượng</span>
-                                    <span className="detail-value">{detailProduct.quantity ?? '—'}</span>
-                                </div>
-                                <div className="detail-row">
-                                    <span className="detail-label">Ngày tạo</span>
-                                    <span className="detail-value">{formatDate(detailProduct.createdAt)}</span>
-                                </div>
-                            </div>
+                            ) : detailProduct ? (
+                                <>
+                                    <div className="product-detail-left">
+                                        <div className="product-detail-images">
+                                            {detailProduct.images && detailProduct.images.length > 0 ? (
+                                                <>
+                                                    <div className="product-detail-hero-image">
+                                                        <img
+                                                            src={detailProduct.images[0].image_url || detailProduct.images[0].imageUrl}
+                                                            alt={detailProduct.productName || 'Ảnh sản phẩm'}
+                                                            className="product-detail-img product-detail-img-main"
+                                                        />
+                                                    </div>
+                                                    {detailProduct.images.length > 1 && (
+                                                        <div className="product-detail-thumbnails">
+                                                            {detailProduct.images.map((img, i) => (
+                                                                <button
+                                                                    key={img.id || i}
+                                                                    type="button"
+                                                                    className={`product-detail-thumb-button ${i === 0 ? 'active' : ''}`}
+                                                                >
+                                                                    <img
+                                                                        src={img.image_url || img.imageUrl}
+                                                                        alt={`${detailProduct.productName || 'Ảnh sản phẩm'} ${i + 1}`}
+                                                                        className="product-detail-thumb-image"
+                                                                    />
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </>
+                                            ) : (
+                                                <div className="product-detail-img-placeholder">Chưa có ảnh</div>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="product-detail-right">
+                                        <div className="detail-summary-grid">
+                                            <div className="detail-summary-card">
+                                                <span className="detail-label">Giá</span>
+                                                <strong>{formatPrice(detailProduct.productPrice)}</strong>
+                                            </div>
+                                            <div className="detail-summary-card">
+                                                <span className="detail-label">Trạng thái</span>
+                                                <span className={`status-badge ${getStatusBadgeClass(detailProduct.status)}`}>{detailProduct.status || '—'}</span>
+                                            </div>
+                                            <div className="detail-summary-card">
+                                                <span className="detail-label">Số lượng</span>
+                                                <strong>{detailProduct.quantity ?? '—'}</strong>
+                                            </div>
+                                            <div className="detail-summary-card">
+                                                <span className="detail-label">Kích thước</span>
+                                                <strong>{detailProduct.size || '—'}</strong>
+                                            </div>
+                                        </div>
+                                        <div className="detail-section">
+                                            <div className="detail-section-title">Thông tin cơ bản</div>
+                                            <div className="detail-fields-grid">
+                                                <div className="detail-row">
+                                                    <span className="detail-label">Mã sản phẩm</span>
+                                                    <span className="detail-value detail-code">{detailProduct.productId || '—'}</span>
+                                                </div>
+                                                <div className="detail-row">
+                                                    <span className="detail-label">Danh mục</span>
+                                                    <span className="detail-value">{detailProduct.categoryName || '—'}</span>
+                                                </div>
+                                                <div className="detail-row">
+                                                    <span className="detail-label">Tên sản phẩm</span>
+                                                    <span className="detail-value">{detailProduct.productName || '—'}</span>
+                                                </div>
+                                                <div className="detail-row">
+                                                    <span className="detail-label">Artisan</span>
+                                                    <span className="detail-value">{detailProduct.artisanName || '—'}</span>
+                                                </div>
+                                                <div className="detail-row detail-row-full">
+                                                    <span className="detail-label">Mô tả</span>
+                                                    <span className="detail-value detail-description">{detailProduct.productDescription || '—'}</span>
+                                                </div>
+                                                <div className="detail-row detail-row-full">
+                                                    <span className="detail-label">Tags</span>
+                                                    <span className="detail-value detail-tags">{Array.isArray(detailProduct.tags) && detailProduct.tags.length > 0 ? detailProduct.tags.map((tag) => <span key={tag} className="detail-tag">{tag}</span>) : '—'}</span>
+                                                </div>
+                                                <div className="detail-row detail-row-full">
+                                                    <span className="detail-label">Ngày tạo</span>
+                                                    <span className="detail-value">{formatDate(detailProduct.createdAt)}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </>
+                            ) : null}
                         </div>
-                        <div className="detail-modal-footer">
-                            <button type="button" className="btn btn-outline" onClick={() => setDetailProduct(null)}>
-                                Đóng
-                            </button>
+                        <div className="detail-modal-footer product-detail-footer-sticky">
+                            <div className="detail-footer-actions">
+                                <button type="button" className="btn btn-outline" onClick={() => { setDetailProduct(null); setDetailError(''); setDetailLoading(false); }}>
+                                    Đóng
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

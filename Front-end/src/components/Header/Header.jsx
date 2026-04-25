@@ -11,6 +11,7 @@ import {
     FiChevronDown,
     FiMessageSquare,
     FiStar,
+    FiAward,
 } from 'react-icons/fi';
 import logo from '../../assets/logo.png';
 import { useAuth } from '../../context/AuthContext';
@@ -287,6 +288,10 @@ const Header = () => {
                                                 <button type="button" className="dropdown-item" onClick={() => { setUserMenuOpen(false); navigate('/custom-requests'); }}>
                                                     <FiStar size={16} strokeWidth={2} />
                                                     Yêu cầu của tôi
+                                                </button>
+                                                <button type="button" className="dropdown-item" onClick={() => { setUserMenuOpen(false); navigate('/my-feedbacks'); }}>
+                                                    <FiAward size={16} strokeWidth={2} />
+                                                    Đánh giá của tôi
                                                 </button>
                                                 <button type="button" className="dropdown-item" onClick={() => { setUserMenuOpen(false); navigate('/wallet'); }}>
                                                     <FiMessageSquare size={16} strokeWidth={2} />

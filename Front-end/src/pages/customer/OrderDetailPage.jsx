@@ -36,6 +36,7 @@ const OrderDetailPage = () => {
     const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
     const [feedbackRating, setFeedbackRating] = useState(5);
     const [feedbackComment, setFeedbackComment] = useState('');
+    const [feedbackStatus, setFeedbackStatus] = useState('Chưa đánh giá');
     const [complaintConfirmOpen, setComplaintConfirmOpen] = useState(false);
 
     useEffect(() => {
@@ -54,6 +55,7 @@ const OrderDetailPage = () => {
             }
 
             setOrder(res.data || null);
+            setFeedbackStatus(res.data?.feedback ? 'Đã đánh giá' : 'Chưa đánh giá');
             setLoading(false);
         };
 
@@ -81,7 +83,7 @@ const OrderDetailPage = () => {
         };
     }, [order?.customOrderId, order?.id, order?.orderDetails, order?.orderId, orderDetails, templateDetails]);
 
-    const canSubmitFeedback = Boolean(feedbackTarget.orderId && feedbackTarget.customOrderId);
+    const canSubmitFeedback = Boolean(feedbackTarget.orderId || feedbackTarget.customOrderId);
 
     if (loading) {
         return (
@@ -113,8 +115,8 @@ const OrderDetailPage = () => {
 
         setFeedbackSubmitting(true);
         const res = await createFeedback({
-            orderId: feedbackTarget.orderId,
-            customOrderId: feedbackTarget.customOrderId,
+            orderId: feedbackTarget.orderId || null,
+            customOrderId: feedbackTarget.customOrderId || null,
             rating: feedbackRating,
             comment: feedbackComment,
         });
@@ -126,6 +128,7 @@ const OrderDetailPage = () => {
         }
 
         setFeedbackModalOpen(false);
+        setFeedbackStatus('Đã đánh giá');
         appToast.success('Đánh giá thành công');
         if (Number(feedbackRating) === 1) {
             setComplaintConfirmOpen(true);
@@ -200,6 +203,9 @@ const OrderDetailPage = () => {
                                 <h2>Danh sách sản phẩm</h2>
                                 <div className="panel-head-actions">
                                     <span>{items.length} mục</span>
+                                    <span className={`feedback-status ${feedbackStatus === 'Đã đánh giá' ? 'is-done' : 'is-pending'}`}>
+                                        {feedbackStatus}
+                                    </span>
                                     <button type="button" className="btn btn-outline btn-feedback" onClick={openFeedbackModal} disabled={!canSubmitFeedback}>
                                         <FiStar /> Đánh giá sản phẩm
                                     </button>

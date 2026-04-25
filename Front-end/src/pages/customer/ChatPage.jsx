@@ -72,6 +72,7 @@ export default function ChatPage({ hideHeader = false } = {}) {
   const { isConnected } = useWebSocket({
     wsUrl: WS_URL,
     jwtToken: token,
+    conversationId: selectedConversation,
     onMessageReceived: handleIncomingMessage,
   });
 

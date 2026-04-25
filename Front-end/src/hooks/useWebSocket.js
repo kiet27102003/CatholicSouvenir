@@ -30,10 +30,11 @@ function normalizeWebSocketUrl(rawUrl) {
   }
 }
 
-export default function useWebSocket({ wsUrl = DEFAULT_WS_URL, jwtToken = '', onMessageReceived }) {
+export default function useWebSocket({ wsUrl = DEFAULT_WS_URL, jwtToken = '', conversationId = '', onMessageReceived }) {
   const [isConnected, setIsConnected] = useState(false);
   const callbackRef = useRef(onMessageReceived);
   const subscriptionRef = useRef(null);
+  const subscribedDestinationRef = useRef('');
 
   const safeWsUrl = useMemo(() => normalizeWebSocketUrl(wsUrl), [wsUrl]);
 
@@ -47,6 +48,7 @@ export default function useWebSocket({ wsUrl = DEFAULT_WS_URL, jwtToken = '', on
     if (subscriptionRef.current) {
       subscriptionRef.current.unsubscribe();
       subscriptionRef.current = null;
+      subscribedDestinationRef.current = '';
     }
 
     subscriberCount = Math.max(0, subscriberCount - 1);
@@ -92,8 +94,12 @@ export default function useWebSocket({ wsUrl = DEFAULT_WS_URL, jwtToken = '', on
       sharedClient.activate();
     }
 
-    if (sharedClient.connected && !subscriptionRef.current) {
-      subscriptionRef.current = sharedClient.subscribe('/user/queue/messages', (frame) => {
+    const destination = conversationId ? `/topic/chat/${conversationId}` : '/user/queue/messages';
+
+    const subscribeToDestination = () => {
+      if (!sharedClient?.connected || subscriptionRef.current || subscribedDestinationRef.current === destination) return;
+
+      subscriptionRef.current = sharedClient.subscribe(destination, (frame) => {
         try {
           const payload = JSON.parse(frame.body || '{}');
           callbackRef.current?.(payload);
@@ -101,21 +107,16 @@ export default function useWebSocket({ wsUrl = DEFAULT_WS_URL, jwtToken = '', on
           callbackRef.current?.(null);
         }
       });
+      subscribedDestinationRef.current = destination;
       setIsConnected(true);
-    }
+    };
+
+    subscribeToDestination();
 
     if (!sharedClient.connected) {
       const connectWatcher = window.setInterval(() => {
-        if (sharedClient?.connected && !subscriptionRef.current) {
-          subscriptionRef.current = sharedClient.subscribe('/user/queue/messages', (frame) => {
-            try {
-              const payload = JSON.parse(frame.body || '{}');
-              callbackRef.current?.(payload);
-            } catch {
-              callbackRef.current?.(null);
-            }
-          });
-          setIsConnected(true);
+        if (sharedClient?.connected) {
+          subscribeToDestination();
           window.clearInterval(connectWatcher);
         }
 
@@ -126,7 +127,7 @@ export default function useWebSocket({ wsUrl = DEFAULT_WS_URL, jwtToken = '', on
     }
 
     subscriberCount += 1;
-  }, [jwtToken, safeWsUrl]);
+  }, [conversationId, jwtToken, safeWsUrl]);
 
   const sendMessage = useCallback((payload) => {
     if (!sharedClient?.connected) {

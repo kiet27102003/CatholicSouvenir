@@ -23,7 +23,7 @@ import {
 const AdminLayout = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const navigate = useNavigate();
-    const { isAuthenticated, logout, user } = useAuth();
+    const { isAuthenticated, logout, user, loading } = useAuth();
 
     const toggleSidebar = useCallback(() => {
         setIsSidebarOpen((open) => !open);
@@ -76,6 +76,10 @@ const AdminLayout = () => {
         logout();
         navigate('/login');
     };
+
+    if (loading) {
+        return null;
+    }
 
     if (!isAuthenticated) {
         return <Navigate to="/login" replace />;

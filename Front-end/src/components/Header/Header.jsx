@@ -171,7 +171,7 @@ const Header = () => {
                         aria-label="Menu"
                         onClick={() => setMobileMenuOpen((prev) => !prev)}
                     >
-                        {mobileMenuOpen ? <FiX size={22} /> : <FiMenu size={22} />}
+                        {mobileMenuOpen ? <FiX size={28} /> : <FiMenu size={28} />}
                     </button>
 
                     <Link to="/" className="header-logo" aria-label="Sanctus home">
@@ -196,7 +196,7 @@ const Header = () => {
 
                 <div className="nav-actions">
                     <button type="button" className="icon-btn" aria-label={t('common.searchPlaceholder')} onClick={() => navigate('/shop')}>
-                        <FiSearch size={18} strokeWidth={2} />
+                        <FiSearch size={24} strokeWidth={2} />
                     </button>
 
                     <div className="notifications-dropdown-wrapper">
@@ -208,7 +208,7 @@ const Header = () => {
                             aria-expanded={notificationsOpen}
                             onClick={() => setNotificationsOpen((prev) => !prev)}
                         >
-                            <FiBell size={18} strokeWidth={2} />
+                            <FiBell size={20} strokeWidth={2} />
                             {unreadNotifications > 0 && <span className="badge">{badgeText(unreadNotifications)}</span>}
                         </button>
                         {notificationsOpen && (
@@ -221,7 +221,7 @@ const Header = () => {
                                             <p className="notifications-dropdown-subtitle">Các cập nhật mới nhất của bạn</p>
                                         </div>
                                         <button type="button" className="notifications-dropdown-close" onClick={() => setNotificationsOpen(false)} aria-label="Đóng thông báo">
-                                            <FiX size={18} strokeWidth={2} />
+                                            <FiX size={20} strokeWidth={2} />
                                         </button>
                                     </div>
                                     <div className="notifications-dropdown-body">
@@ -248,12 +248,12 @@ const Header = () => {
                     </div>
 
                     <button type="button" className="icon-btn" aria-label="Messages" onClick={() => navigate('/messages')}>
-                        <FiMessageSquare size={18} strokeWidth={2} />
+                        <FiMessageSquare size={20} strokeWidth={2} />
                         {unreadConversations > 0 && <span className="badge">{badgeText(unreadConversations)}</span>}
                     </button>
 
                     <button type="button" className="icon-btn" aria-label="Shopping cart" onClick={handleOpenCart}>
-                        <FiShoppingCart size={18} strokeWidth={2} />
+                        <FiShoppingCart size={20} strokeWidth={2} />
                         {cartItemsCount > 0 && <span className="badge">{badgeText(cartItemsCount)}</span>}
                     </button>
 
@@ -268,7 +268,7 @@ const Header = () => {
                                     <span className="user-avatar user-avatar-fallback">{userInitial}</span>
                                 )}
                                 <span className="user-pill-name">{userName}</span>
-                                <FiChevronDown size={12} />
+                                <FiChevronDown size={14} />
                             </button>
 
                             {userMenuOpen && (

@@ -113,7 +113,13 @@ const ShipmentManagementPage = ({ user, embedded = false }) => {
             return;
         }
 
-        const paidOrders = (Array.isArray(ordersRes.data) ? ordersRes.data : []).filter((order) => String(order?.status || '').toUpperCase() === 'PAID');
+        const ordersList = Array.isArray(ordersRes.data?.content)
+            ? ordersRes.data.content
+            : Array.isArray(ordersRes.data)
+                ? ordersRes.data
+                : [];
+
+        const paidOrders = ordersList.filter((order) => String(order?.status || '').toUpperCase() === 'PAID');
         setOrders(paidOrders);
 
         const pairs = await Promise.all(paidOrders.map(async (order) => {

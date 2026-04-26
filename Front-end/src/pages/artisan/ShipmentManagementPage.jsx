@@ -496,79 +496,75 @@ const ShipmentManagementPage = ({ user, embedded = false }) => {
         <>
             {content}
 
-            {detailModalOpen && (
-                <div className="order-detail-modal-backdrop" role="presentation" onClick={handleCloseOrderDetail}>
-                    <div className="order-detail-modal" role="dialog" aria-modal="true" aria-labelledby="order-detail-title" onClick={(e) => e.stopPropagation()}>
-                        <div className="order-detail-modal-header">
-                            <div>
-                                <p className="page-kicker">Chi tiết đơn hàng</p>
-                                <h3 id="order-detail-title">{orderDetail?.orderId ? `#${String(orderDetail.orderId).slice(0, 8)}` : 'Đang tải...'}</h3>
-                            </div>
-                            <button type="button" className="btn btn-outline btn-sm" onClick={handleCloseOrderDetail}>Đóng</button>
-                        </div>
-
-                        {detailLoading ? (
-                            <div className="order-detail-modal-body"><p className="shipment-empty">Đang tải thông tin đơn hàng...</p></div>
-                        ) : detailError ? (
-                            <div className="order-detail-modal-body"><p className="shipment-empty">{detailError}</p></div>
-                        ) : orderDetail ? (
-                            <div className="order-detail-modal-body">
-                                <section className="order-detail-section">
-                                    <h4>Thông tin chung</h4>
-                                    <div className="order-detail-grid order-detail-grid-2">
-                                        <div className="order-detail-item"><span>Mã đơn</span><strong>{orderDetail.orderId || '—'}</strong></div>
-                                        <div className="order-detail-item"><span>Khách hàng</span><strong>{orderDetail.fullName || '—'}</strong></div>
-                                        <div className="order-detail-item"><span>Trạng thái</span><strong>{STATUS_LABELS[String(orderDetail.status || '').toUpperCase()] || orderDetail.status || '—'}</strong></div>
-                                        <div className="order-detail-item"><span>Thanh toán</span><strong>{PAYMENT_LABELS[String(orderDetail.paymentMethod || '').toUpperCase()] || orderDetail.paymentMethod || '—'}</strong></div>
-                                        <div className="order-detail-item"><span>Ngày tạo</span><strong>{formatDateTime(orderDetail.orderDate || orderDetail.createAt)}</strong></div>
-                                        <div className="order-detail-item"><span>Cập nhật</span><strong>{formatDateTime(orderDetail.updateAt)}</strong></div>
-                                    </div>
-                                </section>
-
-                                <section className="order-detail-section">
-                                    <h4>Thanh toán</h4>
-                                    <div className="order-detail-grid order-detail-grid-3">
-                                        <div className="order-detail-item"><span>Tổng tiền</span><strong>{formatCurrency(orderDetail.total)}</strong></div>
-                                        <div className="order-detail-item"><span>Tổng tính lại</span><strong>{formatCurrency(orderDetailsTotal)}</strong></div>
-                                        <div className="order-detail-item"><span>Khách hàng ID</span><strong>{orderDetail.customerId || '—'}</strong></div>
-                                    </div>
-                                </section>
-
-                                <section className="order-detail-section">
-                                    <h4>Sản phẩm trong đơn</h4>
-                                    {Array.isArray(orderDetail.orderDetails) && orderDetail.orderDetails.length > 0 ? (
-                                        <div className="order-detail-items-list">
-                                            {orderDetail.orderDetails.map((item) => (
-                                                <article key={item.id} className="order-detail-product-card">
-                                                    <img src={item.image || '/logo.png'} alt={item.productName || 'Sản phẩm'} />
-                                                    <div>
-                                                        <strong>{item.productName || '—'}</strong>
-                                                        <p>Số lượng: {item.quantity || 0}</p>
-                                                        <p>Đơn giá: {formatCurrency(item.unitPrice)}</p>
-                                                        <p>Giảm giá: {formatCurrency(item.discount)}</p>
-                                                        <p>Tạm tính: {formatCurrency(item.subTotal)}</p>
-                                                    </div>
-                                                </article>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <p className="shipment-empty">Không có sản phẩm chi tiết.</p>
-                                    )}
-                                </section>
-
-                                <section className="order-detail-section">
-                                    <h4>Template details</h4>
-                                    {Array.isArray(orderDetail.templateDetails) && orderDetail.templateDetails.length > 0 ? (
-                                        <pre className="order-detail-json">{JSON.stringify(orderDetail.templateDetails, null, 2)}</pre>
-                                    ) : (
-                                        <p className="shipment-empty">Không có template details.</p>
-                                    )}
-                                </section>
-                            </div>
-                        ) : null}
+            <div className={`order-detail-side-panel ${detailModalOpen ? 'open' : ''}`} aria-hidden={!detailModalOpen}>
+                <div className="order-detail-side-panel-header">
+                    <div>
+                        <p className="page-kicker">Chi tiết đơn hàng</p>
+                        <h3 id="order-detail-title">{orderDetail?.orderId ? `#${String(orderDetail.orderId).slice(0, 8)}` : 'Đang tải...'}</h3>
                     </div>
+                    <button type="button" className="btn btn-outline btn-sm" onClick={handleCloseOrderDetail}>Đóng</button>
                 </div>
-            )}
+
+                {detailLoading ? (
+                    <div className="order-detail-side-panel-body"><p className="shipment-empty">Đang tải thông tin đơn hàng...</p></div>
+                ) : detailError ? (
+                    <div className="order-detail-side-panel-body"><p className="shipment-empty">{detailError}</p></div>
+                ) : orderDetail ? (
+                    <div className="order-detail-side-panel-body">
+                        <section className="order-detail-section">
+                            <h4>Thông tin chung</h4>
+                            <div className="order-detail-grid order-detail-grid-2">
+                                <div className="order-detail-item"><span>Mã đơn</span><strong>{orderDetail.orderId || '—'}</strong></div>
+                                <div className="order-detail-item"><span>Khách hàng</span><strong>{orderDetail.fullName || '—'}</strong></div>
+                                <div className="order-detail-item"><span>Trạng thái</span><strong>{STATUS_LABELS[String(orderDetail.status || '').toUpperCase()] || orderDetail.status || '—'}</strong></div>
+                                <div className="order-detail-item"><span>Thanh toán</span><strong>{PAYMENT_LABELS[String(orderDetail.paymentMethod || '').toUpperCase()] || orderDetail.paymentMethod || '—'}</strong></div>
+                                <div className="order-detail-item"><span>Ngày tạo</span><strong>{formatDateTime(orderDetail.orderDate || orderDetail.createAt)}</strong></div>
+                                <div className="order-detail-item"><span>Cập nhật</span><strong>{formatDateTime(orderDetail.updateAt)}</strong></div>
+                            </div>
+                        </section>
+
+                        <section className="order-detail-section">
+                            <h4>Thanh toán</h4>
+                            <div className="order-detail-grid order-detail-grid-3">
+                                <div className="order-detail-item"><span>Tổng tiền</span><strong>{formatCurrency(orderDetail.total)}</strong></div>
+                                <div className="order-detail-item"><span>Tổng tính lại</span><strong>{formatCurrency(orderDetailsTotal)}</strong></div>
+                                <div className="order-detail-item"><span>Khách hàng ID</span><strong>{orderDetail.customerId || '—'}</strong></div>
+                            </div>
+                        </section>
+
+                        <section className="order-detail-section">
+                            <h4>Sản phẩm trong đơn</h4>
+                            {Array.isArray(orderDetail.orderDetails) && orderDetail.orderDetails.length > 0 ? (
+                                <div className="order-detail-items-list">
+                                    {orderDetail.orderDetails.map((item) => (
+                                        <article key={item.id} className="order-detail-product-card">
+                                            <img src={item.image || '/logo.png'} alt={item.productName || 'Sản phẩm'} />
+                                            <div>
+                                                <strong>{item.productName || '—'}</strong>
+                                                <p>Số lượng: {item.quantity || 0}</p>
+                                                <p>Đơn giá: {formatCurrency(item.unitPrice)}</p>
+                                                <p>Giảm giá: {formatCurrency(item.discount)}</p>
+                                                <p>Tạm tính: {formatCurrency(item.subTotal)}</p>
+                                            </div>
+                                        </article>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="shipment-empty">Không có sản phẩm chi tiết.</p>
+                            )}
+                        </section>
+
+                        <section className="order-detail-section">
+                            <h4>Template details</h4>
+                            {Array.isArray(orderDetail.templateDetails) && orderDetail.templateDetails.length > 0 ? (
+                                <pre className="order-detail-json">{JSON.stringify(orderDetail.templateDetails, null, 2)}</pre>
+                            ) : (
+                                <p className="shipment-empty">Không có template details.</p>
+                            )}
+                        </section>
+                    </div>
+                ) : null}
+            </div>
         </>
     );
 };

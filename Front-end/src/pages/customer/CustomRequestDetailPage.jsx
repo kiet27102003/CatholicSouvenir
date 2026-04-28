@@ -16,6 +16,7 @@ import {
 import { appToast } from '../../lib/appToast';
 import { getConversationsByRequest, startConversation } from '../../services/chatService';
 import {
+    cancelCustomOrder,
     confirmCustomOrder,
     getCustomOrderByRequest,
     getCustomOrderStages,
@@ -104,6 +105,9 @@ const CustomRequestDetailPage = () => {
     const [confirmModalOpen, setConfirmModalOpen] = useState(false);
     const [pendingArtisan, setPendingArtisan] = useState(null);
     const [confirmingOrder, setConfirmingOrder] = useState(false);
+    const [cancellingOrder, setCancellingOrder] = useState(false);
+    const [cancelModalOpen, setCancelModalOpen] = useState(false);
+    const [cancelReason, setCancelReason] = useState('');
     const [orderLookupLoading, setOrderLookupLoading] = useState(false);
 
     const requestStatus = String(request?.status || '').toUpperCase();
@@ -359,6 +363,38 @@ const CustomRequestDetailPage = () => {
         await loadOrderStages(request?.requestId || id);
     };
 
+    const openCancelModal = () => {
+        if (cancellingOrder || confirmingOrder || orderLookupLoading) return;
+        setCancelReason('');
+        setCancelModalOpen(true);
+    };
+
+    const closeCancelModal = () => {
+        if (cancellingOrder) return;
+        setCancelModalOpen(false);
+        setCancelReason('');
+    };
+
+    const handleCancelOrder = async () => {
+        const customOrderId = request?.customOrderId || request?.orderId || request?.customOrder?.orderId;
+        if (!customOrderId || cancellingOrder) return;
+
+        setCancellingOrder(true);
+        const res = await cancelCustomOrder(customOrderId, cancelReason.trim());
+        setCancellingOrder(false);
+
+        if (!res.success) {
+            appToast.error('Không thể từ chối đơn', res.error || 'Vui lòng thử lại');
+            return;
+        }
+
+        appToast.success('Đã từ chối đơn hàng');
+        setCancelModalOpen(false);
+        setCancelReason('');
+        await refreshDetail();
+        await loadOrderStages(request?.requestId || id);
+    };
+
     const handlePayStage = async (stageId) => {
         if (!stageId || payingStageId) return;
         setPayingStageId(String(stageId));
@@ -526,8 +562,11 @@ const CustomRequestDetailPage = () => {
                                                 Đơn hàng này đang ở trạng thái chờ xác nhận. Sau khi bạn xác nhận, hệ thống sẽ mở khóa các giai đoạn thanh toán.
                                             </p>
                                             <div className="detail-locked-payment-actions">
-                                                <button type="button" className="btn btn-primary" onClick={handleConfirmOrder} disabled={confirmingOrder || orderLookupLoading}>
+                                                <button type="button" className="btn btn-primary" onClick={handleConfirmOrder} disabled={confirmingOrder || cancellingOrder || orderLookupLoading}>
                                                     {confirmingOrder ? 'Đang xác nhận...' : orderLookupLoading ? 'Đang tải đơn...' : 'Xác nhận để mở thanh toán'}
+                                                </button>
+                                                <button type="button" className="btn btn-outline" onClick={openCancelModal} disabled={cancellingOrder || confirmingOrder || orderLookupLoading}>
+                                                    Từ chối
                                                 </button>
                                                 <span className="detail-locked-payment-hint">Sau khi xác nhận, bạn có thể thanh toán giai đoạn đầu tiên.</span>
                                             </div>
@@ -649,6 +688,35 @@ const CustomRequestDetailPage = () => {
                             </button>
                             <button type="button" className="btn btn-primary" onClick={confirmSelectArtisan} disabled={Boolean(selectingArtisanId)}>
                                 {selectingArtisanId ? 'Đang chọn...' : 'Xác nhận chọn'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {cancelModalOpen && (
+                <div className="detail-confirm-overlay" onClick={closeCancelModal} role="dialog" aria-modal="true" aria-labelledby="detail-cancel-title">
+                    <div className="detail-confirm-modal detail-cancel-modal" onClick={(e) => e.stopPropagation()}>
+                        <h3 id="detail-cancel-title">Từ chối đơn hàng</h3>
+                        <p>Nhập lý do từ chối để hệ thống lưu lại thông tin xử lý đơn.</p>
+                        <label className="detail-cancel-label" htmlFor="cancel-reason-input">
+                            Lý do từ chối
+                        </label>
+                        <textarea
+                            id="cancel-reason-input"
+                            className="detail-cancel-textarea"
+                            rows="4"
+                            value={cancelReason}
+                            onChange={(e) => setCancelReason(e.target.value)}
+                            placeholder="Nhập lý do từ chối..."
+                            disabled={cancellingOrder}
+                        />
+                        <div className="detail-confirm-actions">
+                            <button type="button" className="btn btn-outline" onClick={closeCancelModal} disabled={cancellingOrder}>
+                                Hủy
+                            </button>
+                            <button type="button" className="btn btn-primary" onClick={handleCancelOrder} disabled={cancellingOrder}>
+                                {cancellingOrder ? 'Đang từ chối...' : 'Xác nhận từ chối'}
                             </button>
                         </div>
                     </div>

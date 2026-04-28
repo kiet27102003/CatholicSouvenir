@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Header from '../components/Header/Header';
 import Footer from '../components/Footer/Footer';
 import ArtisanCard from '../components/FeaturedArtisans/ArtisanCard';
-import { getArtisans } from '../services/artisanService';
+import { getArtisans, getArtisanRating } from '../services/artisanService';
 import './ArtisanDirectoryPage.css';
 
 const PAGE_SIZE = 20;
@@ -10,6 +10,11 @@ const PLACEHOLDER_AVATAR = 'https://ui-avatars.com/api/?name=Artisan&background=
 const PLACEHOLDER_PORTFOLIO = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200" viewBox="0 0 300 200"><rect width="300" height="200" rx="16" fill="%23eef2ff"/><text x="150" y="104" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="%234f46e5">Portfolio</text></svg>';
 
 const formatNumber = (value) => new Intl.NumberFormat('vi-VN').format(Number(value || 0));
+
+const normalizeRating = (rating) => ({
+    averageRating: Number(rating?.averageRating ?? 0),
+    totalFeedbacks: Number(rating?.totalFeedbacks ?? 0),
+});
 
 const ArtisanDirectoryPage = () => {
     const [artisans, setArtisans] = useState([]);
@@ -26,17 +31,36 @@ const ArtisanDirectoryPage = () => {
         window.scrollTo(0, 0);
         let cancelled = false;
         queueMicrotask(() => setLoading(true));
-        getArtisans(page, PAGE_SIZE).then((result) => {
+
+        const loadArtisansWithRatings = async () => {
+            const result = await getArtisans(page, PAGE_SIZE);
             if (cancelled) return;
-            setLoading(false);
+
             if (result.success && result.data) {
-                setArtisans(result.data.content ?? []);
+                const baseArtisans = result.data.content ?? [];
+                const artisansWithRatings = await Promise.all(
+                    baseArtisans.map(async (artisan) => {
+                        const ratingResult = await getArtisanRating(artisan.artisanId);
+                        return {
+                            ...artisan,
+                            rating: ratingResult.success ? normalizeRating(ratingResult.data) : normalizeRating(),
+                        };
+                    })
+                );
+
+                if (cancelled) return;
+                setArtisans(artisansWithRatings);
                 setTotalPages(result.data.totalPages ?? 0);
                 setTotalElements(result.data.totalElements ?? 0);
             } else {
                 setArtisans([]);
             }
-        });
+
+            setLoading(false);
+        };
+
+        loadArtisansWithRatings();
+
         return () => {
             cancelled = true;
         };
@@ -166,6 +190,8 @@ const ArtisanDirectoryPage = () => {
                                                 description={artisan.bio || ''}
                                                 profileImage={artisan.profileImageUrl || PLACEHOLDER_AVATAR}
                                                 productImage={artisan.portfolioUrl || PLACEHOLDER_PORTFOLIO}
+                                                averageRating={artisan.rating?.averageRating ?? 0}
+                                                totalFeedbacks={artisan.rating?.totalFeedbacks ?? 0}
                                             />
                                         ))}
                                     </div>

@@ -2,10 +2,31 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import './ArtisanCard.css';
 
-const ArtisanCard = ({ id, name, location, description, profileImage, productImage }) => {
+const renderStars = (rating = 0) => {
+    const value = Math.max(0, Math.min(5, Number(rating) || 0));
+    const fullStars = Math.floor(value);
+    const hasHalf = value - fullStars >= 0.5;
+    const emptyStars = 5 - fullStars - (hasHalf ? 1 : 0);
+
+    return (
+        <div className="artisan-rating-stars" aria-label={`Đánh giá ${value.toFixed(1)} trên 5`}>
+            {Array.from({ length: fullStars }).map((_, index) => (
+                <span key={`full-${index}`} className="star star--full">★</span>
+            ))}
+            {hasHalf && <span className="star star--half">★</span>}
+            {Array.from({ length: emptyStars }).map((_, index) => (
+                <span key={`empty-${index}`} className="star star--empty">★</span>
+            ))}
+        </div>
+    );
+};
+
+const ArtisanCard = ({ id, name, location, description, profileImage, productImage, averageRating, totalFeedbacks }) => {
     const summary = String(description || '').trim();
     const shortSummary = summary.length > 110 ? `${summary.slice(0, 110).trim()}...` : summary;
     const displayLocation = String(location || '').trim();
+    const ratingValue = Number(averageRating ?? 0);
+    const feedbackCount = Number(totalFeedbacks ?? 0);
 
     return (
         <article className="artisan-card">
@@ -30,6 +51,12 @@ const ArtisanCard = ({ id, name, location, description, profileImage, productIma
                             <span className="artisan-ellipsis">{displayLocation || 'Chưa cập nhật'}</span>
                         </p>
                     </div>
+                </div>
+
+                <div className="artisan-rating-row">
+                    {renderStars(ratingValue)}
+                    <span className="artisan-rating-text">{ratingValue ? ratingValue.toFixed(1) : '0.0'} / 5</span>
+                    <span className="artisan-rating-count">({feedbackCount} đánh giá)</span>
                 </div>
 
                 <div className="artisan-detail-grid">

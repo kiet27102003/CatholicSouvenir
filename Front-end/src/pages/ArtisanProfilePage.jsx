@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Header from '../components/Header/Header';
 import Footer from '../components/Footer/Footer';
 import ProductCard from '../components/ProductGrid/ProductCard';
-import { getArtisanById } from '../services/artisanService';
+import { getArtisanById, getArtisanFeedbacks, getArtisanRating } from '../services/artisanService';
 import { getProductsByArtisan } from '../services/productService';
 import './ArtisanProfilePage.css';
 
@@ -20,13 +20,48 @@ const formatText = (value, fallback = '—') => {
     return text || fallback;
 };
 
+const formatDate = (value) => {
+    if (!value) return '—';
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? '—' : new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
+};
+
+const renderStars = (rating = 0) => {
+    const value = Math.max(0, Math.min(5, Number(rating) || 0));
+    return Array.from({ length: 5 }, (_, index) => (
+        <span key={`star-${index}`} className={index < Math.round(value) ? 'profile-star profile-star--active' : 'profile-star'}>★</span>
+    ));
+};
+
+const getSortConfig = (sortBy) => {
+    switch (sortBy) {
+        case 'rating-desc':
+            return { sort: 'rating,DESC' };
+        case 'rating-asc':
+            return { sort: 'rating,ASC' };
+        case 'date-asc':
+            return { sort: 'createdAt,ASC' };
+        case 'date-desc':
+        default:
+            return { sort: 'createdAt,DESC' };
+    }
+};
+
+const FEEDBACK_PAGE_SIZE = 6;
+
 const ArtisanProfilePage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const [artisan, setArtisan] = useState(null);
     const [products, setProducts] = useState([]);
+    const [ratingSummary, setRatingSummary] = useState({ averageRating: 0, totalFeedbacks: 0 });
+    const [feedbackPage, setFeedbackPage] = useState(0);
+    const [feedbackSortBy, setFeedbackSortBy] = useState('date-desc');
+    const [feedbacks, setFeedbacks] = useState([]);
+    const [feedbackTotalPages, setFeedbackTotalPages] = useState(0);
     const [loading, setLoading] = useState(true);
     const [productsLoading, setProductsLoading] = useState(false);
+    const [feedbackLoading, setFeedbackLoading] = useState(false);
 
     useEffect(() => {
         window.scrollTo(0, 0);
@@ -70,24 +105,62 @@ const ArtisanProfilePage = () => {
         return () => { cancelled = true; };
     }, [id, artisan?.artisanId]);
 
+    useEffect(() => {
+        const artisanId = artisan?.artisanId ?? id;
+        if (!artisanId) return;
+
+        let cancelled = false;
+        setFeedbackLoading(true);
+        const { sort } = getSortConfig(feedbackSortBy);
+        Promise.all([
+            getArtisanRating(artisanId),
+            getArtisanFeedbacks(artisanId, feedbackPage, FEEDBACK_PAGE_SIZE, sort),
+        ]).then(([ratingResult, feedbackResult]) => {
+            if (cancelled) return;
+
+            setRatingSummary(ratingResult.success ? ratingResult.data : { averageRating: 0, totalFeedbacks: 0 });
+            setFeedbacks(feedbackResult.success ? feedbackResult.data.content ?? [] : []);
+            setFeedbackTotalPages(feedbackResult.success ? feedbackResult.data.totalPages ?? 0 : 0);
+            setFeedbackLoading(false);
+        });
+
+        return () => { cancelled = true; };
+    }, [id, artisan?.artisanId, feedbackPage, feedbackSortBy]);
+
     const handleCustomRequest = () => {
         if (!artisan) return;
         navigate('/custom-requests', { state: { artisanId: artisan.artisanId, artisanName: artisan.artisanName } });
     };
 
     const profileImage = artisan?.profileImageUrl || PLACEHOLDER_AVATAR;
-    const coverImage = artisan?.portfolioUrl || null;
 
     const artisanName = formatText(artisan?.artisanName, 'Nghệ nhân');
     const specialty = formatText(artisan?.specialization, '');
     const experienceYears = Number(artisan?.experienceYears || 0);
-    const bio = truncate(artisan?.bio, 420);
+    const bio = formatText(artisan?.bio, 'Chưa có mô tả.');
+    const ratingValue = Number(ratingSummary?.averageRating ?? 0);
+    const ratingCount = Number(ratingSummary?.totalFeedbacks ?? 0);
 
     const infoCards = useMemo(() => ([
-        { label: 'Chuyên môn', value: specialty },
         { label: 'Kinh nghiệm', value: experienceYears > 0 ? `${experienceYears} năm` : 'Chưa có' },
+        { label: 'Chuyên môn', value: specialty || '—' },
         { label: 'Liên hệ', value: formatText(artisan?.phoneNumber, '—') },
     ]), [specialty, experienceYears, artisan?.phoneNumber]);
+
+    const profileStats = useMemo(() => ([
+        { label: 'Sản phẩm', value: `${products.length}` },
+        { label: 'Đánh giá', value: ratingValue.toFixed(1) },
+        { label: 'Lượt đánh giá', value: `${ratingCount}` },
+    ]), [products.length, ratingValue, ratingCount]);
+
+    const ratingDistribution = useMemo(() => {
+        const counts = [0, 0, 0, 0, 0];
+        feedbacks.forEach((item) => {
+            const rating = Math.max(1, Math.min(5, Math.round(Number(item?.rating || 0))));
+            if (rating) counts[5 - rating] += 1;
+        });
+        return counts;
+    }, [feedbacks]);
 
     if (loading) {
         return (
@@ -152,7 +225,6 @@ const ArtisanProfilePage = () => {
                                     <div>
                                         <p className="profile-kicker">Nghệ nhân</p>
                                         <h1 title={artisanName}>{artisanName}</h1>
-                                        {specialty ? <p className="profile-subtitle" title={specialty}>{specialty}</p> : null}
                                     </div>
 
                                     <button className="btn btn-primary btn-custom-order" onClick={handleCustomRequest}>
@@ -160,20 +232,27 @@ const ArtisanProfilePage = () => {
                                     </button>
                                 </div>
 
-                                <div className="profile-meta-grid">
-                                    {infoCards.map((item) => (
-                                        <div key={item.label} className="profile-meta-card">
-                                            <span>{item.label}</span>
-                                            <strong title={item.value}>{item.value}</strong>
+                                <div className="profile-meta-grid profile-meta-grid--centered">
+                                    {profileStats.map((item) => (
+                                        <div key={item.label} className="profile-meta-card profile-meta-card--centered">
+                                            {item.label === 'Đánh giá' ? (
+                                                <>
+                                                    <span className="profile-meta-card__value-row">
+                                                        <strong className="profile-meta-card__rating" title={item.value}>{item.value}</strong>
+                                                        <svg className="profile-star-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                                            <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                                                        </svg>
+                                                    </span>
+                                                    <span className="profile-meta-card__label-below">{item.label}</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <strong title={item.value}>{item.value}</strong>
+                                                    <span>{item.label}</span>
+                                                </>
+                                            )}
                                         </div>
                                     ))}
-                                </div>
-
-                                <div className="profile-specialties">
-                                    {specialty && <span className="badge badge-outline">{specialty}</span>}
-                                    {artisan?.portfolioUrl && (
-                                        <a href={artisan.portfolioUrl} target="_blank" rel="noopener noreferrer" className="badge badge-outline">Portfolio</a>
-                                    )}
                                 </div>
                             </div>
                         </header>
@@ -182,25 +261,23 @@ const ArtisanProfilePage = () => {
                             <aside className="artisan-profile-sidebar">
                                 <article className="artisan-side-card">
                                     <h2>Giới thiệu</h2>
-                                    <p title={artisan?.bio || '—'}>{bio || 'Chưa có mô tả.'}</p>
+                                    <p>{bio}</p>
                                 </article>
 
-                                <article className="artisan-side-card artisan-side-card--accent">
+                                <article className="artisan-side-card artisan-side-card--accent artisan-side-card--spaced">
                                     <h2>Thông tin nhanh</h2>
                                     <div className="quick-info-list">
                                         <div>
-                                            <span>Tên hiển thị</span>
-                                            <strong>{artisanName}</strong>
-                                        </div>
-                                        {specialty && (
-                                            <div>
-                                                <span>Chuyên môn</span>
-                                                <strong>{specialty}</strong>
-                                            </div>
-                                        )}
-                                        <div>
                                             <span>Kinh nghiệm</span>
                                             <strong>{experienceYears > 0 ? `${experienceYears} năm` : '—'}</strong>
+                                        </div>
+                                        <div>
+                                            <span>Chuyên môn</span>
+                                            <strong>{specialty || '—'}</strong>
+                                        </div>
+                                        <div>
+                                            <span>Liên hệ</span>
+                                            <strong>{formatText(artisan?.phoneNumber, '—')}</strong>
                                         </div>
                                     </div>
                                 </article>
@@ -228,7 +305,6 @@ const ArtisanProfilePage = () => {
                                                 id={product.productId}
                                                 image={getProductImage(product)}
                                                 title={truncate(product.productName, 48)}
-                                                artisan={artisanName}
                                                 price={product.productPrice}
                                                 salePrice={product.salePrice}
                                                 onSale={product.onSale || false}
@@ -243,6 +319,74 @@ const ArtisanProfilePage = () => {
                                         </button>
                                     </div>
                                 )}
+
+                                <div className="artisan-feedback-section">
+                                    <div className="artisan-feedback-header">
+                                        <div>
+                                            <p className="section-kicker">Đánh giá</p>
+                                            <h2>Phản hồi từ khách hàng</h2>
+                                        </div>
+                                        <div className="feedback-toolbar">
+                                            <span className="section-count">{ratingCount} lượt đánh giá</span>
+                                            <select
+                                                className="feedback-sort-select"
+                                                value={feedbackSortBy}
+                                                onChange={(e) => {
+                                                    setFeedbackPage(0);
+                                                    setFeedbackSortBy(e.target.value);
+                                                }}
+                                            >
+                                                <option value="date-desc">Mới nhất</option>
+                                                <option value="date-asc">Cũ nhất</option>
+                                                <option value="rating-desc">Sao cao → thấp</option>
+                                                <option value="rating-asc">Sao thấp → cao</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    {feedbackLoading ? (
+                                        <div className="artisan-feedback-loading">
+                                            <div className="spinner" />
+                                            <p>Đang tải đánh giá...</p>
+                                        </div>
+                                    ) : feedbacks.length > 0 ? (
+                                        <div className="artisan-feedback-list">
+                                            {feedbacks.map((feedback) => (
+                                                <article key={feedback.feedbackId} className="feedback-card">
+                                                    <div className="feedback-card__header">
+                                                        <div className="feedback-avatar">
+                                                            <img src={feedback.customerAvatar || PLACEHOLDER_AVATAR} alt={feedback.customerName || 'Khách hàng'} />
+                                                        </div>
+                                                        <div className="feedback-card__meta">
+                                                            <h3>{formatText(feedback.customerName, 'Khách hàng')}</h3>
+                                                            <div className="feedback-card__submeta">
+                                                                <span>{formatDate(feedback.createdAt)}</span>
+                                                                <span className="feedback-rating">{renderStars(feedback.rating)}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <p className="feedback-card__comment">{formatText(feedback.comment, 'Khách hàng chưa để lại bình luận.')}</p>
+                                                </article>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="no-products-message">
+                                            <p>Chưa có đánh giá nào cho nghệ nhân này.</p>
+                                        </div>
+                                    )}
+
+                                    {feedbackTotalPages > 1 && (
+                                        <div className="feedback-pagination">
+                                            <button className="btn btn-outline" type="button" disabled={feedbackPage === 0} onClick={() => setFeedbackPage((page) => Math.max(0, page - 1))}>
+                                                Trước
+                                            </button>
+                                            <span className="section-count">Trang {feedbackPage + 1} / {feedbackTotalPages}</span>
+                                            <button className="btn btn-outline" type="button" disabled={feedbackPage >= feedbackTotalPages - 1} onClick={() => setFeedbackPage((page) => Math.min(feedbackTotalPages - 1, page + 1))}>
+                                                Sau
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
                             </section>
                         </div>
                     </section>

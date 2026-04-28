@@ -493,7 +493,9 @@ export const cancelCustomOrder = async (orderId, reason = '') => {
     if (!orderId) return { success: false, error: 'Thiếu mã đơn.' };
 
     try {
-        const response = await api.post(`/custom-orders/${orderId}/cancel`, reason ? { reason } : {});
+        const response = await api.post(`/custom-orders/${orderId}/cancel`, null, {
+            params: reason ? { reason } : {},
+        });
         const normalized = normalizeResponse(response);
 
         if (!isSuccessCode(normalized.code)) {

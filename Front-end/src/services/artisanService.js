@@ -75,4 +75,52 @@ export const getArtisanById = async (artisanId) => {
     }
 };
 
-export default { getArtisans, getArtisanById, getMyArtisanProfile, updateMyArtisanProfile };
+/**
+ * Lấy rating trung bình của nghệ nhân (GET /api/feedbacks/artisan/{artisanId}/rating).
+ */
+export const getArtisanRating = async (artisanId) => {
+    try {
+        if (!artisanId) return { success: false, error: 'Thiếu mã nghệ nhân.' };
+        const response = await api.get(`/feedbacks/artisan/${artisanId}/rating`);
+        const res = response.data;
+        if (res?.code !== 0 && res?.code !== 200) return { success: false, error: res?.message || 'Không thể tải đánh giá nghệ nhân.' };
+        return { success: true, data: res?.data ?? { averageRating: 0, totalFeedbacks: 0 } };
+    } catch (error) {
+        const message = error.response?.data?.message ?? error.message ?? 'Không thể tải đánh giá nghệ nhân.';
+        return { success: false, error: typeof message === 'string' ? message : 'Lỗi không xác định.' };
+    }
+};
+
+/**
+ * Lấy danh sách feedback của nghệ nhân theo trang (GET /api/feedbacks/artisan/{artisanId}).
+ */
+export const getArtisanFeedbacks = async (artisanId, page = 0, size = 10, sort) => {
+    try {
+        if (!artisanId) return { success: false, error: 'Thiếu mã nghệ nhân.' };
+        const params = { page, size };
+        if (sort) params.sort = sort;
+        const response = await api.get(`/feedbacks/artisan/${artisanId}`, { params });
+        const res = response.data;
+        if (res?.code !== 0 && res?.code !== 200) return { success: false, error: res?.message || 'Không thể tải danh sách đánh giá.' };
+
+        const data = res?.data ?? {};
+        return {
+            success: true,
+            data: {
+                content: data.content ?? [],
+                totalElements: data.totalElements ?? 0,
+                totalPages: data.totalPages ?? 0,
+                number: data.number ?? page,
+                size: data.size ?? size,
+                first: data.first ?? true,
+                last: data.last ?? true,
+                empty: data.empty ?? true,
+            },
+        };
+    } catch (error) {
+        const message = error.response?.data?.message ?? error.message ?? 'Không thể tải danh sách đánh giá.';
+        return { success: false, error: typeof message === 'string' ? message : 'Lỗi không xác định.' };
+    }
+};
+
+export default { getArtisans, getArtisanById, getArtisanRating, getArtisanFeedbacks, getMyArtisanProfile, updateMyArtisanProfile };

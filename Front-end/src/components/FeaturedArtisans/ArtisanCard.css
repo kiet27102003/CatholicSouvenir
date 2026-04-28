@@ -120,6 +120,44 @@
     min-width: 0;
 }
 
+.artisan-rating-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    padding: 0.55rem 0.7rem;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%);
+    border: 1px solid #e2e8f0;
+}
+
+.artisan-rating-stars {
+    display: inline-flex;
+    gap: 0.08rem;
+    color: #f59e0b;
+    font-size: 0.95rem;
+    line-height: 1;
+}
+
+.star--empty {
+    color: #cbd5e1;
+}
+
+.star--half {
+    color: #fbbf24;
+}
+
+.artisan-rating-text {
+    font-size: 0.86rem;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.artisan-rating-count {
+    font-size: 0.84rem;
+    color: #64748b;
+}
+
 .artisan-detail-grid {
     display: grid;
     grid-template-rows: minmax(72px, auto) auto;

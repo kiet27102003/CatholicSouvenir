@@ -127,12 +127,25 @@
     gap: 0.7rem;
 }
 
+.profile-meta-grid--centered {
+    justify-content: center;
+    align-items: stretch;
+}
+
 .profile-meta-card {
     border: 1px solid #e5e7eb;
     background: #f8fafc;
     border-radius: 14px;
-    padding: 0.75rem 0.85rem;
+    padding: 0.85rem 0.85rem 0.75rem;
     min-width: 0;
+    display: grid;
+    gap: 0.18rem;
+    justify-items: center;
+    text-align: center;
+}
+
+.profile-meta-card--centered {
+    min-height: 84px;
 }
 
 .profile-meta-card span {
@@ -146,12 +159,81 @@
 
 .profile-meta-card strong {
     display: block;
-    margin-top: 0.28rem;
+    margin-top: 0;
     color: #111827;
-    font-size: 0.96rem;
+    font-size: 1.25rem;
+    line-height: 1.1;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.profile-meta-card__rating {
+    color: #f59e0b;
+    font-size: 1.25rem;
+    line-height: 1;
+}
+
+.profile-meta-card__value-row {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.28rem;
+    line-height: 1;
+    width: 100%;
+    flex-direction: row;
+}
+
+.profile-meta-card__value-row strong {
+    display: inline-block;
+    margin: 0;
+    white-space: nowrap;
+}
+
+.profile-meta-card__rating {
+    color: #f59e0b;
+    font-size: 1.25rem;
+    line-height: 1;
+    font-weight: 800;
+}
+
+.profile-meta-card__label-below {
+    color: #64748b;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.profile-star-icon {
+    width: 16px;
+    height: 16px;
+    fill: #f59e0b;
+    flex-shrink: 0;
+    color: #f59e0b;
+}
+
+.feedback-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.feedback-sort-select {
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    border-radius: 999px;
+    padding: 0.5rem 0.9rem;
+    font-size: 0.9rem;
+    color: #111827;
+    outline: none;
+    box-shadow: 0 6px 14px rgba(15, 23, 42, 0.04);
+}
+
+.feedback-sort-select:focus {
+    border-color: #c7d2fe;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
 }
 
 .profile-specialties {
@@ -204,10 +286,18 @@
     color: #475569;
     line-height: 1.65;
     font-size: 0.94rem;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+    word-break: break-word;
 }
 
 .artisan-side-card--accent {
     background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+}
+
+.artisan-side-card--spaced {
+    margin-top: 0.4rem;
 }
 
 .quick-info-list {
@@ -297,6 +387,188 @@
     gap: 0.95rem;
 }
 
+.artisan-feedback-section {
+    margin-top: 1rem;
+    display: grid;
+    gap: 0.9rem;
+    width: 100%;
+    justify-self: stretch;
+    align-self: stretch;
+}
+
+.artisan-feedback-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.artisan-feedback-header h2 {
+    margin: 0.15rem 0 0;
+    font-size: 1.35rem;
+    color: #111827;
+}
+
+.artisan-rating-panel {
+    display: grid;
+    grid-template-columns: 240px minmax(0, 1fr);
+    gap: 1rem;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    border: 1px solid #e5e7eb;
+    border-radius: 18px;
+    padding: 1rem;
+}
+
+.artisan-rating-panel__score {
+    display: grid;
+    place-items: center;
+    text-align: center;
+    gap: 0.35rem;
+    padding: 0.75rem;
+    border-radius: 16px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+}
+
+.artisan-rating-panel__score strong {
+    font-size: 2.5rem;
+    line-height: 1;
+    color: #111827;
+}
+
+.artisan-rating-panel__score span {
+    color: #64748b;
+    font-size: 0.9rem;
+}
+
+.artisan-rating-panel__score p {
+    margin: 0;
+    color: #475569;
+    font-size: 0.92rem;
+}
+
+.profile-rating-stars {
+    display: inline-flex;
+    gap: 0.15rem;
+}
+
+.profile-star {
+    color: #cbd5e1;
+}
+
+.profile-star--active {
+    color: #f59e0b;
+}
+
+.artisan-rating-panel__bars {
+    display: grid;
+    gap: 0.6rem;
+}
+
+.rating-bar-row {
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1fr) 22px;
+    gap: 0.6rem;
+    align-items: center;
+    color: #334155;
+    font-size: 0.92rem;
+}
+
+.rating-bar {
+    height: 10px;
+    border-radius: 999px;
+    overflow: hidden;
+    background: #e2e8f0;
+}
+
+.rating-bar__fill {
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+
+.artisan-feedback-list {
+    display: grid;
+    gap: 0.85rem;
+    width: 100%;
+    align-items: stretch;
+    justify-items: stretch;
+}
+
+.feedback-card {
+    width: 100%;
+    max-width: none;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 0.95rem;
+    display: grid;
+    gap: 0.75rem;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+    box-sizing: border-box;
+    justify-self: stretch;
+}
+
+.feedback-card__header {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    width: 100%;
+}
+
+.feedback-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: #eef2ff;
+}
+
+.feedback-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.feedback-card__meta {
+    min-width: 0;
+}
+
+.feedback-card__meta h3 {
+    margin: 0;
+    font-size: 0.98rem;
+    color: #111827;
+}
+
+.feedback-card__submeta {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    color: #64748b;
+    font-size: 0.82rem;
+    margin-top: 0.15rem;
+}
+
+.feedback-rating {
+    color: #f59e0b;
+}
+
+.feedback-card__comment {
+    margin: 0;
+    color: #334155;
+    line-height: 1.65;
+}
+
+.feedback-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
 .no-products-message {
     min-height: 260px;
     display: grid;
@@ -328,7 +600,8 @@
 
 @media (max-width: 1024px) {
     .artisan-profile-header,
-    .artisan-profile-layout {
+    .artisan-profile-layout,
+    .artisan-rating-panel {
         grid-template-columns: 1fr;
     }
 

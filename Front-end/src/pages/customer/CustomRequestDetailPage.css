@@ -528,6 +528,38 @@
     padding: 24px;
 }
 
+.detail-cancel-modal {
+    width: min(560px, 100%);
+}
+
+.detail-cancel-label {
+    display: inline-block;
+    margin-top: 16px;
+    margin-bottom: 8px;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.detail-cancel-textarea {
+    width: 100%;
+    resize: vertical;
+    min-height: 120px;
+    border: 1px solid #cbd5e1;
+    border-radius: 16px;
+    padding: 12px 14px;
+    font: inherit;
+    color: #0f172a;
+    background: #f8fafc;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.detail-cancel-textarea:focus {
+    border-color: #2563eb;
+    background: #fff;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
 .detail-confirm-modal h3 {
     margin: 0 0 10px;
     font-size: 1.25rem;

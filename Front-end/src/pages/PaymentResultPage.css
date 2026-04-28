@@ -50,6 +50,14 @@
     color: var(--color-text-light);
 }
 
+.payment-meta {
+    display: grid;
+    gap: 6px;
+    margin-bottom: 20px;
+    color: var(--color-text-light);
+    font-size: 0.94rem;
+}
+
 .payment-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;

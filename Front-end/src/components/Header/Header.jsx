@@ -18,7 +18,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { getMyConversations } from '../../services/chatService';
-import { getNotifications, getUnreadNotificationCount } from '../../services/notificationService';
+import { getNotifications, getUnreadNotificationCount, markNotificationAsRead } from '../../services/notificationService';
 import './Header.css';
 
 const Header = () => {
@@ -131,20 +131,34 @@ const Header = () => {
         return date.toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' });
     };
 
-    const handleNotificationClick = (item) => {
+    const handleNotificationClick = async (item) => {
+        const notificationId = item?.notificationId || item?.id;
+        if (notificationId && !item?.isRead) {
+            await markNotificationAsRead(notificationId);
+            setNotifications((prev) => prev.map((notification) => (
+                String(notification?.notificationId || notification?.id) === String(notificationId)
+                    ? { ...notification, isRead: true }
+                    : notification
+            )));
+            setUnreadNotifications((prev) => Math.max(0, prev - 1));
+        }
+
         setNotificationsOpen(false);
 
         const actionType = String(item?.actionType || '').toUpperCase();
         const relatedEntityType = String(item?.relatedEntityType || '').toUpperCase();
         const relatedEntityId = item?.relatedEntityId;
+        const requestId = item?.requestId || item?.metadata?.requestId || relatedEntityId;
 
         if (actionType === 'VIEW_CONVERSATION' && relatedEntityId) return navigate(`/messages?conversationId=${relatedEntityId}`);
-        if (actionType === 'VIEW_ORDER' && relatedEntityId) return navigate(`/orders/${relatedEntityId}`);
-        if (actionType === 'VIEW_CUSTOM_REQUEST' && relatedEntityId) return navigate(`/custom-requests/${relatedEntityId}`);
+        if (actionType === 'VIEW_ORDER' && relatedEntityId) return navigate('/custom-requests/pending-confirmation');
+        if (actionType === 'VIEW_CUSTOM_REQUEST' && requestId) return navigate('/custom-requests/pending-confirmation');
+        if (actionType === 'VIEW_PENDING_CUSTOM_ORDERS' || actionType === 'VIEW_ORDER_CONFIRMATION_LIST') return navigate('/custom-requests/pending-confirmation');
         if (actionType === 'VIEW_PRODUCT' && relatedEntityId) return navigate(`/product/${relatedEntityId}`);
         if (relatedEntityType === 'CONVERSATION' && relatedEntityId) return navigate(`/messages?conversationId=${relatedEntityId}`);
-        if (relatedEntityType === 'ORDER' && relatedEntityId) return navigate(`/orders/${relatedEntityId}`);
-        if (relatedEntityType === 'CUSTOM_REQUEST' && relatedEntityId) return navigate(`/custom-requests/${relatedEntityId}`);
+        if (relatedEntityType === 'ORDER' && relatedEntityId) return navigate('/custom-requests/pending-confirmation');
+        if (relatedEntityType === 'CUSTOM_REQUEST' && requestId) return navigate('/custom-requests/pending-confirmation');
+        if (requestId) return navigate('/custom-requests/pending-confirmation');
     };
 
     const navItems = [

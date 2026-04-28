@@ -91,6 +91,11 @@ const ProductDetailsPage = () => {
         const image = getProductImage(product);
         const artisan = product.artisanName ?? product.artisan ?? '';
 
+        if (isOutOfStock) {
+            appToast.warning('Sản phẩm đã hết hàng');
+            return;
+        }
+
         addToCart({
             id: productId,
             productId,
@@ -102,6 +107,7 @@ const ProductDetailsPage = () => {
             image,
             artisan,
             customRequests: {},
+            quantity: hasStockValue ? stockValue : undefined,
         }, quantity);
 
         appToast.success('Đã thêm vào giỏ hàng');
@@ -121,6 +127,11 @@ const ProductDetailsPage = () => {
     const productDescription = product?.productDescription ?? product?.description ?? '';
     const categoryName = product?.categoryName ?? product?.category?.name ?? 'Danh mục';
     const productReviews = Array.isArray(product?.reviews) ? product.reviews : [];
+    const stockValue = Number(product?.quantity);
+    const hasStockValue = Number.isFinite(stockValue);
+    const isOutOfStock = hasStockValue && stockValue <= 0;
+    const isLowStock = hasStockValue && stockValue > 0 && stockValue < 5;
+    const maxSelectable = hasStockValue ? Math.max(stockValue, 1) : Infinity;
 
     if (loading) {
         return (
@@ -244,6 +255,16 @@ const ProductDetailsPage = () => {
                             <span className="price-label">Giá sản phẩm</span>
                         </div>
 
+                        <div className="stock-status-panel">
+                            {isOutOfStock ? (
+                                <div className="stock-chip stock-chip-out">Hết hàng</div>
+                            ) : isLowStock ? (
+                                <div className="stock-chip stock-chip-low">Chỉ còn {stockValue} sản phẩm</div>
+                            ) : hasStockValue ? (
+                                <div className="stock-chip stock-chip-in">Còn {stockValue} sản phẩm</div>
+                            ) : null}
+                        </div>
+
                         <div className="product-highlights">
                             <div className="highlight-card">
                                 <span className="highlight-label">Ảnh</span>
@@ -265,26 +286,26 @@ const ProductDetailsPage = () => {
                                     <button
                                         className="qty-btn"
                                         onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                                        disabled={quantity <= 1}
+                                        disabled={quantity <= 1 || isOutOfStock}
                                     >
                                         −
                                     </button>
                                     <span className="qty-value">{quantity}</span>
                                     <button
                                         className="qty-btn"
-                                        onClick={() => setQuantity(Math.min((product.quantity ?? Infinity), quantity + 1))}
-                                        disabled={product.quantity != null && quantity >= product.quantity}
+                                        onClick={() => setQuantity(Math.min(maxSelectable, quantity + 1))}
+                                        disabled={isOutOfStock || (hasStockValue && quantity >= stockValue)}
                                     >
                                         +
                                     </button>
                                 </div>
-                                {product.quantity != null && (
-                                    <span className="stock-text">Còn {product.quantity} sản phẩm</span>
+                                {hasStockValue && (
+                                    <span className="stock-text">Còn {stockValue} sản phẩm</span>
                                 )}
                             </div>
 
-                            <button className="btn btn-primary btn-add-cart" onClick={handleAddToCart}>
-                                Thêm vào giỏ hàng
+                            <button className="btn btn-primary btn-add-cart" onClick={handleAddToCart} disabled={isOutOfStock || (hasStockValue && quantity > stockValue)}>
+                                {isOutOfStock ? 'Hết hàng' : 'Thêm vào giỏ hàng'}
                             </button>
 
                             <button

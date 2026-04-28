@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FiShoppingCart, FiImage } from 'react-icons/fi';
+import { FiShoppingCart, FiImage, FiAlertCircle } from 'react-icons/fi';
 import { useCart } from '../../context/CartContext';
 import './ProductCard.css';
 
@@ -74,6 +74,17 @@ const ProductCard = ({
     const originalPriceDisplay = onSale ? formatPrice(productPrice ?? price, currency) : null;
     const showStyleLabel = variant === 'shop' && (styleLabel || category);
     const artisanText = artisan ? (artisanLabel ? `${artisanLabel}: ${artisan}` : artisan) : null;
+    const stockValue = Number(quantity);
+    const hasStockValue = Number.isFinite(stockValue);
+    const isOutOfStock = hasStockValue && stockValue <= 0;
+    const isLowStock = hasStockValue && stockValue > 0 && stockValue < 5;
+    const stockLabel = isOutOfStock
+        ? 'Hết hàng'
+        : isLowStock
+            ? `Chỉ còn ${stockValue} sản phẩm`
+            : hasStockValue
+                ? `Còn ${stockValue} sản phẩm`
+                : null;
 
     useEffect(() => {
         const rafId = window.requestAnimationFrame(() => {
@@ -164,12 +175,14 @@ const ProductCard = ({
     const addProductToCart = (e) => {
         e.preventDefault();
         e.stopPropagation();
+        if (isOutOfStock) return;
         addToCart({
             id,
             title: displayProductName,
             price: Number(displayPriceValue) || 0,
             image,
             artisan: displayArtisan,
+            quantity: hasStockValue ? stockValue : undefined,
         });
         setOverlayOpen(false);
     };
@@ -225,6 +238,8 @@ const ProductCard = ({
                     >
                         {isCustomOrder && <span className="badge badge-custom-order">ĐẶT LÀM</span>}
                         {onSale && !isCustomOrder && <span className="badge badge-sale">SALE</span>}
+                        {isOutOfStock && <span className="badge badge-stock badge-stock-out">Hết hàng</span>}
+                        {!isOutOfStock && isLowStock && <span className="badge badge-stock badge-stock-low">{stockLabel}</span>}
                         {image && !imageBroken ? (
                             <img src={image} alt={displayProductName} onError={() => setImageBroken(true)} />
                         ) : (
@@ -238,6 +253,7 @@ const ProductCard = ({
                                 <h4 className="product-overlay-title">{displayProductName}</h4>
                                 <p className="product-overlay-description">{displayDescription}</p>
                                 <p className="product-overlay-rating">⭐ {displayRating} ({displayReviewCount} đánh giá)</p>
+                                {stockLabel && <p className={`product-overlay-stock ${isOutOfStock ? 'is-out' : 'is-low'}`}>{stockLabel}</p>}
                                 <div className="product-overlay-actions">
                                     <button
                                         type="button"
@@ -254,8 +270,9 @@ const ProductCard = ({
                                         type="button"
                                         className="product-overlay-btn product-overlay-btn-filled"
                                         onClick={addProductToCart}
+                                        disabled={isOutOfStock}
                                     >
-                                        Thêm vào giỏ
+                                        {isOutOfStock ? 'Hết hàng' : 'Thêm vào giỏ'}
                                     </button>
                                 </div>
                             </div>
@@ -282,7 +299,7 @@ const ProductCard = ({
                         </div>
                     </div>
                 </Link>
-                {!isCustomOrder && (
+                {!isCustomOrder && !isOutOfStock && (
                     <button
                         type="button"
                         className="product-card-cart-btn"
@@ -316,6 +333,7 @@ const ProductCard = ({
                     <p><strong>Mô tả:</strong> {displayDescription}</p>
                     <p><strong>Giá:</strong> {priceDisplay || '—'}</p>
                     <p><strong>Số lượng:</strong> {displayQuantity}</p>
+                    {stockLabel && <p><strong>Tồn kho:</strong> {stockLabel}</p>}
                     <p><strong>Kích thước:</strong> {displaySize}</p>
                     <p><strong>Tags:</strong> {displayTags.length ? displayTags.join(', ') : '—'}</p>
                     <div className="quick-view-actions">
@@ -330,8 +348,9 @@ const ProductCard = ({
                                     addProductToCart(e);
                                     closeQuickView();
                                 }}
+                                disabled={isOutOfStock}
                             >
-                                Thêm vào giỏ
+                                {isOutOfStock ? 'Hết hàng' : 'Thêm vào giỏ'}
                             </button>
                         )}
                     </div>

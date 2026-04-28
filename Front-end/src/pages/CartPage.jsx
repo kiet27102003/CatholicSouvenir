@@ -36,6 +36,7 @@ const CartPage = () => {
         () => selectedItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0),
         [selectedItems]
     );
+    const hasUnavailableItems = items.some((item) => Number(item.quantity) > Number(item.availableStock ?? Infinity));
 
     const handleCheckoutSelected = async () => {
         if (selectedItems.length === 0) {
@@ -125,6 +126,13 @@ const CartPage = () => {
                     </div>
                 </header>
 
+                {hasUnavailableItems && (
+                    <div className="cart-warning-banner" role="alert">
+                        <strong>Một số sản phẩm đã hết hàng.</strong>
+                        <p>Vui lòng xóa hoặc điều chỉnh các sản phẩm không còn đủ tồn kho trước khi thanh toán.</p>
+                    </div>
+                )}
+
                 {items.length === 0 ? (
                     <div className="cart-empty-state">
                         <FiShoppingCart size={52} />
@@ -182,6 +190,11 @@ const CartPage = () => {
                                             <div>
                                                 <h4>{item.productName || item.templateName || 'Sản phẩm'}</h4>
                                                 <p>{item.artisanName || 'Sanctus Artisan'}</p>
+                                                {item.availableStock != null && (
+                                                    <p className={`cart-stock-text ${item.isAvailable === false ? 'is-out' : ''}`}>
+                                                        {item.isAvailable === false ? 'Hết hàng' : `Còn ${item.availableStock} sản phẩm`}
+                                                    </p>
+                                                )}
                                                 {item.zoneInputs?.length > 0 && (
                                                     <p className="zone-summary">
                                                         {item.zoneInputs.map((z) => `${z.zoneName}: ${z.value || '—'}`).join(' · ')}
@@ -192,9 +205,9 @@ const CartPage = () => {
                                         <div>{formatVnd(item.basePrice)}</div>
                                         <div>
                                             <div className="qty-control">
-                                                <button type="button" onClick={() => handleUpdateQty(item.productId, item.quantity - 1)}>-</button>
+                                                <button type="button" onClick={() => handleUpdateQty(item.productId, item.quantity - 1)} disabled={item.isAvailable === false}>-</button>
                                                 <span>{item.quantity}</span>
-                                                <button type="button" onClick={() => handleUpdateQty(item.productId, item.quantity + 1)}>+</button>
+                                                <button type="button" onClick={() => handleUpdateQty(item.productId, item.quantity + 1)} disabled={item.isAvailable === false || (item.availableStock != null && item.quantity >= item.availableStock)}>+</button>
                                             </div>
                                         </div>
                                         <div className="line-price">{formatVnd(item.totalPrice)}</div>
@@ -239,10 +252,10 @@ const CartPage = () => {
                                 <button
                                     type="button"
                                     className="btn btn-primary summary-checkout"
-                                    disabled={checkingOut || selectedItems.length === 0}
+                                    disabled={checkingOut || selectedItems.length === 0 || hasUnavailableItems}
                                     onClick={handleCheckoutSelected}
                                 >
-                                    {checkingOut ? 'Đang xử lý...' : `Thanh toán (${selectedItems.length} sản phẩm)`}
+                                    {hasUnavailableItems ? 'Xóa sản phẩm hết hàng' : (checkingOut ? 'Đang xử lý...' : `Thanh toán (${selectedItems.length} sản phẩm)`)}
                                 </button>
                             </div>
 

@@ -231,6 +231,18 @@ export const rejectAdminComplaint = async (id, body) => {
     }
 };
 
+const REFUND_ERROR_MAP = {
+    '05': 'Giao dịch đã được hoàn trước đó.',
+    '06': 'Giao dịch hoàn tiền không hợp lệ.',
+    '07': 'Giao dịch gốc không tồn tại.',
+    '97': 'Hệ thống VNPay đang bận, vui lòng thử lại sau.',
+};
+
+export const mapRefundError = (code, fallback = 'Đã có lỗi xảy ra, vui lòng thử lại hoặc liên hệ hỗ trợ') => {
+    const normalizedCode = String(code || '').trim();
+    return REFUND_ERROR_MAP[normalizedCode] || fallback;
+};
+
 export const retryAdminRefundTransaction = async (id) => {
     if (!id) return { success: false, error: 'Thiếu mã giao dịch hoàn tiền.' };
     try {
@@ -241,7 +253,8 @@ export const retryAdminRefundTransaction = async (id) => {
         }
         return { success: true, data: normalized.data ?? {} };
     } catch (error) {
-        return { success: false, error: mapError(error, 'Thử lại hoàn tiền thất bại. Vui lòng thử lại.') };
+        const code = error?.response?.data?.errorCode || error?.response?.data?.code;
+        return { success: false, error: mapRefundError(code, mapError(error, 'Đã có lỗi xảy ra, vui lòng thử lại hoặc liên hệ hỗ trợ')) };
     }
 };
 
@@ -266,7 +279,6 @@ export const getAdminRefundTransactions = async ({ status, page = 0, size = 10 }
         };
     }
 };
-
 export default {
     toArray,
     getMyComplaints,

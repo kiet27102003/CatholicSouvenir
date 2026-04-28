@@ -179,10 +179,11 @@ export const getFeedbackById = async (feedbackId) => {
     }
 };
 
-export const getOrderById = async (orderId) => {
+export const getOrderDetail = async (orderId) => {
     if (!orderId) {
         return { success: false, error: 'Thiếu mã đơn hàng.' };
     }
+
     try {
         const response = await api.get(`/order/${orderId}`);
         const normalized = normalizeResponse(response);
@@ -205,6 +206,8 @@ export const getOrderById = async (orderId) => {
         };
     }
 };
+
+export const getOrderById = getOrderDetail;
 
 export const createFeedback = async (payload) => {
     const orderId = payload?.orderId || null;

@@ -14,9 +14,10 @@ import {
     FiUser,
 } from 'react-icons/fi';
 import { appToast } from '../../lib/appToast';
-import { useAuth } from '../../context/AuthContext';
 import { getConversationsByRequest, startConversation } from '../../services/chatService';
 import {
+    confirmCustomOrder,
+    getCustomOrderByRequest,
     getCustomOrderStages,
     getCustomRequestDetail,
     getCustomerCustomOrders,
@@ -58,8 +59,11 @@ const getStatusMeta = (status) => {
         OPEN: { label: 'Đang mở', className: 'status-open', icon: FiClock },
         PUBLISHED: { label: 'Đang mở', className: 'status-open', icon: FiClock },
         ARTISAN_SELECTED: { label: 'Đã chọn artisan', className: 'status-selected', icon: FiStar },
+        PENDING_CONFIRMATION: { label: 'Chờ xác nhận', className: 'status-pending', icon: FiClock },
+        PENDING_PAYMENT: { label: 'Chờ thanh toán', className: 'status-pending', icon: FiClock },
         IN_PROGRESS: { label: 'Đang thực hiện', className: 'status-in-progress', icon: FiShield },
         COMPLETED: { label: 'Hoàn thành', className: 'status-completed', icon: FiPackage },
+        CANCELLED: { label: 'Đã huỷ', className: 'status-cancelled', icon: FiFileText },
     }[s]) || { label: status || 'Không xác định', className: 'status-open', icon: FiClock };
 };
 
@@ -87,7 +91,6 @@ const StatCard = ({ label, value, subtext }) => (
 const CustomRequestDetailPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { user } = useAuth();
     const [loading, setLoading] = useState(true);
     const [request, setRequest] = useState(null);
     const [stagesLoading, setStagesLoading] = useState(false);
@@ -100,6 +103,8 @@ const CustomRequestDetailPage = () => {
     const [selectingArtisanId, setSelectingArtisanId] = useState('');
     const [confirmModalOpen, setConfirmModalOpen] = useState(false);
     const [pendingArtisan, setPendingArtisan] = useState(null);
+    const [confirmingOrder, setConfirmingOrder] = useState(false);
+    const [orderLookupLoading, setOrderLookupLoading] = useState(false);
 
     const requestStatus = String(request?.status || '').toUpperCase();
     const statusMeta = getStatusMeta(requestStatus);
@@ -113,12 +118,11 @@ const CustomRequestDetailPage = () => {
     const completedAmount = useMemo(() => stages
         .filter((stage) => String(stage?.status || '').toUpperCase() === 'COMPLETED')
         .reduce((sum, stage) => sum + Number(stage?.amount || 0), 0), [stages]);
-    const completedStagesCount = useMemo(() => stages
-        .filter((stage) => String(stage?.status || '').toUpperCase() === 'COMPLETED').length, [stages]);
     const remainingAmount = Math.max(0, totalPrice - paidAmount);
     const paidPercent = totalPrice > 0 ? Math.min(100, Math.round((completedAmount / totalPrice) * 100)) : 0;
     const selectedArtisanId = String(request?.selectedArtisanId || artisan?.artisanId || artisan?.id || '');
     const hasStages = stages.length > 0;
+    const customOrderId = request?.customOrderId || request?.orderId || request?.customOrder?.orderId || null;
 
     const refreshInterestedArtisans = async () => {
         const res = await getConversationsByRequest(id);
@@ -132,15 +136,18 @@ const CustomRequestDetailPage = () => {
         }
 
         setStagesLoading(true);
-        const [pendingRes, inProgressRes] = await Promise.all([
+        const [pendingConfirmationRes, pendingRes, inProgressRes, completedRes] = await Promise.all([
+            getCustomerCustomOrders({ status: 'PENDING_CONFIRMATION', page: 0, size: 10 }),
             getCustomerCustomOrders({ status: 'PENDING_PAYMENT', page: 0, size: 10 }),
             getCustomerCustomOrders({ status: 'IN_PROGRESS', page: 0, size: 10 }),
             getCustomerCustomOrders({ status: 'COMPLETED', page: 0, size: 10 }),
         ]);
 
+        const pendingConfirmationOrders = pendingConfirmationRes.success ? (pendingConfirmationRes.data?.content || []) : [];
         const pendingOrders = pendingRes.success ? (pendingRes.data?.content || []) : [];
         const inProgressOrders = inProgressRes.success ? (inProgressRes.data?.content || []) : [];
-        const allOrders = [...pendingOrders, ...inProgressOrders];
+        const completedOrders = completedRes.success ? (completedRes.data?.content || []) : [];
+        const allOrders = [...pendingConfirmationOrders, ...pendingOrders, ...inProgressOrders, ...completedOrders];
         const matchedOrders = allOrders.filter((order) => String(order?.requestId || '') === String(requestId));
 
         const scoreOrder = (order) => {
@@ -159,6 +166,34 @@ const CustomRequestDetailPage = () => {
             customOrderId: bestOrder?.customOrderId || bestOrder?.orderId || prev?.customOrderId || null,
         }));
         setStagesLoading(false);
+    };
+
+    const fetchOrderByRequest = async (requestId) => {
+        if (!requestId) return null;
+
+        setOrderLookupLoading(true);
+        const res = await getCustomOrderByRequest(requestId);
+        setOrderLookupLoading(false);
+
+        if (!res.success) {
+            return null;
+        }
+
+        const order = res.data || null;
+        const orderId = order?.customOrderId || order?.orderId || null;
+
+        if (order) {
+            setRequest((prev) => ({
+                ...(prev || {}),
+                ...order,
+                customOrderId: orderId,
+            }));
+            if (Array.isArray(order?.stages)) {
+                setStages(order.stages);
+            }
+        }
+
+        return order;
     };
 
     const refreshDetail = async () => {
@@ -185,14 +220,16 @@ const CustomRequestDetailPage = () => {
             setLoading(false);
 
             const nextStatus = String(detailRes.data?.status || '').toUpperCase();
-            if (nextStatus === 'OPEN' || nextStatus === 'PUBLISHED' || nextStatus === 'ARTISAN_SELECTED') {
+            if (nextStatus === 'OPEN' || nextStatus === 'PUBLISHED' || nextStatus === 'ARTISAN_SELECTED' || nextStatus === 'PENDING_CONFIRMATION' || nextStatus === 'PENDING_PAYMENT') {
                 await refreshInterestedArtisans();
             } else {
                 setInterestedArtisans([]);
             }
 
-            const nextOrderId = detailRes.data?.customOrderId ?? detailRes.data?.orderId ?? detailRes.data?.customOrder?.orderId;
-            if (nextStatus === 'ARTISAN_SELECTED' || nextStatus === 'IN_PROGRESS') {
+            const nextOrder = await fetchOrderByRequest(detailRes.data?.requestId || id);
+            const nextOrderId = nextOrder?.customOrderId ?? nextOrder?.orderId ?? detailRes.data?.customOrderId ?? detailRes.data?.orderId ?? detailRes.data?.customOrder?.orderId;
+
+            if (nextStatus === 'ARTISAN_SELECTED' || nextStatus === 'PENDING_CONFIRMATION' || nextStatus === 'PENDING_PAYMENT' || nextStatus === 'IN_PROGRESS') {
                 if (nextOrderId) {
                     setStagesLoading(true);
                     const stagesRes = await getCustomOrderStages(nextOrderId);
@@ -201,7 +238,7 @@ const CustomRequestDetailPage = () => {
 
                     if (stagesRes.success) {
                         setStages(Array.isArray(stagesRes.data) ? stagesRes.data : []);
-                    } else {
+                    } else if (!nextOrder?.stages?.length) {
                         setStages([]);
                         await loadOrderStages(detailRes.data?.requestId || id);
                     }
@@ -304,6 +341,24 @@ const CustomRequestDetailPage = () => {
         await refreshInterestedArtisans();
     };
 
+    const handleConfirmOrder = async () => {
+        const customOrderId = request?.customOrderId || request?.orderId || request?.customOrder?.orderId;
+        if (!customOrderId || confirmingOrder) return;
+
+        setConfirmingOrder(true);
+        const res = await confirmCustomOrder(customOrderId);
+        setConfirmingOrder(false);
+
+        if (!res.success) {
+            appToast.error('Không thể xác nhận đơn', res.error || 'Vui lòng thử lại');
+            return;
+        }
+
+        appToast.success('Xác nhận đơn hàng thành công. Bạn có thể bắt đầu thanh toán giai đoạn đầu tiên.');
+        await refreshDetail();
+        await loadOrderStages(request?.requestId || id);
+    };
+
     const handlePayStage = async (stageId) => {
         if (!stageId || payingStageId) return;
         setPayingStageId(String(stageId));
@@ -386,6 +441,11 @@ const CustomRequestDetailPage = () => {
                             <button type="button" className="btn btn-primary" onClick={handleStartConversation} disabled={startingConversationId === String(id)}>
                                 <FiMessageSquare /> {startingConversationId === String(id) ? 'Đang tạo...' : 'Bắt đầu trò chuyện'}
                             </button>
+                            {requestStatus === 'PENDING_CONFIRMATION' && customOrderId && (
+                                <button type="button" className="btn btn-primary" onClick={handleConfirmOrder} disabled={confirmingOrder || orderLookupLoading}>
+                                    <FiPackage /> {confirmingOrder ? 'Đang xác nhận...' : orderLookupLoading ? 'Đang tải đơn...' : 'Xác nhận đơn hàng'}
+                                </button>
+                            )}
                             {requestStatus === 'DRAFT' && (
                                 <button type="button" className="btn btn-outline" onClick={handlePublish} disabled={publishing}>
                                     <FiRefreshCw /> {publishing ? 'Đang publish...' : 'Publish yêu cầu'}
@@ -444,7 +504,7 @@ const CustomRequestDetailPage = () => {
                             </article>
                         </div>
 
-                        {(requestStatus === 'IN_PROGRESS' || requestStatus === 'ARTISAN_SELECTED') && (
+                        {(requestStatus === 'IN_PROGRESS' || requestStatus === 'ARTISAN_SELECTED' || requestStatus === 'PENDING_CONFIRMATION' || requestStatus === 'PENDING_PAYMENT') && (
                             <article className="detail-card detail-stages-card">
                                 <div className="detail-card-header detail-card-header-row">
                                     <h3>Tiến độ thực hiện</h3>
@@ -453,6 +513,27 @@ const CustomRequestDetailPage = () => {
                                 <div className="detail-progress-bar">
                                     <div className="detail-progress-fill" style={{ width: `${paidPercent}%` }} />
                                 </div>
+
+                                {requestStatus === 'PENDING_CONFIRMATION' && customOrderId && (
+                                    <div className="detail-locked-payment-panel">
+                                        <div className="detail-locked-payment-icon">
+                                            <FiShield />
+                                        </div>
+                                        <div className="detail-locked-payment-body">
+                                            <span className="detail-locked-payment-kicker">Thanh toán đang bị khóa</span>
+                                            <h4>Yêu cầu xác nhận đơn hàng trước khi mở thanh toán</h4>
+                                            <p>
+                                                Đơn hàng này đang ở trạng thái chờ xác nhận. Sau khi bạn xác nhận, hệ thống sẽ mở khóa các giai đoạn thanh toán.
+                                            </p>
+                                            <div className="detail-locked-payment-actions">
+                                                <button type="button" className="btn btn-primary" onClick={handleConfirmOrder} disabled={confirmingOrder || orderLookupLoading}>
+                                                    {confirmingOrder ? 'Đang xác nhận...' : orderLookupLoading ? 'Đang tải đơn...' : 'Xác nhận để mở thanh toán'}
+                                                </button>
+                                                <span className="detail-locked-payment-hint">Sau khi xác nhận, bạn có thể thanh toán giai đoạn đầu tiên.</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
 
                                 <div className="detail-stages-list">
                                     {stagesLoading ? (

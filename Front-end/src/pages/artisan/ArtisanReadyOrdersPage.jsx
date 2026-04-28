@@ -1,12 +1,20 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { FiCalendar, FiEye, FiPackage, FiUser } from 'react-icons/fi';
-import { useNavigate } from 'react-router-dom';
+import { FiCalendar, FiEye, FiPackage, FiUser, FiX } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import { appToast } from '../../lib/appToast';
-import { getOrdersByArtisan } from '../../services/orderService';
+import { getOrderDetail, getOrdersByArtisan } from '../../services/orderService';
 import './ArtisanOrdersPage.css';
 
 const formatCurrency = (value) => `${new Intl.NumberFormat('vi-VN').format(Number(value || 0))} đ`;
+
+const formatDateTime = (value) => {
+    if (!value) return '—';
+    try {
+        return new Date(value).toLocaleString('vi-VN');
+    } catch {
+        return value;
+    }
+};
 
 const formatDate = (value) => {
     if (!value) return '—';
@@ -35,11 +43,15 @@ const getStatusClass = (status) => {
 };
 
 const ArtisanReadyOrdersPage = () => {
-    const navigate = useNavigate();
     const { user } = useAuth();
     const artisanId = user?.accountId || user?.id || user?.userId || '';
+
     const [loading, setLoading] = useState(true);
     const [orders, setOrders] = useState([]);
+    const [detailLoading, setDetailLoading] = useState(false);
+    const [detailError, setDetailError] = useState('');
+    const [selectedOrder, setSelectedOrder] = useState(null);
+    const [detailModalOpen, setDetailModalOpen] = useState(false);
 
     useEffect(() => {
         let ignore = false;
@@ -72,6 +84,35 @@ const ArtisanReadyOrdersPage = () => {
     }, [artisanId]);
 
     const summary = useMemo(() => ({ total: orders.length }), [orders]);
+
+    const closeDetailModal = () => {
+        setDetailModalOpen(false);
+        setSelectedOrder(null);
+        setDetailError('');
+    };
+
+    const handleViewDetail = async (orderId) => {
+        if (!orderId || detailLoading) return;
+
+        setDetailLoading(true);
+        setDetailError('');
+
+        const res = await getOrderDetail(orderId);
+        setDetailLoading(false);
+
+        if (!res.success) {
+            setSelectedOrder(null);
+            setDetailError(res.error || 'Vui lòng thử lại');
+            appToast.error('Không tải được chi tiết đơn hàng', res.error || 'Vui lòng thử lại');
+            return;
+        }
+
+        setSelectedOrder(res.data || null);
+        setDetailModalOpen(true);
+    };
+
+    const selectedOrderDetails = Array.isArray(selectedOrder?.orderDetails) ? selectedOrder.orderDetails : [];
+    const selectedTemplateDetails = Array.isArray(selectedOrder?.templateDetails) ? selectedOrder.templateDetails : [];
 
     return (
         <div className="artisan-orders-page modern-artisan-orders">
@@ -124,7 +165,8 @@ const ArtisanReadyOrdersPage = () => {
                                     <button
                                         type="button"
                                         className="btn btn-outline btn-sm"
-                                        onClick={() => navigate(`/artisan/orders/${id}`)}
+                                        onClick={() => handleViewDetail(id)}
+                                        disabled={detailLoading}
                                     >
                                         <FiEye /> Xem chi tiết
                                     </button>
@@ -132,6 +174,154 @@ const ArtisanReadyOrdersPage = () => {
                             </article>
                         );
                     })}
+                </div>
+            )}
+
+            {detailModalOpen && (
+                <div className="cancel-modal-overlay" onClick={closeDetailModal}>
+                    <div
+                        className="cancel-modal shipment-modal"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="order-detail-modal-title"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="order-detail-modal-header">
+                            <div>
+                                <p className="page-kicker">Chi tiết đơn hàng</p>
+                                <h3 id="order-detail-modal-title">{selectedOrder?.orderId || '—'}</h3>
+                            </div>
+                            <button type="button" className="btn btn-outline btn-sm" onClick={closeDetailModal}>
+                                <FiX /> Đóng
+                            </button>
+                        </div>
+
+                        {detailLoading ? (
+                            <div className="artisan-empty">Đang tải chi tiết đơn hàng...</div>
+                        ) : detailError ? (
+                            <div className="artisan-empty">{detailError}</div>
+                        ) : (
+                            <>
+                                <div className="detail-summary-grid" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
+                                    <article className="summary-card">
+                                        <span className="summary-icon"><FiUser /></span>
+                                        <div>
+                                            <p>Khách hàng</p>
+                                            <strong>{selectedOrder?.fullName || '—'}</strong>
+                                        </div>
+                                    </article>
+                                    <article className="summary-card">
+                                        <span className="summary-icon icon-blue"><FiPackage /></span>
+                                        <div>
+                                            <p>Trạng thái</p>
+                                            <strong>{getStatusText(selectedOrder?.status)}</strong>
+                                        </div>
+                                    </article>
+                                    <article className="summary-card">
+                                        <span className="summary-icon icon-green"><FiCalendar /></span>
+                                        <div>
+                                            <p>Thanh toán</p>
+                                            <strong>{selectedOrder?.paymentMethod || '—'}</strong>
+                                        </div>
+                                    </article>
+                                    <article className="summary-card">
+                                        <span className="summary-icon icon-amber"><FiCalendar /></span>
+                                        <div>
+                                            <p>Ngày đặt</p>
+                                            <strong>{formatDateTime(selectedOrder?.orderDate || selectedOrder?.createAt)}</strong>
+                                        </div>
+                                    </article>
+                                </div>
+
+                                <div className="detail-layout-grid" style={{ marginTop: '1rem' }}>
+                                    <section className="left-col">
+                                        <article className="card-box">
+                                            <h3>Thông tin thanh toán</h3>
+                                            <div className="info-grid">
+                                                <div>
+                                                    <label>Tổng tiền</label>
+                                                    <p>{formatCurrency(selectedOrder?.total)}</p>
+                                                </div>
+                                                <div>
+                                                    <label>Phí giao hàng</label>
+                                                    <p>{selectedOrder?.shippingFee == null ? '—' : formatCurrency(selectedOrder.shippingFee)}</p>
+                                                </div>
+                                                <div>
+                                                    <label>Ngày cập nhật</label>
+                                                    <p>{formatDateTime(selectedOrder?.updateAt)}</p>
+                                                </div>
+                                                <div>
+                                                    <label>Mã đơn</label>
+                                                    <p>{selectedOrder?.orderId || '—'}</p>
+                                                </div>
+                                            </div>
+                                        </article>
+
+                                        <article className="card-box" style={{ marginTop: '1rem' }}>
+                                            <h3>Thông tin sản phẩm</h3>
+                                            <div className="stages-list">
+                                                {selectedOrderDetails.length === 0 ? (
+                                                    <div className="artisan-empty">Đơn hàng chưa có sản phẩm.</div>
+                                                ) : (
+                                                    selectedOrderDetails.map((item) => (
+                                                        <div key={item?.id || item?.productId} className="stage-item completed">
+                                                            <div className="timeline-dot">✓</div>
+                                                            <div className="stage-content">
+                                                                <div className="stage-top-row">
+                                                                    <h4>{item?.productName || 'Sản phẩm'}</h4>
+                                                                    <span className="mini-status completed">{formatCurrency(item?.subTotal)}</span>
+                                                                </div>
+                                                                <div className="order-detail-product-row">
+                                                                    {item?.image ? <img src={item.image} alt={item?.productName || 'product'} className="order-detail-thumb" /> : null}
+                                                                    <div>
+                                                                        <p>Mã sản phẩm: {item?.productId || '—'}</p>
+                                                                        <p>Số lượng: {item?.quantity ?? 0}</p>
+                                                                        <p>Đơn giá: {formatCurrency(item?.unitPrice)}</p>
+                                                                        <p>Giảm giá: {formatCurrency(item?.discount)}</p>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))
+                                                )}
+                                            </div>
+                                        </article>
+                                    </section>
+
+                                    <aside className="right-col">
+                                        <article className="card-box side-card">
+                                            <h3>Thông tin khách hàng</h3>
+                                            <p><FiUser /> <strong>{selectedOrder?.fullName || '—'}</strong></p>
+                                            <p>Mã khách hàng: {selectedOrder?.customerId || '—'}</p>
+                                        </article>
+
+                                        <article className="card-box side-card" style={{ marginTop: '1rem' }}>
+                                            <h3>Template đi kèm</h3>
+                                            {selectedTemplateDetails.length === 0 ? (
+                                                <p className="muted">Không có template nào trong đơn này.</p>
+                                            ) : (
+                                                selectedTemplateDetails.map((item, index) => (
+                                                    <div key={item?.id || index} style={{ marginTop: index === 0 ? 0 : '0.75rem' }}>
+                                                        <strong>{item?.templateName || `Template ${index + 1}`}</strong>
+                                                        <p>Số lượng: {item?.quantity ?? 0}</p>
+                                                        <p>Đơn giá: {formatCurrency(item?.price || item?.unitPrice || 0)}</p>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </article>
+
+                                        <article className="card-box side-card" style={{ marginTop: '1rem' }}>
+                                            <h3>Tóm tắt đơn hàng</h3>
+                                            <p><span>Trạng thái:</span> <strong>{getStatusText(selectedOrder?.status)}</strong></p>
+                                            <p><span>Thanh toán:</span> <strong>{selectedOrder?.paymentMethod || '—'}</strong></p>
+                                            <p><span>Ngày tạo:</span> <strong>{formatDateTime(selectedOrder?.createAt)}</strong></p>
+                                            <p><span>Cập nhật:</span> <strong>{formatDateTime(selectedOrder?.updateAt)}</strong></p>
+                                        </article>
+                                    </aside>
+                                </div>
+                            </>
+                        )}
+                    </div>
                 </div>
             )}
         </div>

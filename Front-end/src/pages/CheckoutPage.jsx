@@ -20,26 +20,6 @@ const normalizeAddressItem = (item, idKeys, nameKeys) => {
     };
 };
 
-const resolveShippingFee = (feeData) => {
-    if (typeof feeData === 'number') return feeData;
-    if (!feeData || typeof feeData !== 'object') return 0;
-
-    const candidates = [
-        feeData.total,
-        feeData.totalFee,
-        feeData.shippingFee,
-        feeData.fee,
-        feeData.service_fee,
-        feeData.serviceFee,
-    ];
-
-    for (const value of candidates) {
-        if (!Number.isNaN(Number(value))) return Number(value || 0);
-    }
-
-    return 0;
-};
-
 const CheckoutPage = () => {
     const navigate = useNavigate();
     const { selectedItems, subtotal } = useCart();
@@ -47,6 +27,10 @@ const CheckoutPage = () => {
     const items = useMemo(() => selectedItems || [], [selectedItems]);
 
     const [submitting, setSubmitting] = useState(false);
+    const [shippingLoading, setShippingLoading] = useState(false);
+    const [shippingFee, setShippingFee] = useState(0);
+    const [shippingBreakdown, setShippingBreakdown] = useState([]);
+    const [checkoutSummary, setCheckoutSummary] = useState(null);
 
     const [provinces, setProvinces] = useState([]);
     const [districts, setDistricts] = useState([]);
@@ -175,6 +159,12 @@ const CheckoutPage = () => {
         return Math.max(500, estimated || 500);
     }, [items]);
 
+    const packageDimensions = useMemo(() => ({
+        length: 20,
+        width: 20,
+        height: 10,
+    }), []);
+
     const validateForm = () => {
         const nextErrors = {};
 
@@ -205,6 +195,46 @@ const CheckoutPage = () => {
         setShipping((prev) => ({ ...prev, [field]: value }));
         setErrors((prev) => ({ ...prev, [field]: '' }));
     };
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const loadShippingFee = async () => {
+            if (!shipping.districtId || !shipping.wardCode || !items.length) {
+                setShippingFee(0);
+                setShippingBreakdown([]);
+                return;
+            }
+
+            setShippingLoading(true);
+            const res = await checkoutService.calculateShippingFee({
+                toDistrictId: shipping.districtId,
+                toWardCode: shipping.wardCode,
+                weight: totalWeight,
+                ...packageDimensions,
+            });
+
+            if (cancelled) return;
+
+            if (!res.success) {
+                setShippingFee(0);
+                setShippingBreakdown([]);
+                setShippingLoading(false);
+                return;
+            }
+
+            const fee = Number(res.data?.totalShippingFee ?? res.data?.shippingFee ?? 0);
+            setShippingFee(Number.isNaN(fee) ? 0 : fee);
+            setShippingBreakdown(Array.isArray(res.data?.breakdown) ? res.data.breakdown : []);
+            setShippingLoading(false);
+        };
+
+        loadShippingFee();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [shipping.districtId, shipping.wardCode, items.length, totalWeight, packageDimensions]);
 
     const handleSelectProvince = (e) => {
         const provinceId = e.target.value;
@@ -268,11 +298,15 @@ const CheckoutPage = () => {
         try {
             const shippingAddress = `${shipping.addressDetail.trim()}, ${shipping.wardName}, ${shipping.districtName}, ${shipping.provinceName}`;
 
-            const checkoutResult = await checkoutService.createCheckout({
+            const checkoutResult = await checkoutService.checkoutWithShipping({
                 shippingAddress,
                 phoneNumber: shipping.phone.trim(),
-                notes: shipping.note?.trim() || '',
+                recipientName: shipping.fullName.trim(),
+                toDistrictId: shipping.districtId,
+                toWardCode: shipping.wardCode,
                 paymentMethod: 'VNPAY',
+                weight: totalWeight,
+                ...packageDimensions,
             });
 
             if (!checkoutResult.success) {
@@ -285,6 +319,8 @@ const CheckoutPage = () => {
                 appToast.error('Không nhận được mã nhóm đơn hàng để thanh toán');
                 return;
             }
+
+            setCheckoutSummary(checkoutResult.data || null);
 
             const paymentResult = await paymentService.initiateOrderGroupPayment({
                 orderGroupId,
@@ -439,14 +475,40 @@ const CheckoutPage = () => {
                                     <strong>{formatVnd(subtotal)}</strong>
                                 </div>
                                 <div>
+                                    <span>Phí vận chuyển</span>
+                                    <strong>{shippingLoading ? 'Đang tính...' : formatVnd(shippingFee)}</strong>
+                                </div>
+                                <div>
                                     <span>Giảm giá</span>
                                     <strong>—</strong>
                                 </div>
                                 <div className="grand">
                                     <span>Tổng cộng</span>
-                                    <strong>{formatVnd(subtotal)}</strong>
+                                    <strong>{formatVnd(Number(subtotal || 0) + Number(shippingFee || 0))}</strong>
                                 </div>
                             </div>
+
+                            {shippingBreakdown.length > 0 && (
+                                <div className="shipping-breakdown">
+                                    <h4>Chi tiết phí theo nghệ nhân</h4>
+                                    {shippingBreakdown.map((artisan) => (
+                                        <div key={artisan.artisanId || artisan.artisanName} className="shipping-breakdown-item">
+                                            <div>
+                                                <strong>{artisan.artisanName || 'Nghệ nhân'}</strong>
+                                                <p>{Number(artisan.itemCount || 0)} sản phẩm · {Number(artisan.weight || 0)}g</p>
+                                            </div>
+                                            <strong>{formatVnd(artisan.shippingFee)}</strong>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {checkoutSummary?.orderCount ? (
+                                <div className="shipping-breakdown">
+                                    <h4>Đơn hàng sẽ được tạo</h4>
+                                    <p>{checkoutSummary.orderCount} đơn hàng · Tổng tiền {formatVnd(checkoutSummary.totalAmount)}</p>
+                                </div>
+                            ) : null}
 
                             <button
                                 type="button"

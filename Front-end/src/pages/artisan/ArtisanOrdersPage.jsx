@@ -71,7 +71,10 @@ const ArtisanOrdersPage = () => {
     };
 
     useEffect(() => {
-        fetchOrders();
+        const timer = setTimeout(() => {
+            fetchOrders();
+        }, 0);
+        return () => clearTimeout(timer);
     }, []);
 
     useEffect(() => {
@@ -249,7 +252,7 @@ const ArtisanOrdersPage = () => {
                                             type="button"
                                             className="btn btn-primary btn-sm"
                                             disabled={!id}
-                                            onClick={() => navigate(`/artisan/orders/${id}`)}
+                                            onClick={() => navigate(`/artisan/custom-orders/${id}`)}
                                         >
                                             Quản lý chi tiết
                                         </button>

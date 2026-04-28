@@ -513,42 +513,59 @@ const OrderTrackingPage = () => {
             {complaintOpen && (
                 <div className="modal-overlay" onClick={closeComplaintModal}>
                     <div className="complaint-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="complaint-title">
-                        <div className="modal-header">
-                            <div>
-                                <p className="modal-kicker">Hỗ trợ khách hàng</p>
+                        <div className="complaint-modal-hero">
+                            <div className="complaint-modal-badge">Hỗ trợ khách hàng</div>
+                            <div className="complaint-modal-title-wrap">
                                 <h3 id="complaint-title">Gửi khiếu nại đơn hàng</h3>
+                                <p>
+                                    Mô tả vấn đề thật rõ ràng để đội ngũ CSKH xử lý nhanh hơn và phản hồi đúng trọng tâm.
+                                </p>
                             </div>
-                            <button type="button" className="modal-close" onClick={closeComplaintModal} disabled={complaintSubmitting}>
+                            <button type="button" className="modal-close" onClick={closeComplaintModal} disabled={complaintSubmitting} aria-label="Đóng">
                                 ×
                             </button>
                         </div>
 
-                        <div className="modal-body">
-                            <label>
+                        <div className="complaint-modal-body">
+                            <div className="complaint-callout">
+                                <div className="complaint-callout-dot" />
+                                <div>
+                                    <strong>Gợi ý:</strong> nêu rõ sản phẩm bị ảnh hưởng, thời điểm phát sinh và mong muốn xử lý của bạn.
+                                </div>
+                            </div>
+
+                            <label className="complaint-field complaint-field-textarea">
                                 <span>Nội dung khiếu nại</span>
                                 <textarea
-                                    rows="5"
+                                    rows="6"
                                     value={complaintForm.reason}
                                     onChange={(e) => setComplaintForm((prev) => ({ ...prev, reason: e.target.value }))}
-                                    placeholder="Mô tả chi tiết vấn đề bạn gặp phải"
+                                    placeholder="Ví dụ: Sản phẩm nhận được bị sai màu, bể góc hoặc thiếu phụ kiện..."
                                 />
                             </label>
 
-                            <ImageUpload
-                                label="Ảnh minh chứng"
-                                helperText="Tải ảnh lên Supabase hoặc dán link ảnh có sẵn."
-                                folder="complaints"
-                                value={complaintForm.evidenceImages[0] || ''}
-                                onChange={(nextValue) =>
-                                    setComplaintForm((prev) => ({
-                                        ...prev,
-                                        evidenceImages: nextValue ? [nextValue] : [],
-                                    }))
-                                }
-                            />
+                            <div className="complaint-upload-section">
+                                <div className="complaint-section-head">
+                                    <span>Ảnh minh chứng</span>
+                                    <p>Tải ảnh lên Supabase hoặc dán link ảnh có sẵn.</p>
+                                </div>
+
+                                <ImageUpload
+                                    label=""
+                                    helperText=""
+                                    folder="complaints"
+                                    value={complaintForm.evidenceImages[0] || ''}
+                                    onChange={(nextValue) =>
+                                        setComplaintForm((prev) => ({
+                                            ...prev,
+                                            evidenceImages: nextValue ? [nextValue] : [],
+                                        }))
+                                    }
+                                />
+                            </div>
                         </div>
 
-                        <div className="modal-actions">
+                        <div className="complaint-modal-footer">
                             <button type="button" className="btn btn-outline" onClick={closeComplaintModal} disabled={complaintSubmitting}>
                                 Huỷ
                             </button>

@@ -298,18 +298,42 @@
     margin-top: 0.55rem;
 }
 
-.stage-complete-form {
-    margin-top: 0.65rem;
-    display: grid;
-    gap: 0.6rem;
+.stage-detail-meta {
+    margin-top: 0.55rem;
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    color: var(--color-text-light);
+    font-size: 0.82rem;
 }
 
-.stage-complete-form textarea {
-    border: 1px solid var(--color-border);
-    border-radius: 10px;
-    padding: 0.65rem 0.72rem;
-    resize: vertical;
-    min-height: 84px;
+.stage-detail-meta span {
+    background: rgba(15, 23, 42, 0.04);
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    padding: 0.28rem 0.5rem;
+    border-radius: 999px;
+}
+
+.stage-proof-block {
+    margin-top: 0.7rem;
+    display: grid;
+    gap: 0.45rem;
+}
+
+.stage-proof-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-weight: 700;
+    color: var(--color-text);
+}
+
+.stage-complete-form .form-input {
+    border: 1px solid rgba(15, 23, 42, 0.18);
+    border-radius: 12px;
+    padding: 0.72rem 0.85rem;
+    outline: none;
+    background: #fff;
 }
 
 .side-card p {

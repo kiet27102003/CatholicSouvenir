@@ -5,6 +5,7 @@ import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
 import ArtisanDashboard from './pages/artisan/ArtisanDashboard'
 import ArtisanOrderDetailPage from './pages/artisan/ArtisanOrderDetailPage'
+import ArtisanCustomOrderDetailPage from './pages/artisan/ArtisanCustomOrderDetailPage'
 
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
@@ -22,6 +23,7 @@ import ShopPage from './pages/ShopPage'
 import CustomRequestsManagePage from './pages/customer/CustomRequestsManagePage'
 import CustomRequestPage from './pages/customer/CustomRequestPage'
 import CustomRequestDetailPage from './pages/customer/CustomRequestDetailPage'
+import PendingCustomOrdersPage from './pages/customer/PendingCustomOrdersPage'
 import ChatPage from './pages/customer/ChatPage'
 import TemplateOrderPage from './pages/TemplateOrderPage'
 import TemplateCatalogPage from './pages/TemplateCatalogPage'
@@ -32,7 +34,6 @@ import PaymentSuccessPage from './pages/PaymentResultPage'
 import PaymentFailedPage from './pages/PaymentFailedPage'
 import OrderTrackingPage from './pages/customer/OrderTrackingPage'
 import MyFeedbacksPage from './pages/customer/MyFeedbacksPage'
-import WalletPage from './pages/customer/WalletPage'
 import ComplaintCenterPage from './pages/customer/ComplaintCenterPage'
 import ComplaintHistoryPage from './pages/customer/ComplaintHistoryPage'
 import RefundSupportPage from './pages/customer/RefundSupportPage'
@@ -40,8 +41,8 @@ import CartDrawer from './components/CartDrawer/CartDrawer'
 import ChatBox from './components/ChatBox'
 
 import AdminLayout from './pages/admin/AdminLayout'
-import AdminWallets from './pages/admin/AdminWallets'
 import AdminWithdrawals from './pages/admin/AdminWithdrawals'
+import AdminRefundTransactionsPage from './pages/admin/AdminRefundTransactionsPage'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import SystemConfig from './pages/admin/SystemConfig'
 import UserManager from './pages/admin/UserManager'
@@ -69,18 +70,13 @@ function ArtisanOnlyRoute({ children }) {
   return children
 }
 
-function WalletAccessRoute({ children }) {
+function AuthenticatedRoute({ children }) {
   const { user, loading } = useAuth()
 
   if (loading) return null
 
-  const role = String(user?.role || '').toUpperCase()
   if (!user) {
     return <Navigate to="/login" replace />
-  }
-
-  if (role !== 'CUSTOMER' && role !== 'ARTISAN') {
-    return <Navigate to="/" replace />
   }
 
   return children
@@ -106,7 +102,9 @@ function App() {
         <Route path="/artisan-centre" element={<ArtisanCentrePage />} />
         <Route path="/checkout" element={<CheckoutPage />} />
         <Route path="/payment/result" element={<PaymentSuccessPage />} />
+        <Route path="/payment/success" element={<PaymentSuccessPage />} />
         <Route path="/payment/error" element={<PaymentFailedPage />} />
+        <Route path="/payment/failed" element={<PaymentFailedPage />} />
         <Route path="/cart" element={<CartPage />} />
 
         <Route path="/artisan" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
@@ -119,9 +117,12 @@ function App() {
         <Route path="/artisan/requests/:id/custom-order" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
         <Route path="/artisan/orders" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
         <Route path="/artisan/ready-orders" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
+        <Route path="/artisan/readyOrders" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
         <Route path="/artisan/complaints" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
         <Route path="/artisan/shipments" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
-        <Route path="/artisan/orders/:id" element={<ArtisanOnlyRoute><ArtisanOrderDetailPage /></ArtisanOnlyRoute>} />
+        <Route path="/artisan/orders/:id" element={<ArtisanOnlyRoute><ArtisanCustomOrderDetailPage /></ArtisanOnlyRoute>} />
+        <Route path="/artisan/custom-orders/:id" element={<ArtisanOnlyRoute><ArtisanCustomOrderDetailPage /></ArtisanOnlyRoute>} />
+        <Route path="/order/:orderId" element={<ArtisanOnlyRoute><ArtisanOrderDetailPage /></ArtisanOnlyRoute>} />
 
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<Navigate to="/admin/dashboard" replace />} />
@@ -136,21 +137,21 @@ function App() {
           <Route path="orders" element={<ShipmentDemoStatusPage />} />
           <Route path="payments" element={<AdminComingSoon title="Thanh toán" />} />
           <Route path="complaints" element={<AdminComplaintManagementPage />} />
-          <Route path="wallets" element={<AdminWallets />} />
+          <Route path="refund-transactions" element={<AdminRefundTransactionsPage />} />
           <Route path="withdrawals" element={<AdminWithdrawals />} />
           <Route path="categories" element={<CategoryManager />} />
           <Route path="artisan-applications" element={<ArtisanApplications />} />
         </Route>
 
-        <Route path="/wallet" element={<WalletAccessRoute><WalletPage /></WalletAccessRoute>} />
         <Route path="/complaints" element={<ComplaintCenterPage />} />
         <Route path="/complaint-history" element={<ComplaintHistoryPage />} />
         <Route path="/refund-support" element={<RefundSupportPage />} />
-        <Route path="/messages" element={<WalletAccessRoute><ChatPage /></WalletAccessRoute>} />
+        <Route path="/messages" element={<AuthenticatedRoute><ChatPage /></AuthenticatedRoute>} />
         <Route path="/custom-order" element={<CustomRequestPage />} />
         <Route path="/templates" element={<TemplateCatalogPage />} />
         <Route path="/template-order" element={<TemplateOrderPage />} />
         <Route path="/custom-requests" element={<CustomRequestsManagePage />} />
+        <Route path="/custom-requests/pending-confirmation" element={<PendingCustomOrdersPage />} />
         <Route path="/custom-requests/:id" element={<CustomRequestDetailPage />} />
 
         <Route element={<CustomerLayout />}>

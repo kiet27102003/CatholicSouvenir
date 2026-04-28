@@ -245,36 +245,47 @@ export const uploadReferenceImage = async (file) => {
         return { success: false, error: 'File không hợp lệ.' };
     }
 
-    const endpoint = import.meta.env.VITE_REFERENCE_UPLOAD_ENDPOINT || '/files/upload';
+    const supabaseUrl = String(import.meta.env.VITE_SUPABASE_URL || '').replace(/\/$/, '');
+    const supabaseKey = String(import.meta.env.VITE_SUPABASE_ANON_KEY || '').trim();
+    const bucket = String(import.meta.env.VITE_SUPABASE_BUCKET || '').trim();
+
+    if (!supabaseUrl || !supabaseKey || !bucket) {
+        return {
+            success: false,
+            error: 'Thiếu cấu hình Supabase. Vui lòng kiểm tra VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY và VITE_SUPABASE_BUCKET.',
+        };
+    }
 
     try {
-        const formData = new FormData();
-        formData.append('file', file);
+        const ext = (file.name?.split('.').pop() || 'jpg').toLowerCase();
+        const safeName = String(file.name || 'proof').replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9-_]/g, '_').slice(0, 48) || 'proof';
+        const path = `stage-proofs/${Date.now()}-${safeName}.${ext}`;
 
-        const response = await api.post(endpoint, formData);
-        const normalized = normalizeResponse(response);
+        const uploadResponse = await fetch(`${supabaseUrl}/storage/v1/object/${bucket}/${path}`, {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${supabaseKey}`,
+                apikey: supabaseKey,
+                'Content-Type': file.type || 'application/octet-stream',
+                'x-upsert': 'true',
+            },
+            body: file,
+        });
 
-        if (!isSuccessCode(normalized.code)) {
-            return { success: false, error: normalized.message || 'Upload ảnh thất bại.' };
-        }
-
-        const data = normalized.data;
-        const url = typeof data === 'string'
-            ? data
-            : data?.url || data?.imageUrl || data?.secure_url || '';
-
-        if (!url) {
+        if (!uploadResponse.ok) {
+            const text = await uploadResponse.text();
             return {
                 success: false,
-                error: 'Upload thành công nhưng không nhận được URL. Hãy cấu hình VITE_REFERENCE_UPLOAD_ENDPOINT đúng API upload của backend.',
+                error: text || 'Upload ảnh lên Supabase thất bại.',
             };
         }
 
-        return { success: true, data: url };
+        const publicUrl = `${supabaseUrl}/storage/v1/object/public/${bucket}/${path}`;
+        return { success: true, data: publicUrl };
     } catch (error) {
         return {
             success: false,
-            error: mapError(error, 'Upload ảnh thất bại. Hãy cấu hình VITE_REFERENCE_UPLOAD_ENDPOINT đúng API upload của backend.'),
+            error: mapError(error, 'Upload ảnh lên Supabase thất bại.'),
         };
     }
 };
@@ -425,6 +436,23 @@ export const getCustomOrderDetail = async (orderId) => {
     }
 };
 
+export const getCustomOrderByRequest = async (requestId) => {
+    if (!requestId) return { success: false, error: 'Thiếu mã yêu cầu.' };
+
+    try {
+        const response = await api.get(`/custom-orders/by-request/${requestId}`);
+        const normalized = normalizeResponse(response);
+
+        if (!isSuccessCode(normalized.code)) {
+            return { success: false, error: normalized.message || 'Không tải được đơn hàng theo yêu cầu.' };
+        }
+
+        return { success: true, data: normalized.data || null };
+    } catch (error) {
+        return { success: false, error: mapError(error, 'Không tải được đơn hàng theo yêu cầu.') };
+    }
+};
+
 export const updateCustomOrderStatus = async (orderId, status) => {
     if (!orderId || !status) return { success: false, error: 'Thiếu thông tin cập nhật trạng thái.' };
 
@@ -441,6 +469,23 @@ export const updateCustomOrderStatus = async (orderId, status) => {
         return { success: true, data: normalized.data || {} };
     } catch (error) {
         return { success: false, error: mapError(error, 'Cập nhật trạng thái thất bại.') };
+    }
+};
+
+export const confirmCustomOrder = async (orderId) => {
+    if (!orderId) return { success: false, error: 'Thiếu mã đơn.' };
+
+    try {
+        const response = await api.post(`/custom-orders/${orderId}/confirm`);
+        const normalized = normalizeResponse(response);
+
+        if (!isSuccessCode(normalized.code)) {
+            return { success: false, error: normalized.message || 'Xác nhận đơn thất bại.' };
+        }
+
+        return { success: true, data: normalized.data || {} };
+    } catch (error) {
+        return { success: false, error: mapError(error, 'Xác nhận đơn thất bại.') };
     }
 };
 
@@ -461,32 +506,31 @@ export const cancelCustomOrder = async (orderId, reason = '') => {
     }
 };
 
-export const completeStage = async (stageId, payload = {}) => {
+export const uploadStageProof = async (stageId, payload = {}) => {
     if (!stageId) return { success: false, error: 'Thiếu mã stage.' };
 
     const completionImageUrl = String(payload?.completionImageUrl || payload?.imageUrl || '').trim();
     if (!completionImageUrl) return { success: false, error: 'Thiếu ảnh bằng chứng hoàn thành.' };
 
     try {
-        const response = await api.put(`/stages/${stageId}/complete`, {
+        const response = await api.post(`/stages/${stageId}/upload-proof`, {
+            imageUrl: completionImageUrl,
             completionImageUrl,
             notes: String(payload?.notes || '').trim(),
         });
         const normalized = normalizeResponse(response);
 
         if (!isSuccessCode(normalized.code)) {
-            return { success: false, error: normalized.message || 'Cập nhật hoàn thành stage thất bại.' };
+            return { success: false, error: normalized.message || 'Upload proof stage thất bại.' };
         }
 
         return { success: true, data: normalized.data || {} };
     } catch (error) {
-        return { success: false, error: mapError(error, 'Cập nhật hoàn thành stage thất bại.') };
+        return { success: false, error: mapError(error, 'Upload proof stage thất bại.') };
     }
 };
 
-export const uploadStageProof = async (stageId, payload = {}) => {
-    return completeStage(stageId, payload);
-};
+export const completeStage = uploadStageProof;
 
 export default {
     getCustomerCustomRequests,
@@ -504,6 +548,8 @@ export default {
     createCustomOrder,
     getArtisanCustomOrders,
     getCustomOrderDetail,
+    getCustomOrderByRequest,
+    confirmCustomOrder,
     updateCustomOrderStatus,
     cancelCustomOrder,
     uploadStageProof,

@@ -149,9 +149,18 @@ export const searchWards = async (districtId, wardName) => {
     }
 };
 
+const normalizeShippingBody = (body = {}) => ({
+    toDistrictId: Number(body.toDistrictId || 0),
+    toWardCode: String(body.toWardCode || '').trim(),
+    weight: Number(body.weight || 0),
+    length: Number(body.length || 0),
+    width: Number(body.width || 0),
+    height: Number(body.height || 0),
+});
+
 export const calculateShippingFee = async (body) => {
     try {
-        const response = await api.post('/shipments/calculate-fee', body);
+        const response = await api.post('/checkout/calculate-shipping', normalizeShippingBody(body));
         const payload = unwrap(response);
         if (!payload.ok) {
             return { success: false, error: payload.message || 'Không tính được phí vận chuyển.' };
@@ -159,6 +168,30 @@ export const calculateShippingFee = async (body) => {
         return { success: true, data: payload.data ?? {} };
     } catch (error) {
         return { success: false, error: mapError(error, 'Không tính được phí vận chuyển.') };
+    }
+};
+
+export const checkoutWithShipping = async (body) => {
+    try {
+        const response = await api.post('/checkout', {
+            paymentMethod: body?.paymentMethod || 'VNPAY',
+            toDistrictId: Number(body?.toDistrictId || 0),
+            toWardCode: String(body?.toWardCode || '').trim(),
+            recipientName: String(body?.recipientName || '').trim() || undefined,
+            phoneNumber: String(body?.phoneNumber || '').trim() || undefined,
+            shippingAddress: String(body?.shippingAddress || '').trim() || undefined,
+            weight: Number(body?.weight || 0),
+            length: Number(body?.length || 0),
+            width: Number(body?.width || 0),
+            height: Number(body?.height || 0),
+        });
+        const payload = unwrap(response);
+        if (!payload.ok) {
+            return { success: false, error: payload.message || 'Không thể tạo đơn hàng.' };
+        }
+        return { success: true, data: payload.data ?? {} };
+    } catch (error) {
+        return { success: false, error: mapError(error, 'Không thể tạo đơn hàng.') };
     }
 };
 
@@ -171,4 +204,5 @@ export default {
     getWards,
     searchWards,
     calculateShippingFee,
+    checkoutWithShipping,
 };

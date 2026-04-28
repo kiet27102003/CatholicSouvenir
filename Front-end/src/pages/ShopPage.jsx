@@ -284,6 +284,7 @@ const ShopPage = () => {
                                                 artisan={product.artisanName || '—'}
                                                 artisanLabel="Nghệ nhân"
                                                 price={product.productPrice}
+                                                quantity={product.quantity}
                                                 currency="VND"
                                                 variant="shop"
                                             />

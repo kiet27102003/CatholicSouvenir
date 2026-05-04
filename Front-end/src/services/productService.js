@@ -192,28 +192,49 @@ export const updateProductStatus = async (productId, payload) => {
  */
 export const updateProduct = async (productId, payload) => {
     try {
-        const body = {
-            productName: (payload.productName ?? '').trim(),
-            productDescription:
-                payload.productDescription != null && String(payload.productDescription).trim() !== ''
-                    ? String(payload.productDescription).trim()
-                    : '',
-            productPrice: Number(payload.productPrice),
-            quantity: Math.max(0, Math.floor(Number(payload.quantity))),
-            size:
-                payload.size != null && String(payload.size).trim() !== ''
-                    ? String(payload.size).trim()
-                    : '',
-            categoryId:
-                payload.categoryId != null && String(payload.categoryId).trim() !== ''
-                    ? String(payload.categoryId).trim()
-                    : '',
-            tags: Array.isArray(payload.tags)
-                ? payload.tags.map((tag) => (tag != null ? String(tag).trim() : '')).filter(Boolean)
-                : [],
-        };
+        const formData = new FormData();
+        formData.append('productName', (payload.productName ?? '').trim());
 
-        const response = await api.put(`/product/${productId}`, body);
+        if (payload.productDescription != null) {
+            const description = String(payload.productDescription).trim();
+            if (description !== '') formData.append('productDescription', description);
+        }
+
+        formData.append('productPrice', Number(payload.productPrice));
+        formData.append('quantity', Math.max(0, Math.floor(Number(payload.quantity))));
+
+        if (payload.size != null) {
+            const size = String(payload.size).trim();
+            if (size !== '') formData.append('size', size);
+        }
+
+        if (payload.categoryId != null) {
+            const categoryId = String(payload.categoryId).trim();
+            if (categoryId !== '') formData.append('categoryId', categoryId);
+        }
+
+        if (Array.isArray(payload.tags)) {
+            payload.tags
+                .map((tag) => (tag != null ? String(tag).trim() : ''))
+                .filter(Boolean)
+                .forEach((tag) => formData.append('tags', tag));
+        }
+
+        if (Array.isArray(payload.deleteImageIds)) {
+            payload.deleteImageIds
+                .map((id) => (id != null ? String(id).trim() : ''))
+                .filter(Boolean)
+                .forEach((id) => formData.append('deleteImageIds', id));
+        }
+
+        if (Array.isArray(payload.newImages)) {
+            payload.newImages
+                .map((image) => (image != null ? String(image).trim() : ''))
+                .filter(Boolean)
+                .forEach((image) => formData.append('newImages', image));
+        }
+
+        const response = await api.put(`/product/${productId}`, formData);
         const res = response.data;
 
         if (res?.code !== 200) {
@@ -231,50 +252,6 @@ export const updateProduct = async (productId, payload) => {
             error.response?.data?.message ??
             error.message ??
             'Cập nhật sản phẩm thất bại.';
-        return {
-            success: false,
-            error: typeof message === 'string' ? message : 'Lỗi không xác định.',
-        };
-    }
-};
-
-/**
- * Cập nhật hình ảnh sản phẩm (PUT /api/product-image/{productId}).
- * @param {string} productId - ID sản phẩm
- * @param {Object} payload
- * @param {string[]} [payload.deleteImageIds] - Danh sách ID ảnh cần xóa
- * @param {string[]} [payload.newImages] - Danh sách ảnh mới (URL hoặc base64 data URL)
- * @returns {Promise<{ success: boolean, data?: object, error?: string }>}
- */
-export const updateProductImages = async (productId, payload) => {
-    try {
-        const body = {
-            deleteImageIds: Array.isArray(payload.deleteImageIds)
-                ? payload.deleteImageIds.filter((id) => id != null && String(id).trim() !== '')
-                : [],
-            newImages: Array.isArray(payload.newImages)
-                ? payload.newImages.filter((s) => s != null && String(s).trim() !== '')
-                : [],
-        };
-
-        const response = await api.put(`/product-image/${productId}`, body);
-        const res = response.data;
-
-        if (res?.code !== 200) {
-            return {
-                success: false,
-                error: res?.message || 'Cập nhật ảnh sản phẩm thất bại.',
-            };
-        }
-        return {
-            success: true,
-            data: res?.data ?? {},
-        };
-    } catch (error) {
-        const message =
-            error.response?.data?.message ??
-            error.message ??
-            'Cập nhật ảnh sản phẩm thất bại.';
         return {
             success: false,
             error: typeof message === 'string' ? message : 'Lỗi không xác định.',
@@ -385,7 +362,6 @@ export default {
     getProductById,
     getProductsByArtisan,
     updateProduct,
-    updateProductImages,
     updateProductStatus,
     deleteProduct,
 };

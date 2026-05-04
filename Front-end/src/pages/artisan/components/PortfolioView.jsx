@@ -262,26 +262,18 @@ const PortfolioView = ({ user }) => {
                 return Promise.resolve(item.preview && item.preview.startsWith('http') ? item.preview : '');
             })
         )).filter(Boolean);
-        const hasImageChanges = deleteImageIds.length > 0 || newImageStrings.length > 0;
 
         setSubmitting(true);
         try {
-            const resultProduct = await productService.updateProduct(productId, productPayload);
+            const resultProduct = await productService.updateProduct(productId, {
+                ...productPayload,
+                deleteImageIds,
+                newImages: newImageStrings,
+            });
             if (!resultProduct.success) {
                 const msg = resultProduct.error != null ? String(resultProduct.error) : 'Vui lòng thử lại';
                 appToast.error('Có lỗi xảy ra', msg);
                 return;
-            }
-            if (hasImageChanges) {
-                const resultImages = await productService.updateProductImages(productId, {
-                    deleteImageIds,
-                    newImages: newImageStrings,
-                });
-                if (!resultImages.success) {
-                    const msg = resultImages.error != null ? String(resultImages.error) : 'Vui lòng thử lại';
-                    appToast.error('Có lỗi xảy ra', msg);
-                    return;
-                }
             }
             appToast.success('Đã cập nhật', 'Thông tin đã được lưu');
             closeEditForm();

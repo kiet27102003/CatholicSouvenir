@@ -1,19 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { FiCamera, FiUser, FiShield, FiBell, FiMail, FiMessageCircle, FiShoppingBag } from 'react-icons/fi';
 import { useLocation, useNavigate } from 'react-router-dom';
+import appToast from '../../lib/appToast';
 import api from '../../cofig/api';
+import { getShipmentDistricts, getShipmentProvinces, getShipmentWardOptions } from '../../services/shipmentService';
 import { getSupabaseConfig, isSupabaseConfigured, SUPABASE_STORAGE_BUCKET } from '../../lib/supabase';
 import './ProfilePage.css';
-
-const formatDate = (value) => {
-    if (!value) return 'Chưa cập nhật';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return value;
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
-};
 
 const formatValue = (value) => value || 'Chưa cập nhật';
 
@@ -67,6 +59,11 @@ const ProfilePage = () => {
     const [notifEmail, setNotifEmail] = useState(true);
     const [notifSMS, setNotifSMS] = useState(false);
     const [notifPromo, setNotifPromo] = useState(true);
+    const [provinceOptions, setProvinceOptions] = useState([]);
+    const [districtOptions, setDistrictOptions] = useState([]);
+    const [wardOptions, setWardOptions] = useState([]);
+    const [locationLoading, setLocationLoading] = useState({ provinces: false, districts: false, wards: false });
+    const [fieldErrors, setFieldErrors] = useState({});
     const avatarInputRef = useRef(null);
 
     useEffect(() => {
@@ -111,9 +108,136 @@ const ProfilePage = () => {
         };
     }, []);
 
+    useEffect(() => {
+        let mounted = true;
+
+        const loadProvinces = async () => {
+            setLocationLoading((prev) => ({ ...prev, provinces: true }));
+            const result = await getShipmentProvinces();
+            if (!mounted) return;
+            if (result.success) {
+                setProvinceOptions(Array.isArray(result.data) ? result.data : []);
+            }
+            setLocationLoading((prev) => ({ ...prev, provinces: false }));
+        };
+
+        loadProvinces();
+
+        return () => {
+            mounted = false;
+        };
+    }, []);
+
+    useEffect(() => {
+        let mounted = true;
+
+        if (!formData.city) {
+            setDistrictOptions([]);
+            setWardOptions([]);
+            return () => {
+                mounted = false;
+            };
+        }
+
+        const loadDistricts = async () => {
+            setLocationLoading((prev) => ({ ...prev, districts: true }));
+            const selectedProvince = provinceOptions.find((item) => String(item?.name || item?.provinceName || item?.province || '') === String(formData.city || ''));
+            const provinceId = selectedProvince?.provinceId ?? selectedProvince?.id ?? selectedProvince?.provinceCode;
+            const result = provinceId ? await getShipmentDistricts(provinceId) : { success: false, data: [] };
+            if (!mounted) return;
+            setDistrictOptions(result.success ? (Array.isArray(result.data) ? result.data : []) : []);
+            setLocationLoading((prev) => ({ ...prev, districts: false }));
+        };
+
+        loadDistricts();
+
+        return () => {
+            mounted = false;
+        };
+    }, [formData.city, provinceOptions]);
+
+    useEffect(() => {
+        let mounted = true;
+
+        if (!formData.district) {
+            setWardOptions([]);
+            return () => {
+                mounted = false;
+            };
+        }
+
+        const loadWards = async () => {
+            setLocationLoading((prev) => ({ ...prev, wards: true }));
+            const selectedDistrict = districtOptions.find((item) => String(item?.name || item?.districtName || item?.district || '') === String(formData.district || ''));
+            const districtId = selectedDistrict?.districtId ?? selectedDistrict?.id ?? selectedDistrict?.districtCode;
+            const result = districtId ? await getShipmentWardOptions(districtId) : { success: false, data: [] };
+            if (!mounted) return;
+            setWardOptions(result.success ? (Array.isArray(result.data) ? result.data : []) : []);
+            setLocationLoading((prev) => ({ ...prev, wards: false }));
+        };
+
+        loadWards();
+
+        return () => {
+            mounted = false;
+        };
+    }, [formData.district, districtOptions]);
+
+    const validateDateOfBirth = (value) => {
+        if (!value) return 'Vui lòng chọn ngày sinh.';
+
+        const selectedDate = new Date(`${value}T00:00:00`);
+        if (Number.isNaN(selectedDate.getTime())) return 'Ngày sinh không hợp lệ.';
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (selectedDate > today) return 'Ngày sinh không được lớn hơn ngày hiện tại.';
+
+        const minAllowedDate = new Date(today);
+        minAllowedDate.setFullYear(today.getFullYear() - 120);
+        if (selectedDate < minAllowedDate) return 'Ngày sinh không hợp lệ.';
+
+        return '';
+    };
+
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData((prev) => ({ ...prev, [name]: value }));
+
+        if (name === 'dateOfBirth') {
+            setFieldErrors((prev) => ({ ...prev, dateOfBirth: validateDateOfBirth(value) }));
+        }
+    };
+
+    const handleProvinceChange = (e) => {
+        const { value } = e.target;
+        setFormData((prev) => ({
+            ...prev,
+            city: value,
+            district: '',
+            ward: '',
+        }));
+        setDistrictOptions([]);
+        setWardOptions([]);
+    };
+
+    const handleDistrictChange = (e) => {
+        const { value } = e.target;
+        setFormData((prev) => ({
+            ...prev,
+            district: value,
+            ward: '',
+        }));
+        setWardOptions([]);
+    };
+
+    const handleWardChange = (e) => {
+        const { value } = e.target;
+        setFormData((prev) => ({
+            ...prev,
+            ward: value,
+        }));
     };
 
     const handleAvatarSelect = () => {
@@ -170,6 +294,14 @@ const ProfilePage = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        const dobError = validateDateOfBirth(formData.dateOfBirth);
+        if (dobError) {
+            setFieldErrors((prev) => ({ ...prev, dateOfBirth: dobError }));
+            appToast.warning('Ngày sinh chưa hợp lệ', dobError);
+            return;
+        }
+
         setSaving(true);
         setError('');
 
@@ -222,9 +354,12 @@ const ProfilePage = () => {
                 setInitialFormData((prev) => ({ ...prev, ...payload }));
             }
             setEditMode(false);
-            window.alert('Cập nhật thành công');
+            setFieldErrors({});
+            appToast.success('Cập nhật thành công');
         } catch (err) {
-            setError(err?.response?.data?.message || 'Không thể cập nhật hồ sơ.');
+            const message = err?.response?.data?.message || 'Không thể cập nhật hồ sơ.';
+            setError(message);
+            appToast.error('Cập nhật hồ sơ thất bại', message);
         } finally {
             setSaving(false);
         }
@@ -301,15 +436,81 @@ const ProfilePage = () => {
                                         <input type="text" value={genderLabel(formData.gender)} readOnly className="readonly" />
                                     )}
                                 </div>
-                                <div className="profile-field"><label>NGÀY SINH</label><input type="date" name="dateOfBirth" value={formData.dateOfBirth || ''} onChange={handleChange} readOnly={!editMode} className={!editMode ? 'readonly' : ''} /></div>
+                                <div className="profile-field">
+                                    <label>NGÀY SINH</label>
+                                    <input
+                                        type="date"
+                                        name="dateOfBirth"
+                                        value={formData.dateOfBirth || ''}
+                                        onChange={handleChange}
+                                        readOnly={!editMode}
+                                        className={!editMode ? 'readonly' : ''}
+                                        max={new Date().toISOString().split('T')[0]}
+                                    />
+                                    {editMode && fieldErrors.dateOfBirth ? <p className="profile-field-error">{fieldErrors.dateOfBirth}</p> : null}
+                                </div>
                                 <div className="profile-field"><label>SỐ ĐIỆN THOẠI</label><input type="tel" name="phone" value={formData.phone} onChange={handleChange} readOnly={!editMode} className={!editMode ? 'readonly' : ''} /></div>
                                 <div className="profile-field"><label>EMAIL</label><input type="email" name="email" value={formData.email} readOnly disabled className="readonly" /></div>
                                 <div className="profile-field"><label>TÊN THÁNH</label><input type="text" name="saintName" value={formData.saintName} onChange={handleChange} readOnly={!editMode} className={!editMode ? 'readonly' : ''} /></div>
                                 <div className="profile-field profile-field-full"><label>TIỂU SỬ</label><textarea name="bio" value={formData.bio} onChange={handleChange} readOnly={!editMode} className={!editMode ? 'readonly' : ''} rows="4" placeholder="Giới thiệu ngắn về bản thân" /></div>
                                 <div className="profile-field"><label>ĐỊA CHỈ GIAO HÀNG MẶC ĐỊNH</label><input type="text" name="address" value={formData.address} onChange={handleChange} readOnly={!editMode} className={!editMode ? 'readonly' : ''} /></div>
-                                <div className="profile-field"><label>THÀNH PHỐ/TỈNH</label><input type="text" name="city" value={formData.city} onChange={handleChange} readOnly={!editMode} className={!editMode ? 'readonly' : ''} /></div>
-                                <div className="profile-field"><label>QUẬN/HUYỆN</label><input type="text" name="district" value={formData.district} onChange={handleChange} readOnly={!editMode} className={!editMode ? 'readonly' : ''} /></div>
-                                <div className="profile-field"><label>PHƯỜNG/XÃ</label><input type="text" name="ward" value={formData.ward} onChange={handleChange} readOnly={!editMode} className={!editMode ? 'readonly' : ''} /></div>
+                                <div className="profile-field">
+                                    <label>THÀNH PHỐ/TỈNH</label>
+                                    {editMode ? (
+                                        <select name="city" value={formData.city} onChange={handleProvinceChange} className="profile-select" disabled={locationLoading.provinces}>
+                                            <option value="">Chọn thành phố/tỉnh</option>
+                                            {provinceOptions.map((item) => {
+                                                const value = String(item?.name || item?.provinceName || item?.province || '');
+                                                const key = String(item?.provinceId ?? item?.id ?? item?.provinceCode ?? value);
+                                                return (
+                                                    <option key={key} value={value}>
+                                                        {value}
+                                                    </option>
+                                                );
+                                            })}
+                                        </select>
+                                    ) : (
+                                        <input type="text" value={formData.city} readOnly className="readonly" />
+                                    )}
+                                </div>
+                                <div className="profile-field">
+                                    <label>QUẬN/HUYỆN</label>
+                                    {editMode ? (
+                                        <select name="district" value={formData.district} onChange={handleDistrictChange} className="profile-select" disabled={!formData.city || locationLoading.districts}>
+                                            <option value="">Chọn quận/huyện</option>
+                                            {districtOptions.map((item) => {
+                                                const value = String(item?.name || item?.districtName || item?.district || '');
+                                                const key = String(item?.districtId ?? item?.id ?? item?.districtCode ?? value);
+                                                return (
+                                                    <option key={key} value={value}>
+                                                        {value}
+                                                    </option>
+                                                );
+                                            })}
+                                        </select>
+                                    ) : (
+                                        <input type="text" value={formData.district} readOnly className="readonly" />
+                                    )}
+                                </div>
+                                <div className="profile-field">
+                                    <label>PHƯỜNG/XÃ</label>
+                                    {editMode ? (
+                                        <select name="ward" value={formData.ward} onChange={handleWardChange} className="profile-select" disabled={!formData.district || locationLoading.wards}>
+                                            <option value="">Chọn phường/xã</option>
+                                            {wardOptions.map((item) => {
+                                                const value = String(item?.name || item?.wardName || item?.ward || '');
+                                                const key = String(item?.wardCode ?? item?.id ?? value);
+                                                return (
+                                                    <option key={key} value={value}>
+                                                        {value}
+                                                    </option>
+                                                );
+                                            })}
+                                        </select>
+                                    ) : (
+                                        <input type="text" value={formData.ward} readOnly className="readonly" />
+                                    )}
+                                </div>
                                 <div className="profile-field"><label>MÃ BƯU CHÍNH</label><input type="text" name="postalCode" value={formData.postalCode} onChange={handleChange} readOnly={!editMode} className={!editMode ? 'readonly' : ''} /></div>
                                 <div className="profile-field"><label>NGÔN NGỮ</label><input type="text" name="language" value={formData.language} onChange={handleChange} readOnly={!editMode} className={!editMode ? 'readonly' : ''} /></div>
                                 <div className="profile-field"><label>MÚI GIỜ</label><input type="text" name="timezone" value={formData.timezone} onChange={handleChange} readOnly={!editMode} className={!editMode ? 'readonly' : ''} /></div>

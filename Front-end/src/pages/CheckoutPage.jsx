@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header/Header';
 import Footer from '../components/Footer/Footer';
+import api from '../cofig/api';
 import { useCart } from '../context/CartContext';
 import paymentService from '../services/paymentService';
 import checkoutService from '../services/checkoutService';
@@ -35,7 +36,7 @@ const CheckoutPage = () => {
     const [provinces, setProvinces] = useState([]);
     const [districts, setDistricts] = useState([]);
     const [wards, setWards] = useState([]);
-
+    const [profileShipping, setProfileShipping] = useState(null);
 
     const [shipping, setShipping] = useState({
         fullName: '',
@@ -51,6 +52,41 @@ const CheckoutPage = () => {
     });
 
     const [errors, setErrors] = useState({});
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const loadProfile = async () => {
+            try {
+                const response = await api.get('/profile');
+                if (cancelled) return;
+
+                const profile = response?.data?.data || response?.data || null;
+                if (!profile) return;
+
+                setProfileShipping(profile);
+                setShipping((prev) => ({
+                    ...prev,
+                    fullName: prev.fullName || profile.fullName || '',
+                    phone: prev.phone || profile.phone || '',
+                    addressDetail: prev.addressDetail || profile.address || '',
+                    provinceName: prev.provinceName || profile.city || '',
+                    districtName: prev.districtName || profile.district || '',
+                    wardName: prev.wardName || profile.ward || '',
+                }));
+            } catch (error) {
+                if (!cancelled) {
+                    // Không chặn flow checkout nếu profile chưa load được
+                }
+            }
+        };
+
+        loadProfile();
+
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     useEffect(() => {
         if (!items.length) {
@@ -86,6 +122,19 @@ const CheckoutPage = () => {
     }, []);
 
     useEffect(() => {
+        if (!profileShipping || !provinces.length) return;
+
+        const matchedProvince = provinces.find((province) => province.name === String(profileShipping.city || '').trim());
+        if (!matchedProvince || shipping.provinceId) return;
+
+        setShipping((prev) => ({
+            ...prev,
+            provinceId: matchedProvince.id,
+            provinceName: matchedProvince.name,
+        }));
+    }, [profileShipping, provinces, shipping.provinceId]);
+
+    useEffect(() => {
         let cancelled = false;
 
         const loadDistricts = async () => {
@@ -118,6 +167,19 @@ const CheckoutPage = () => {
     }, [shipping.provinceId]);
 
     useEffect(() => {
+        if (!profileShipping || !districts.length || !shipping.provinceId) return;
+
+        const matchedDistrict = districts.find((district) => district.name === String(profileShipping.district || '').trim());
+        if (!matchedDistrict || shipping.districtId) return;
+
+        setShipping((prev) => ({
+            ...prev,
+            districtId: matchedDistrict.id,
+            districtName: matchedDistrict.name,
+        }));
+    }, [profileShipping, districts, shipping.provinceId, shipping.districtId]);
+
+    useEffect(() => {
         let cancelled = false;
 
         const loadWards = async () => {
@@ -148,6 +210,19 @@ const CheckoutPage = () => {
             cancelled = true;
         };
     }, [shipping.districtId]);
+
+    useEffect(() => {
+        if (!profileShipping || !wards.length || !shipping.districtId) return;
+
+        const matchedWard = wards.find((ward) => ward.name === String(profileShipping.ward || '').trim());
+        if (!matchedWard || shipping.wardCode) return;
+
+        setShipping((prev) => ({
+            ...prev,
+            wardCode: matchedWard.id,
+            wardName: matchedWard.name,
+        }));
+    }, [profileShipping, wards, shipping.districtId, shipping.wardCode]);
 
     const totalWeight = useMemo(() => {
         const estimated = (items || []).reduce((sum, item) => {
@@ -296,7 +371,7 @@ const CheckoutPage = () => {
 
         setSubmitting(true);
         try {
-            const shippingAddress = `${shipping.addressDetail.trim()}, ${shipping.wardName}, ${shipping.districtName}, ${shipping.provinceName}`;
+            const shippingAddress = `${shipping.addressDetail.trim()}, ${shipping.wardName || profileShipping?.ward || ''}, ${shipping.districtName || profileShipping?.district || ''}, ${shipping.provinceName || profileShipping?.city || ''}`.replace(/^,\s*|\s*,\s*,/g, '').trim();
 
             const checkoutResult = await checkoutService.checkoutWithShipping({
                 shippingAddress,
@@ -448,7 +523,14 @@ const CheckoutPage = () => {
 
                     <aside className="checkout-right">
                         <article className="checkout-card summary-card">
-                            <h3>Tóm tắt đơn hàng</h3>
+                            <div className="summary-header">
+                                <div>
+                                    <p className="summary-eyebrow">ĐƠN HÀNG CỦA BẠN</p>
+                                    <h3>Tóm tắt đơn hàng</h3>
+                                </div>
+                                <div className="summary-badge">{items.length} sản phẩm</div>
+                            </div>
+
                             <div className="summary-items">
                                 {items.map((item) => (
                                     <div key={`${item.productId}-${item.productName}`} className="summary-item">
@@ -456,20 +538,22 @@ const CheckoutPage = () => {
                                             <div className="thumb">
                                                 {item.imageUrl ? <img src={item.imageUrl} alt={item.productName} /> : null}
                                             </div>
-                                            <div>
-                                                <strong>{item.productName}</strong>
+                                            <div className="summary-item-meta">
+                                                <strong className="summary-item-name">{item.productName}</strong>
                                                 {item.zoneInputs?.length > 0 ? (
-                                                    <p>{item.zoneInputs.map((z) => `${z.zoneName}: ${z.value || '—'}`).join(' · ')}</p>
+                                                    <p className="summary-item-variant">{item.zoneInputs.map((z) => `${z.zoneName}: ${z.value || '—'}`).join(' · ')}</p>
                                                 ) : null}
-                                                <span>SL: {item.quantity}</span>
+                                                <div className="summary-item-qty-row">
+                                                    <span>Số lượng: {item.quantity}</span>
+                                                    <span className="summary-item-unit-price">{formatVnd(item.totalPrice)}</span>
+                                                </div>
                                             </div>
                                         </div>
-                                        <strong>{formatVnd(item.totalPrice)}</strong>
                                     </div>
                                 ))}
                             </div>
 
-                            <div className="summary-total">
+                            <div className="summary-pricing">
                                 <div>
                                     <span>Tạm tính</span>
                                     <strong>{formatVnd(subtotal)}</strong>
@@ -478,19 +562,16 @@ const CheckoutPage = () => {
                                     <span>Phí vận chuyển</span>
                                     <strong>{shippingLoading ? 'Đang tính...' : formatVnd(shippingFee)}</strong>
                                 </div>
-                                <div>
-                                    <span>Giảm giá</span>
-                                    <strong>—</strong>
-                                </div>
-                                <div className="grand">
-                                    <span>Tổng cộng</span>
-                                    <strong>{formatVnd(Number(subtotal || 0) + Number(shippingFee || 0))}</strong>
-                                </div>
                             </div>
 
-                            {shippingBreakdown.length > 0 && (
+                            <div className="summary-total grand">
+                                <span>Tổng cộng</span>
+                                <strong>{formatVnd(Number(subtotal || 0) + Number(shippingFee || 0))}</strong>
+                            </div>
+
+                            {/* {shippingBreakdown.length > 0 && (
                                 <div className="shipping-breakdown">
-                                    <h4>Chi tiết phí theo nghệ nhân</h4>
+                                    <h4>Chi tiết phí vận chuyển</h4>
                                     {shippingBreakdown.map((artisan) => (
                                         <div key={artisan.artisanId || artisan.artisanName} className="shipping-breakdown-item">
                                             <div>
@@ -501,10 +582,10 @@ const CheckoutPage = () => {
                                         </div>
                                     ))}
                                 </div>
-                            )}
+                            )} */}
 
                             {checkoutSummary?.orderCount ? (
-                                <div className="shipping-breakdown">
+                                <div className="order-note">
                                     <h4>Đơn hàng sẽ được tạo</h4>
                                     <p>{checkoutSummary.orderCount} đơn hàng · Tổng tiền {formatVnd(checkoutSummary.totalAmount)}</p>
                                 </div>

@@ -218,7 +218,6 @@ const CustomRequestPage = () => {
                                 value={formData.referenceImageUrl}
                                 onChange={(nextValue) => setFormData((prev) => ({ ...prev, referenceImageUrl: nextValue }))}
                                 label="Ảnh tham khảo"
-                                helperText="Tải ảnh lên Supabase Storage hoặc dán URL ảnh sẵn có."
                                 folder="custom-requests"
                             />
 
@@ -242,18 +241,6 @@ const CustomRequestPage = () => {
                                 </button>
                             </div>
 
-                            <div className="form-group">
-                                <label className="form-label" htmlFor="aiImagePrompt">Prompt AI</label>
-                                <textarea
-                                    id="aiImagePrompt"
-                                    name="aiImagePrompt"
-                                    className="form-input form-textarea"
-                                    rows="4"
-                                    value={formData.aiImagePrompt}
-                                    onChange={handleChange}
-                                    placeholder="Mô tả ảnh concept bạn muốn AI tạo..."
-                                />
-                            </div>
 
                             <div className="request-form-footer">
                                 <p className="notice-text">Gửi form này không ràng buộc bạn mua hàng. Nghệ nhân sẽ gửi báo giá chính thức để bạn duyệt.</p>

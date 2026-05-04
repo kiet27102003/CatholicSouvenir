@@ -35,18 +35,39 @@ const toArray = (payload) => {
     return [];
 };
 
-export const getCustomerCustomRequests = async () => {
+export const getCustomerCustomRequests = async ({ page = 0, size = 10 } = {}) => {
     try {
-        const response = await api.get('/custom-requests');
+        const response = await api.get('/custom-requests', { params: { page, size } });
         const normalized = normalizeResponse(response);
 
         if (!isSuccessCode(normalized.code)) {
-            return { success: false, error: normalized.message || 'Không tải được danh sách yêu cầu.', data: [] };
+            return {
+                success: false,
+                error: normalized.message || 'Không tải được danh sách yêu cầu.',
+                data: { content: [], totalPages: 0, number: page, size },
+            };
         }
 
-        return { success: true, data: toArray(normalized.data) };
+        const raw = normalized.data ?? {};
+        const content = toArray(raw);
+
+        return {
+            success: true,
+            data: {
+                ...raw,
+                content,
+                totalPages: Number(raw?.totalPages ?? 0),
+                number: Number(raw?.number ?? page),
+                size: Number(raw?.size ?? size),
+                totalElements: Number(raw?.totalElements ?? content.length),
+            },
+        };
     } catch (error) {
-        return { success: false, error: mapError(error, 'Không tải được danh sách yêu cầu.'), data: [] };
+        return {
+            success: false,
+            error: mapError(error, 'Không tải được danh sách yêu cầu.'),
+            data: { content: [], totalPages: 0, number: page, size },
+        };
     }
 };
 

@@ -137,6 +137,135 @@
     color: var(--color-text-light);
 }
 
+.wallet-admin-transaction-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+}
+
+.wallet-admin-transaction-card {
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 18px;
+    background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+    padding: 1rem 1.1rem;
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04);
+}
+
+.wallet-admin-transaction-main {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.9rem;
+    min-width: 0;
+    flex: 1;
+}
+
+.wallet-admin-transaction-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.35rem 0.7rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.wallet-admin-transaction-badge--positive {
+    background: rgba(16, 185, 129, 0.12);
+    color: #047857;
+}
+
+.wallet-admin-transaction-badge--negative {
+    background: rgba(239, 68, 68, 0.12);
+    color: #b91c1c;
+}
+
+.wallet-admin-transaction-badge--neutral {
+    background: rgba(59, 130, 246, 0.12);
+    color: #1d4ed8;
+}
+
+.wallet-admin-transaction-info {
+    min-width: 0;
+}
+
+.wallet-admin-transaction-info h4 {
+    margin: 0;
+    font-size: 0.98rem;
+    color: var(--color-text);
+}
+
+.wallet-admin-transaction-info p {
+    margin: 0.35rem 0 0;
+    color: var(--color-text-light);
+    font-size: 0.82rem;
+}
+
+.wallet-admin-transaction-meta {
+    display: grid;
+    grid-template-columns: auto auto;
+    gap: 1rem;
+    align-items: center;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.wallet-admin-transaction-label {
+    display: block;
+    font-size: 0.72rem;
+    color: var(--color-text-light);
+    margin-bottom: 0.2rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.wallet-admin-transaction-amount {
+    font-size: 1rem;
+    font-weight: 800;
+}
+
+.wallet-admin-transaction-balance {
+    font-size: 0.92rem;
+    color: var(--color-text);
+}
+
+.transaction-amount--positive {
+    color: #059669;
+}
+
+.transaction-amount--negative {
+    color: #dc2626;
+}
+
+.transaction-amount--neutral {
+    color: #1d4ed8;
+}
+
+.wallet-admin-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.wallet-admin-page-btn {
+    border: 1px solid var(--color-border-light);
+    background: #fff;
+    border-radius: 999px;
+    padding: 0.55rem 0.9rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.wallet-admin-page-indicator {
+    color: var(--color-text-light);
+    font-size: 0.9rem;
+}
+
 .wallet-admin-skeleton-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));

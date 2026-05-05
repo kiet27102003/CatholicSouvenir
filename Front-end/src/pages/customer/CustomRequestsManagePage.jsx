@@ -38,6 +38,7 @@ const getStatusMeta = (status) => {
         OPEN: { label: 'Đang mở', className: 'status-open' },
         IN_PROGRESS: { label: 'Đang thực hiện', className: 'status-in-progress' },
         COMPLETED: { label: 'Hoàn thành', className: 'status-completed' },
+        ARTISAN_SELECTED: { label: 'Đã chọn nghệ nhân', className: 'status-artisan-selected' },
     };
     return map[s] || { label: status || 'Không xác định', className: 'status-open' };
 };
@@ -95,7 +96,14 @@ const CustomRequestsManagePage = () => {
         return requests.filter((item) => {
             const status = String(item?.status || '').toUpperCase();
             const matchesTab = activeTab === 'ALL' || status === activeTab;
-            const haystack = [item?.title, item?.description, item?.artisan?.artisanName, item?.confirmedArtisan?.artisanName, item?.selectedArtisan?.artisanName].join(' ').toLowerCase();
+            const haystack = [
+                item?.title,
+                item?.description,
+                item?.artisanName,
+                item?.artisan?.artisanName,
+                item?.confirmedArtisan?.artisanName,
+                item?.selectedArtisan?.artisanName,
+            ].join(' ').toLowerCase();
             return matchesTab && (!term || haystack.includes(term));
         });
     }, [activeTab, searchTerm, requests]);
@@ -266,7 +274,16 @@ const CustomRequestsManagePage = () => {
                                 const status = String(item?.status || '').toUpperCase();
                                 const statusMeta = getStatusMeta(status);
                                 const aiImageUrl = item?.aiGeneratedImageUrl || item?.aiImageUrl || item?.generatedImageUrl || '';
-                                const artisanName = item?.artisan?.artisanName || item?.confirmedArtisan?.artisanName || item?.selectedArtisan?.artisanName || '';
+                                const artisanName =
+                                    item?.artisanName ||
+                                    item?.artisan?.artisanName ||
+                                    item?.confirmedArtisan?.artisanName ||
+                                    item?.selectedArtisan?.artisanName ||
+                                    item?.selectedArtisanName ||
+                                    item?.confirmedArtisanName ||
+                                    '';
+                                const selectedArtisanId = item?.selectedArtisanId || item?.artisanId || item?.confirmedArtisanId || item?.selectedArtisan?.artisanId || item?.artisan?.artisanId || '';
+                                const hasSelectedArtisan = Boolean(String(selectedArtisanId || '').trim()) || status === 'ARTISAN_SELECTED';
 
                                 return (
                                     <article key={String(requestId)} className="manage-card">
@@ -295,7 +312,9 @@ const CustomRequestsManagePage = () => {
                                         </div>
 
                                         <footer className="manage-card-footer">
-                                            <span className="manage-card-meta">{artisanName || 'Chưa có nghệ nhân'}</span>
+                                            <span className="manage-card-meta">
+                                                {artisanName || (hasSelectedArtisan ? 'Đã chọn nghệ nhân' : 'Chưa có nghệ nhân')}
+                                            </span>
                                             <div className="manage-card-actions">
                                                 {status === 'IN_PROGRESS' && (
                                                     <button type="button" className="btn btn-outline btn-sm" onClick={() => navigate(`/custom-requests/${requestId}#stages`)}>

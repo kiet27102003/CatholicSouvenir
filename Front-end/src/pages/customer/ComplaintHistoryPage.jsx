@@ -116,10 +116,7 @@ const ComplaintHistoryPage = () => {
                     <span>Trang hiện tại</span>
                     <strong>{pageInfo.number + 1}</strong>
                 </div>
-                <div className="summary-card">
-                    <span>Trạng thái nổi bật</span>
-                    <strong>Complaint Tracking</strong>
-                </div>
+
             </section>
 
             <section className="complaint-history-list-card">

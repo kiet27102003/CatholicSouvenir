@@ -57,6 +57,7 @@ import CommissionManagement from './pages/admin/CommissionManagement'
 import AdminComplaintManagementPage from './pages/admin/AdminComplaintManagementPage'
 import AdminRecoveryManagementPage from './pages/admin/AdminRecoveryManagementPage'
 import ShipmentDemoStatusPage from './pages/admin/ShipmentDemoStatusPage'
+import AdminWallets from './pages/admin/AdminWallets'
 
 function ArtisanOnlyRoute({ children }) {
   const { user, loading } = useAuth()
@@ -137,6 +138,7 @@ function App() {
           <Route path="products" element={<ProductManager />} />
           <Route path="orders" element={<ShipmentDemoStatusPage />} />
           <Route path="payments" element={<AdminComingSoon title="Thanh toán" />} />
+          <Route path="wallets" element={<AdminWallets />} />
           <Route path="complaints" element={<AdminComplaintManagementPage />} />
           <Route path="recovery-management" element={<AdminRecoveryManagementPage />} />
           <Route path="refund-transactions" element={<AdminRefundTransactionsPage />} />

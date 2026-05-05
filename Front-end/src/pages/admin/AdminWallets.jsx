@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import dayjs from 'dayjs';
 import { Navigate } from 'react-router-dom';
-import { FiSearch, FiCreditCard } from 'react-icons/fi';
+import { FiSearch, FiCreditCard, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import api from '../../cofig/api';
 import { useAuth } from '../../context/AuthContext';
 import { appToast } from '../../lib/appToast';
@@ -46,6 +46,8 @@ const AdminWallets = () => {
 
     const [selectedDetail, setSelectedDetail] = useState(null);
     const [detailLoading, setDetailLoading] = useState(false);
+    const [adminTxPage, setAdminTxPage] = useState(1);
+    const ADMIN_TX_PAGE_SIZE = 10;
 
     useEffect(() => {
         if (!isAuthenticated || !isAdmin) return;
@@ -146,6 +148,35 @@ const AdminWallets = () => {
             todayCount,
         };
     }, [adminWallet, adminTransactions, artisanWalletRows]);
+
+    const adminTransactionPagination = useMemo(() => {
+        const totalItems = adminTransactions.length;
+        const totalPages = Math.max(1, Math.ceil(totalItems / ADMIN_TX_PAGE_SIZE));
+        const currentPage = Math.min(adminTxPage, totalPages);
+        const startIndex = (currentPage - 1) * ADMIN_TX_PAGE_SIZE;
+        const paginatedItems = adminTransactions.slice(startIndex, startIndex + ADMIN_TX_PAGE_SIZE);
+
+        return {
+            currentPage,
+            totalPages,
+            totalItems,
+            paginatedItems,
+        };
+    }, [adminTransactions, adminTxPage]);
+
+    const getTransactionTone = (type) => {
+        const normalized = String(type || '').toUpperCase();
+        if (['DEPOSIT', 'PLATFORM_FEE', 'REFUND_RECEIVE'].includes(normalized)) return 'positive';
+        if (['WITHDRAW', 'REFUND', 'COMMISSION', 'PAYOUT'].includes(normalized)) return 'negative';
+        return 'neutral';
+    };
+
+    const getTransactionSign = (type) => {
+        const normalized = String(type || '').toUpperCase();
+        if (['DEPOSIT', 'PLATFORM_FEE', 'REFUND_RECEIVE'].includes(normalized)) return '+';
+        if (['WITHDRAW', 'REFUND', 'COMMISSION', 'PAYOUT'].includes(normalized)) return '-';
+        return '';
+    };
 
     const openDetail = async (accountId) => {
         if (!accountId) return;
@@ -281,6 +312,83 @@ const AdminWallets = () => {
                                     )}
                                 </tbody>
                             </table>
+                        </div>
+                    </section>
+
+                    <section className="admin-card table-card wallet-admin-table-card">
+                        <div className="wallet-admin-section-header">
+                            <div>
+                                <h2 className="admin-section-title">Lịch sử biến động ví nền tảng</h2>
+                                <p className="admin-section-subtitle"></p>
+                            </div>
+                        </div>
+
+                        <div className="wallet-admin-transaction-list">
+                            {adminTransactionPagination.paginatedItems.length === 0 ? (
+                                <div className="admin-empty-state">
+                                    <FiCreditCard style={{ fontSize: '2rem' }} />
+                                    <p>Chưa có lịch sử giao dịch ví nền tảng</p>
+                                </div>
+                            ) : (
+                                adminTransactionPagination.paginatedItems.map((transaction) => {
+                                    const tone = getTransactionTone(transaction?.type);
+                                    const sign = getTransactionSign(transaction?.type);
+                                    const amountClass = tone === 'positive' ? 'transaction-amount--positive' : tone === 'negative' ? 'transaction-amount--negative' : 'transaction-amount--neutral';
+
+                                    return (
+                                        <article key={transaction.transactionId} className="wallet-admin-transaction-card">
+                                            <div className="wallet-admin-transaction-main">
+                                                <div className={`wallet-admin-transaction-badge wallet-admin-transaction-badge--${tone}`}>
+                                                    {String(transaction?.type || '—')}
+                                                </div>
+                                                <div className="wallet-admin-transaction-info">
+                                                    <h4>{transaction.description || 'Giao dịch ví'}</h4>
+                                                    <p>{formatDateTime(transaction.createdAt)}</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="wallet-admin-transaction-meta">
+                                                <div>
+                                                    <span className="wallet-admin-transaction-label">Biến động</span>
+                                                    <strong className={`wallet-admin-transaction-amount ${amountClass}`}>
+                                                        {sign} {formatCurrency(transaction?.amount || 0)}
+                                                    </strong>
+                                                </div>
+                                                <div>
+                                                    <span className="wallet-admin-transaction-label">Số dư</span>
+                                                    <strong className="wallet-admin-transaction-balance">
+                                                        {formatCurrency(transaction.balanceBefore || 0)} → {formatCurrency(transaction.balanceAfter || 0)}
+                                                    </strong>
+                                                </div>
+                                            </div>
+                                        </article>
+                                    );
+                                })
+                            )}
+                        </div>
+
+                        <div className="wallet-admin-pagination">
+                            <button
+                                type="button"
+                                className="wallet-admin-page-btn"
+                                onClick={() => setAdminTxPage((page) => Math.max(1, page - 1))}
+                                disabled={adminTransactionPagination.currentPage <= 1}
+                            >
+                                <FiChevronLeft />
+                                Trước
+                            </button>
+                            <span className="wallet-admin-page-indicator">
+                                Trang {adminTransactionPagination.currentPage} / {adminTransactionPagination.totalPages}
+                            </span>
+                            <button
+                                type="button"
+                                className="wallet-admin-page-btn"
+                                onClick={() => setAdminTxPage((page) => Math.min(adminTransactionPagination.totalPages, page + 1))}
+                                disabled={adminTransactionPagination.currentPage >= adminTransactionPagination.totalPages}
+                            >
+                                Sau
+                                <FiChevronRight />
+                            </button>
                         </div>
                     </section>
                 </>

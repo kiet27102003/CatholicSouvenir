@@ -130,8 +130,29 @@ const CustomRequestDetailPage = () => {
     const cancelPlatformFee = Number(cancelEstimate?.platformCommissionAmount ?? cancelEstimate?.platformCommission ?? Math.round(cancelTotalRefund * 0.05));
     const cancelNetRefund = Number(cancelEstimate?.netRefundAmount ?? Math.max(0, cancelTotalRefund - cancelPlatformFee));
     const selectedArtisanId = String(request?.selectedArtisanId || artisan?.artisanId || artisan?.id || '');
+    const selectedArtisanName = request?.selectedArtisanName || request?.artisanName || artisan?.artisanName || artisan?.name || '';
     const hasStages = stages.length > 0;
     const customOrderId = request?.customOrderId || request?.orderId || request?.customOrder?.orderId || null;
+
+    const displayInterestedArtisans = useMemo(() => {
+        const list = Array.isArray(interestedArtisans) ? [...interestedArtisans] : [];
+        const shouldShowSelectedArtisan = ['ARTISAN_SELECTED', 'PENDING_CONFIRMATION', 'PENDING_PAYMENT', 'IN_PROGRESS'].includes(requestStatus)
+            && selectedArtisanId;
+
+        if (shouldShowSelectedArtisan) {
+            const exists = list.some((item) => String(item?.artisanId || item?.artisan?.id || '') === selectedArtisanId);
+            if (!exists) {
+                list.unshift({
+                    artisanId: selectedArtisanId,
+                    artisanName: selectedArtisanName || 'Nghệ nhân đã chọn',
+                    artisanEmail: artisan?.artisanEmail || artisan?.email || request?.artisanEmail || '',
+                    isSelectedArtisan: true,
+                });
+            }
+        }
+
+        return list;
+    }, [artisan, interestedArtisans, request?.artisanEmail, requestStatus, selectedArtisanId, selectedArtisanName]);
 
     const refreshInterestedArtisans = async () => {
         const res = await getConversationsByRequest(id);
@@ -228,8 +249,7 @@ const CustomRequestDetailPage = () => {
             setRequest(detailRes.data || null);
             setLoading(false);
 
-            const nextStatus = String(detailRes.data?.status || '').toUpperCase();
-            if (nextStatus === 'OPEN' || nextStatus === 'PUBLISHED' || nextStatus === 'ARTISAN_SELECTED' || nextStatus === 'PENDING_CONFIRMATION' || nextStatus === 'PENDING_PAYMENT') {
+            if (detailRes.data?.requestId || id) {
                 await refreshInterestedArtisans();
             } else {
                 setInterestedArtisans([]);
@@ -238,22 +258,20 @@ const CustomRequestDetailPage = () => {
             const nextOrder = await fetchOrderByRequest(detailRes.data?.requestId || id);
             const nextOrderId = nextOrder?.customOrderId ?? nextOrder?.orderId ?? detailRes.data?.customOrderId ?? detailRes.data?.orderId ?? detailRes.data?.customOrder?.orderId;
 
-            if (nextStatus === 'ARTISAN_SELECTED' || nextStatus === 'PENDING_CONFIRMATION' || nextStatus === 'PENDING_PAYMENT' || nextStatus === 'IN_PROGRESS') {
-                if (nextOrderId) {
-                    setStagesLoading(true);
-                    const stagesRes = await getCustomOrderStages(nextOrderId);
-                    if (cancelled) return;
-                    setStagesLoading(false);
+            if (nextOrderId) {
+                setStagesLoading(true);
+                const stagesRes = await getCustomOrderStages(nextOrderId);
+                if (cancelled) return;
+                setStagesLoading(false);
 
-                    if (stagesRes.success) {
-                        setStages(Array.isArray(stagesRes.data) ? stagesRes.data : []);
-                    } else if (!nextOrder?.stages?.length) {
-                        setStages([]);
-                        await loadOrderStages(detailRes.data?.requestId || id);
-                    }
-                } else {
+                if (stagesRes.success) {
+                    setStages(Array.isArray(stagesRes.data) ? stagesRes.data : []);
+                } else if (!nextOrder?.stages?.length) {
+                    setStages([]);
                     await loadOrderStages(detailRes.data?.requestId || id);
                 }
+            } else if (['ARTISAN_SELECTED', 'PENDING_CONFIRMATION', 'PENDING_PAYMENT', 'IN_PROGRESS'].includes(String(detailRes.data?.status || '').toUpperCase())) {
+                await loadOrderStages(detailRes.data?.requestId || id);
             } else {
                 setStages([]);
             }
@@ -666,22 +684,22 @@ const CustomRequestDetailPage = () => {
                             </div>
 
                             <div className="detail-artisan-list">
-                                {interestedArtisans.length === 0 ? (
+                                {displayInterestedArtisans.length === 0 ? (
                                     <div className="detail-empty-inline">Chưa có nghệ nhân nào bắt đầu trò chuyện.</div>
                                 ) : (
-                                    interestedArtisans.map((item) => {
+                                    displayInterestedArtisans.map((item) => {
                                         const artisanId = item?.artisanId || item?.artisan?.id;
                                         const artisanName = item?.artisanName || item?.artisan?.name || 'Nghệ nhân';
-                                        const isSelected = String(selectedArtisanId) === String(artisanId);
+                                        const isSelected = String(selectedArtisanId) === String(artisanId) || item?.isSelectedArtisan === true;
 
                                         return (
                                             <div key={String(artisanId)} className={`detail-artisan-item ${isSelected ? 'selected' : ''}`}>
                                                 <div className="detail-artisan-avatar">{String(artisanName).trim().charAt(0).toUpperCase()}</div>
                                                 <div className="detail-artisan-body">
                                                     <strong>{artisanName}</strong>
-                                                    <small>{item?.artisanEmail || item?.artisan?.email || 'Đang trao đổi'}</small>
+                                                    <small>{item?.artisanEmail || item?.artisan?.email || (isSelected ? 'Đã chọn nghệ nhân' : 'Đang trao đổi')}</small>
                                                 </div>
-                                                {isSelected || requestStatus === 'ARTISAN_SELECTED' ? (
+                                                {isSelected ? (
                                                     <span className="detail-selected-chip">Đã chọn nghệ nhân này</span>
                                                 ) : (
                                                     <button

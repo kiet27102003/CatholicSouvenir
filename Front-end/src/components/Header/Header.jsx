@@ -307,10 +307,6 @@ const Header = () => {
                                                     <FiAward size={16} strokeWidth={2} />
                                                     Đánh giá của tôi
                                                 </button>
-                                                <button type="button" className="dropdown-item" onClick={() => { setUserMenuOpen(false); navigate('/wallet'); }}>
-                                                    <FiMessageSquare size={16} strokeWidth={2} />
-                                                    Ví của tôi
-                                                </button>
                                             </>
                                         )}
                                         {user?.role === 'artisan' && (

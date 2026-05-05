@@ -10,7 +10,7 @@ import { appToast } from '../../../lib/appToast';
 import api from '../../../cofig/api';
 import './Workbench.css';
 
-const formatCurrencyVnd = (value) => `${new Intl.NumberFormat('vi-VN').format(Number(value || 0))} đ`;
+const formatCurrencyVnd = (value) => `${new Intl.NumberFormat('vi-VN').format(Number(value || 0))}`;
 const formatDate = (value) => {
     if (!value) return '—';
     const date = new Date(value);
@@ -33,8 +33,10 @@ const getOrderStatusLabel = (status) => {
         PENDING: 'Chờ xử lý',
         PAID: 'Đã thanh toán',
         SHIPPING: 'Đang giao',
+        DELIVERED: 'Đã giao',
         COMPLETED: 'Hoàn thành',
         CANCELLED: 'Đã hủy',
+        DELETED: 'Đã xoá',
         CONFIRMED: 'Đã xác nhận',
     };
     return map[key] || status || '—';
@@ -226,6 +228,8 @@ const Workbench = ({ user }) => {
     const [dashboard, setDashboard] = useState(null);
     const [loadingDashboard, setLoadingDashboard] = useState(true);
     const [dashboardError, setDashboardError] = useState('');
+    const [revenueChartMode, setRevenueChartMode] = useState('day');
+    const [revenueChartMonth, setRevenueChartMonth] = useState(() => new Date().toISOString().slice(0, 7));
 
     const [loadingOrders, setLoadingOrders] = useState(true);
     const [loadingWallet, setLoadingWallet] = useState(true);
@@ -477,12 +481,79 @@ const Workbench = ({ user }) => {
 
     const revenueTrend = useMemo(() => {
         const list = Array.isArray(dashboard?.revenueChart) ? dashboard.revenueChart : [];
-        const peak = Math.max(...list.map((item) => Number(item?.revenue || 0)), 1);
-        return list.map((item) => ({
+        const normalizeDateKey = (value) => {
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return null;
+            return date.toISOString().slice(0, 10);
+        };
+
+        const monthLabel = (yearMonth) => {
+            if (!yearMonth) return '—';
+            const [year, month] = yearMonth.split('-').map(Number);
+            if (!year || !month) return yearMonth;
+            return new Date(year, month - 1, 1).toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' });
+        };
+
+        const filtered = list.filter((item) => {
+            if (revenueChartMode === 'day' || revenueChartMode === 'week') {
+                if (!revenueChartMonth) return true;
+                const rawDate = item?.date || item?.day || item?.createdAt;
+                const date = new Date(rawDate);
+                if (Number.isNaN(date.getTime())) return false;
+                return date.toISOString().slice(0, 7) === revenueChartMonth;
+            }
+            return true;
+        });
+
+        const grouped = filtered.reduce((acc, item) => {
+            const rawDate = item?.date || item?.day || item?.createdAt;
+            const date = new Date(rawDate);
+            if (Number.isNaN(date.getTime())) return acc;
+
+            let groupKey = rawDate;
+            let label = formatDate(rawDate);
+
+            if (revenueChartMode === 'week') {
+                const day = date.getDay();
+                const monday = new Date(date);
+                const diff = day === 0 ? -6 : 1 - day;
+                monday.setDate(date.getDate() + diff);
+                monday.setHours(0, 0, 0, 0);
+                groupKey = monday.toISOString().slice(0, 10);
+                const sunday = new Date(monday);
+                sunday.setDate(monday.getDate() + 6);
+                label = `${formatDate(monday)} - ${formatDate(sunday)}`;
+            } else if (revenueChartMode === 'month') {
+                groupKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                label = monthLabel(groupKey);
+            } else {
+                groupKey = normalizeDateKey(rawDate) || rawDate;
+                label = formatDate(rawDate);
+            }
+
+            const current = acc.get(groupKey) || {
+                date: rawDate,
+                label,
+                revenue: 0,
+                orderNumber: 0,
+            };
+
+            current.revenue += Number(item?.revenue || 0);
+            current.orderNumber += Number(item?.orderNumber || item?.orders || 0);
+            current.date = rawDate;
+            current.label = label;
+            acc.set(groupKey, current);
+            return acc;
+        }, new Map());
+
+        const groupedList = Array.from(grouped.values()).sort((a, b) => new Date(a.date) - new Date(b.date));
+        const peak = Math.max(...groupedList.map((item) => Number(item.revenue || 0)), 1);
+
+        return groupedList.map((item) => ({
             ...item,
-            height: Math.max(12, Math.round((Number(item?.revenue || 0) / peak) * 100)),
+            height: Math.max(12, Math.round((Number(item.revenue || 0) / peak) * 100)),
         }));
-    }, [dashboard]);
+    }, [dashboard, revenueChartMode, revenueChartMonth]);
 
     const totalReceived = useMemo(
         () => transactions.filter(isDepositTransaction).reduce((sum, tx) => sum + getTransactionAmount(tx), 0),
@@ -599,7 +670,7 @@ const Workbench = ({ user }) => {
             <section className="wb-dashboard-panel">
                 <div className="wb-dashboard-head">
                     <div>
-                        <p className="wb-section-kicker">API dashboard</p>
+              
                         <h2>Bức tranh tổng quan cho artisan</h2>
                     </div>
                     <div className="wb-dashboard-meta">
@@ -626,24 +697,54 @@ const Workbench = ({ user }) => {
 
                         <div className="wb-dashboard-charts">
                             <article className="wb-chart-card">
-                                <div className="wb-chart-head">
+                                <div className="wb-chart-head wb-chart-head--split">
                                     <div>
-                                        <h3>Doanh thu theo ngày</h3>
-                                        <p>Lấy từ `revenueChart` của API</p>
+                                        <h3>Doanh thu</h3>
+                                        <p>Xem theo ngày, tuần hoặc tháng</p>
+                                    </div>
+                                    <div className="wb-chart-controls">
+                                        <div className="wb-chart-filter">
+                                            <button type="button" className={revenueChartMode === 'day' ? 'wb-chart-filter-btn active' : 'wb-chart-filter-btn'} onClick={() => setRevenueChartMode('day')}>
+                                                Ngày
+                                            </button>
+                                            <button type="button" className={revenueChartMode === 'week' ? 'wb-chart-filter-btn active' : 'wb-chart-filter-btn'} onClick={() => setRevenueChartMode('week')}>
+                                                Tuần
+                                            </button>
+                                            <button type="button" className={revenueChartMode === 'month' ? 'wb-chart-filter-btn active' : 'wb-chart-filter-btn'} onClick={() => setRevenueChartMode('month')}>
+                                                Tháng
+                                            </button>
+                                        </div>
+                                        {(revenueChartMode === 'day' || revenueChartMode === 'week') && (
+                                            <label className="wb-month-select-wrap">
+                                                <span>Tháng</span>
+                                                <select value={revenueChartMonth} onChange={(event) => setRevenueChartMonth(event.target.value)}>
+                                                    <option value="">Tất cả</option>
+                                                    {Array.from(new Set((dashboard?.revenueChart || []).map((item) => {
+                                                        const rawDate = item?.date || item?.day || item?.createdAt;
+                                                        const date = new Date(rawDate);
+                                                        return Number.isNaN(date.getTime()) ? null : date.toISOString().slice(0, 7);
+                                                    }).filter(Boolean))).sort().map((month) => (
+                                                        <option key={month} value={month}>{month}</option>
+                                                    ))}
+                                                </select>
+                                            </label>
+                                        )}
                                     </div>
                                     <FiBarChart2 />
                                 </div>
-                                <div className="wb-bar-chart wb-bar-chart--revenue" role="img" aria-label="Biểu đồ doanh thu theo ngày">
-                                    {revenueTrend.length === 0 ? <p className="wb-empty">Chưa có dữ liệu doanh thu.</p> : revenueTrend.map((item) => (
-                                        <div key={item.date} className="wb-bar-chart-item">
-                                            <div className="wb-bar-track">
-                                                <div className="wb-bar-fill" style={{ height: `${item.height}%` }} />
+                                <div className="wb-bar-chart-scroll" data-mode={revenueChartMode}>
+                                    <div className={`wb-bar-chart wb-bar-chart--revenue wb-bar-chart--${revenueChartMode}`} role="img" aria-label="Biểu đồ doanh thu">
+                                        {revenueTrend.length === 0 ? <p className="wb-empty">Chưa có dữ liệu doanh thu.</p> : revenueTrend.map((item) => (
+                                            <div key={`${item.label}-${item.date}`} className="wb-bar-chart-item">
+                                                <div className="wb-bar-track">
+                                                    <div className="wb-bar-fill" style={{ height: `${item.height}%` }} />
+                                                </div>
+                                                <span className="wb-bar-label">{item.label}</span>
+                                                <strong className="wb-bar-value">{formatCurrencyVnd(item.revenue)}</strong>
+                                                <span className="wb-bar-small">{item.orderNumber} đơn</span>
                                             </div>
-                                            <span className="wb-bar-label">{formatDate(item.date)}</span>
-                                            <strong className="wb-bar-value">{formatCurrencyVnd(item.revenue)}</strong>
-                                            <span className="wb-bar-small">{item.orderNumber} đơn</span>
-                                        </div>
-                                    ))}
+                                        ))}
+                                    </div>
                                 </div>
                             </article>
 
@@ -651,7 +752,6 @@ const Workbench = ({ user }) => {
                                 <div className="wb-chart-head">
                                     <div>
                                         <h3>Phân phối đơn hàng</h3>
-                                        <p>Từ `orderStatus` và các chỉ số hiệu suất</p>
                                     </div>
                                     <FiPieChart />
                                 </div>
@@ -681,7 +781,6 @@ const Workbench = ({ user }) => {
                                 <div className="wb-chart-head">
                                     <div>
                                         <h3>Top khách hàng & sản phẩm</h3>
-                                        <p>Dữ liệu đã có sẵn từ API</p>
                                     </div>
                                     <FiTruck />
                                 </div>

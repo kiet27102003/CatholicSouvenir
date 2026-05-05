@@ -107,6 +107,7 @@ export const createWithdrawalRequest = async (payload) => {
             bankName: String(payload?.bankName || '').trim(),
             bankAccountNumber: String(payload?.bankAccountNumber || '').trim(),
             bankAccountName: String(payload?.bankAccountName || '').trim(),
+            reason: String(payload?.reason || '').trim(),
         };
 
         const response = await api.post('/withdrawals', body);

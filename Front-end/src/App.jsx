@@ -55,6 +55,7 @@ import ArtisanApplications from './pages/admin/ArtisanApplications'
 import AdminComingSoon from './pages/admin/AdminComingSoon'
 import CommissionManagement from './pages/admin/CommissionManagement'
 import AdminComplaintManagementPage from './pages/admin/AdminComplaintManagementPage'
+import AdminRecoveryManagementPage from './pages/admin/AdminRecoveryManagementPage'
 import ShipmentDemoStatusPage from './pages/admin/ShipmentDemoStatusPage'
 
 function ArtisanOnlyRoute({ children }) {
@@ -137,6 +138,7 @@ function App() {
           <Route path="orders" element={<ShipmentDemoStatusPage />} />
           <Route path="payments" element={<AdminComingSoon title="Thanh toán" />} />
           <Route path="complaints" element={<AdminComplaintManagementPage />} />
+          <Route path="recovery-management" element={<AdminRecoveryManagementPage />} />
           <Route path="refund-transactions" element={<AdminRefundTransactionsPage />} />
           <Route path="withdrawals" element={<AdminWithdrawals />} />
           <Route path="categories" element={<CategoryManager />} />

@@ -90,13 +90,13 @@
 }
 
 .artisan-name-cell {
-    max-width: 240px;
+    max-width: none;
     min-width: 0;
     align-items: center;
 }
 
 .artisan-name-cell .table-user-info {
-    max-width: 160px;
+    max-width: none;
 }
 
 .artisan-name-cell .user-name {
@@ -118,7 +118,7 @@
 }
 
 .action-dropdown {
-    position: relative;
+    position: static;
     display: inline-flex;
     justify-content: flex-end;
 }
@@ -136,16 +136,39 @@
 }
 
 .action-menu {
-    position: absolute;
-    right: 0;
-    top: calc(100% + 8px);
+    position: fixed;
     min-width: 170px;
     background: var(--admin-card-bg);
     border: 1px solid var(--admin-border);
     border-radius: 14px;
     box-shadow: 0 16px 36px rgba(15, 23, 42, 0.12);
     padding: 8px;
-    z-index: 20;
+    z-index: 9999;
+}
+
+.action-menu-bottom-right,
+.action-menu-top-right {
+    transform: translateX(-100%);
+}
+
+.action-menu-top-right,
+.action-menu-top-left {
+    transform: translateY(-100%);
+}
+
+.action-menu-bottom-right,
+.action-menu-top-right {
+    margin-top: 8px;
+}
+
+.action-menu-bottom-left,
+.action-menu-top-left {
+    margin-top: 8px;
+}
+
+.action-menu-top-right,
+.action-menu-top-left {
+    margin-top: -8px;
 }
 
 .action-menu-item {
@@ -180,10 +203,14 @@
 }
 
 .artisan-actions-cell {
-    width: 1%;
+    width: 124px;
+    min-width: 124px;
+    max-width: 124px;
     white-space: nowrap;
     padding-left: 8px;
     padding-right: 8px;
+    overflow: visible;
+    text-align: center;
 }
 
 .controls-bar .filter-icon-btn {

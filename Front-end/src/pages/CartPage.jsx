@@ -36,11 +36,20 @@ const CartPage = () => {
         () => selectedItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0),
         [selectedItems]
     );
-    const hasUnavailableItems = items.some((item) => Number(item.quantity) > Number(item.availableStock ?? Infinity));
+    const hasUnavailableItems = items.some((item) => {
+        const stock = Number(item.availableStock);
+        return Number.isFinite(stock) && stock >= 0 && Number(item.quantity) > stock;
+    });
+
+    const canCheckout = selectedItems.length > 0 && !hasUnavailableItems;
 
     const handleCheckoutSelected = async () => {
         if (selectedItems.length === 0) {
             appToast.warning('Vui lòng chọn sản phẩm để thanh toán');
+            return;
+        }
+        if (hasUnavailableItems) {
+            appToast.error('Không thể thanh toán', 'Giỏ hàng có sản phẩm vượt quá số lượng tồn kho');
             return;
         }
 
@@ -207,7 +216,15 @@ const CartPage = () => {
                                             <div className="qty-control">
                                                 <button type="button" onClick={() => handleUpdateQty(item.productId, item.quantity - 1)} disabled={item.isAvailable === false}>-</button>
                                                 <span>{item.quantity}</span>
-                                                <button type="button" onClick={() => handleUpdateQty(item.productId, item.quantity + 1)} disabled={item.isAvailable === false || (item.availableStock != null && item.quantity >= item.availableStock)}>+</button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleUpdateQty(item.productId, item.quantity + 1)}
+                                                    disabled={item.isAvailable === false || (item.availableStock != null && item.quantity >= item.availableStock)}
+                                                    title={item.availableStock != null ? `Tối đa ${item.availableStock}` : 'Tăng số lượng'}
+                                                    aria-label={item.availableStock != null ? `Tăng số lượng, tối đa ${item.availableStock}` : 'Tăng số lượng'}
+                                                >
+                                                    +{item.availableStock != null ? ` (${item.availableStock})` : ''}
+                                                </button>
                                             </div>
                                         </div>
                                         <div className="line-price">{formatVnd(item.totalPrice)}</div>
@@ -252,10 +269,10 @@ const CartPage = () => {
                                 <button
                                     type="button"
                                     className="btn btn-primary summary-checkout"
-                                    disabled={checkingOut || selectedItems.length === 0 || hasUnavailableItems}
+                                    disabled={checkingOut || !canCheckout}
                                     onClick={handleCheckoutSelected}
                                 >
-                                    {hasUnavailableItems ? 'Xóa sản phẩm hết hàng' : (checkingOut ? 'Đang xử lý...' : `Thanh toán (${selectedItems.length} sản phẩm)`)}
+                                    {!canCheckout ? 'Điều chỉnh số lượng sản phẩm' : (checkingOut ? 'Đang xử lý...' : `Thanh toán (${selectedItems.length} sản phẩm)`)}
                                 </button>
                             </div>
 

@@ -72,7 +72,7 @@ const CartDrawer = () => {
         <div className="cart-overlay" onClick={() => setCartOpen(false)}>
             <div className="cart-drawer" onClick={(e) => e.stopPropagation()}>
                 <div className="cart-header">
-                    <h2>Your Cart</h2>
+                    <h2>Giỏ hàng của bạn</h2>
                     <button className="close-cart-btn" onClick={() => setCartOpen(false)}>
                         <FiX size={24} strokeWidth={2} />
                     </button>
@@ -126,10 +126,16 @@ const CartDrawer = () => {
                                                 <button
                                                     className="qty-btn"
                                                     onClick={() => updateQuantity(item.productId, item.quantity + 1)}
+                                                    disabled={item.availableStock != null && item.quantity >= item.availableStock}
+                                                    title={item.availableStock != null ? `Tối đa ${item.availableStock}` : 'Tăng số lượng'}
+                                                    aria-label={item.availableStock != null ? `Tăng số lượng, tối đa ${item.availableStock}` : 'Tăng số lượng'}
                                                 >
                                                     +
                                                 </button>
                                             </div>
+                                            {item.availableStock != null && (
+                                                <div className="qty-stock-note">Tối đa: {item.availableStock}</div>
+                                            )}
 
                                             <button
                                                 className="remove-btn"

@@ -55,6 +55,7 @@ const AdminLayout = () => {
                 { path: '/admin/commission', name: 'Phí hoa hồng', icon: <FiDollarSign /> },
                 { path: '/admin/wallets', name: 'Quản lý ví', icon: <FiCreditCard /> },
                 { path: '/admin/withdrawals', name: 'Rút tiền', icon: <FiRepeat /> },
+                { path: '/admin/recovery-management', name: 'Recovery tasks', icon: <FiAlertTriangle /> },
             ],
         },
         {

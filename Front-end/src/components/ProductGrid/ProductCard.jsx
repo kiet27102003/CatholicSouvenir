@@ -182,7 +182,8 @@ const ProductCard = ({
             price: Number(displayPriceValue) || 0,
             image,
             artisan: displayArtisan,
-            quantity: hasStockValue ? stockValue : undefined,
+            quantity: 1,
+            availableStock: hasStockValue ? stockValue : undefined,
         });
         setOverlayOpen(false);
     };

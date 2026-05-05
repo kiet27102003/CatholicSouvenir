@@ -45,6 +45,9 @@ export const AuthProvider = ({ children }) => {
             // Always clear the client session even if the server logout fails.
         } finally {
             clearSession();
+            if (typeof window !== 'undefined') {
+                window.location.replace('/');
+            }
         }
     };
 

@@ -51,6 +51,7 @@ const WalletPage = ({ embedded = false }) => {
     const [bankName, setBankName] = useState('');
     const [bankAccountNumber, setBankAccountNumber] = useState('');
     const [bankAccountName, setBankAccountName] = useState('');
+    const [withdrawReason, setWithdrawReason] = useState('');
 
     const [searchKeyword, setSearchKeyword] = useState('');
     const [typeFilter, setTypeFilter] = useState('ALL');
@@ -152,6 +153,7 @@ const WalletPage = ({ embedded = false }) => {
         setBankName('');
         setBankAccountNumber('');
         setBankAccountName('');
+        setWithdrawReason('');
         setWithdrawOpen(true);
     };
 
@@ -215,6 +217,14 @@ const WalletPage = ({ embedded = false }) => {
             appToast.error('Thiếu thông tin ngân hàng', 'Vui lòng nhập đầy đủ tên ngân hàng, số tài khoản và tên chủ tài khoản');
             return;
         }
+        if (!withdrawReason.trim()) {
+            appToast.error('Thiếu lý do rút tiền', 'Vui lòng nhập lý do rút tiền');
+            return;
+        }
+        if (withdrawReason.trim().length < 10 || withdrawReason.trim().length > 500) {
+            appToast.error('Lý do rút tiền không hợp lệ', 'Lý do rút tiền phải có từ 10 đến 500 ký tự');
+            return;
+        }
 
         setSubmitting(true);
         const res = await walletService.createWithdrawalRequest({
@@ -222,6 +232,7 @@ const WalletPage = ({ embedded = false }) => {
             bankName,
             bankAccountNumber,
             bankAccountName,
+            reason: withdrawReason,
         });
         setSubmitting(false);
 
@@ -254,7 +265,7 @@ const WalletPage = ({ embedded = false }) => {
         <div className="wallet-page wallet-page-shell">
             <header className="wallet-header wallet-header-row wallet-page-header">
                 <div className="wallet-page-header-content">
-                    <p className="wallet-page-eyebrow">Customer wallet</p>
+                    <p className="wallet-page-eyebrow">Artisan wallet</p>
                     <h1>Ví của tôi</h1>
                     <p>Quản lý số dư và lịch sử giao dịch</p>
                 </div>
@@ -402,6 +413,7 @@ const WalletPage = ({ embedded = false }) => {
                                                         <td>
                                                             <p className="wallet-main-cell">{withdrawal.bankName || '—'}</p>
                                                             <span className="wallet-sub-cell">{withdrawal.bankAccountNumber || '—'}</span>
+                                                            <span className="wallet-sub-cell">Lý do: {withdrawal.reason || '—'}</span>
                                                         </td>
                                                         <td>
                                                             <span className={`wallet-status-badge wallet-status-${status}`}>
@@ -464,6 +476,16 @@ const WalletPage = ({ embedded = false }) => {
                                 <span>Tên chủ tài khoản</span>
                                 <input type="text" value={bankAccountName} onChange={(e) => setBankAccountName(e.target.value)} placeholder="VD: Nguyễn Văn A" />
                             </label>
+                            <label>
+                                <span>Lý do rút tiền</span>
+                                <textarea
+                                    value={withdrawReason}
+                                    onChange={(e) => setWithdrawReason(e.target.value)}
+                                    placeholder="Nhập lý do rút tiền (10-500 ký tự)"
+                                    rows={4}
+                                    maxLength={500}
+                                />
+                            </label>
                         </div>
 
                         <div className="wallet-modal-actions">
@@ -489,6 +511,7 @@ const WalletPage = ({ embedded = false }) => {
                             <p><span>Ngân hàng:</span> <strong>{bankName || '—'}</strong></p>
                             <p><span>Số tài khoản:</span> <strong>{bankAccountNumber || '—'}</strong></p>
                             <p><span>Chủ tài khoản:</span> <strong>{bankAccountName || '—'}</strong></p>
+                            <p><span>Lý do rút tiền:</span> <strong>{withdrawReason || '—'}</strong></p>
                         </div>
 
                         <div className="wallet-modal-actions">
@@ -555,6 +578,7 @@ const WalletPage = ({ embedded = false }) => {
                             <p><span>Mã yêu cầu:</span> <strong>{selectedWithdrawal?.withdrawalId || '—'}</strong></p>
                             <p><span>Số tiền:</span> <strong>{formatCurrency(selectedWithdrawal?.amount)}</strong></p>
                             <p><span>Ngân hàng:</span> <strong>{selectedWithdrawal?.bankName || '—'}</strong></p>
+                            <p><span>Lý do rút tiền:</span> <strong>{selectedWithdrawal?.reason || '—'}</strong></p>
                         </div>
 
                         <div className="wallet-modal-actions">

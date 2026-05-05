@@ -510,6 +510,23 @@ export const confirmCustomOrder = async (orderId) => {
     }
 };
 
+export const getCustomOrderRefundEstimate = async (orderId) => {
+    if (!orderId) return { success: false, error: 'Thiếu mã đơn.' };
+
+    try {
+        const response = await api.get(`/custom-orders/${orderId}/refund-estimate`);
+        const normalized = normalizeResponse(response);
+
+        if (!isSuccessCode(normalized.code)) {
+            return { success: false, error: normalized.message || 'Không thể tính ước tính hoàn tiền.' };
+        }
+
+        return { success: true, data: normalized.data || null };
+    } catch (error) {
+        return { success: false, error: mapError(error, 'Không thể tính ước tính hoàn tiền.') };
+    }
+};
+
 export const cancelCustomOrder = async (orderId, reason = '') => {
     if (!orderId) return { success: false, error: 'Thiếu mã đơn.' };
 
@@ -553,7 +570,25 @@ export const uploadStageProof = async (stageId, payload = {}) => {
     }
 };
 
-export const completeStage = uploadStageProof;
+export const completeStage = async (stageId, payload = {}) => {
+    if (!stageId) return { success: false, error: 'Thiếu mã stage.' };
+
+    try {
+        const response = await api.put(`/stages/${stageId}/complete`, {
+            completionImageUrl: String(payload?.completionImageUrl || payload?.imageUrl || '').trim(),
+            notes: String(payload?.notes || '').trim(),
+        });
+        const normalized = normalizeResponse(response);
+
+        if (!isSuccessCode(normalized.code)) {
+            return { success: false, error: normalized.message || 'Hoàn thành stage thất bại.' };
+        }
+
+        return { success: true, data: normalized.data || {} };
+    } catch (error) {
+        return { success: false, error: mapError(error, 'Hoàn thành stage thất bại.') };
+    }
+};
 
 export default {
     getCustomerCustomRequests,

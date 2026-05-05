@@ -31,6 +31,8 @@ const normalizeIncomingItem = (item) => {
     const zoneInputs = formatZoneInputs(item?.zoneInputs ?? item?.customRequests ?? item?.customizationData ?? []);
     const basePrice = Number(item?.basePrice ?? item?.price ?? 0);
     const quantity = Math.max(1, Number(item?.quantity || 1));
+    const availableStockRaw = Number(item?.availableStock ?? item?.stock ?? item?.quantityAvailable ?? item?.productQuantity ?? item?.inventoryQuantity);
+    const availableStock = Number.isFinite(availableStockRaw) ? Math.max(0, availableStockRaw) : null;
     const totalPrice = Number(item?.totalPrice ?? item?.subtotal ?? calcItemTotal({ basePrice, quantity, zoneInputs }));
     const customizationData = zoneInputs.reduce((acc, z, index) => {
         const key = String(z?.zoneName || `field_${index + 1}`).trim() || `field_${index + 1}`;
@@ -57,6 +59,7 @@ const normalizeIncomingItem = (item) => {
             null,
         basePrice,
         quantity,
+        availableStock,
         zoneInputs,
         totalPrice,
         customizationData,
@@ -77,6 +80,10 @@ const recalcItem = (item) => {
     const next = { ...item };
     next.quantity = Math.max(1, Number(next.quantity || 1));
     next.basePrice = Number(next.basePrice || 0);
+    next.availableStock = Number.isFinite(Number(next.availableStock)) ? Math.max(0, Number(next.availableStock)) : null;
+    if (Number.isFinite(next.availableStock)) {
+        next.quantity = Math.min(next.quantity, next.availableStock);
+    }
     next.zoneInputs = formatZoneInputs(next.zoneInputs);
     next.totalPrice = calcItemTotal(next);
     next.selected = next.selected !== false;
@@ -95,9 +102,18 @@ const cartReducer = (state, action) => {
             const index = state.items.findIndex((it) => makeRowId(it) === incomingId);
             if (index >= 0) {
                 const items = [...state.items];
+                const existing = items[index];
+                const availableStock = Number.isFinite(Number(existing.availableStock))
+                    ? Number(existing.availableStock)
+                    : Number.isFinite(Number(incoming.availableStock))
+                        ? Number(incoming.availableStock)
+                        : null;
                 const merged = {
-                    ...items[index],
-                    quantity: items[index].quantity + incoming.quantity,
+                    ...existing,
+                    availableStock,
+                    quantity: Number.isFinite(availableStock)
+                        ? Math.min(Number(existing.quantity || 0) + Number(incoming.quantity || 0), availableStock)
+                        : Number(existing.quantity || 0) + Number(incoming.quantity || 0),
                 };
                 items[index] = recalcItem(merged);
                 return { ...state, items };
@@ -111,7 +127,12 @@ const cartReducer = (state, action) => {
             }
             return {
                 ...state,
-                items: state.items.map((it) => (it.productId === productId ? recalcItem({ ...it, quantity }) : it)),
+                items: state.items.map((it) => {
+                    if (it.productId !== productId) return it;
+                    const availableStock = Number.isFinite(Number(it.availableStock)) ? Number(it.availableStock) : null;
+                    const nextQuantity = Number.isFinite(availableStock) ? Math.min(quantity, availableStock) : quantity;
+                    return recalcItem({ ...it, quantity: nextQuantity });
+                }),
             };
         }
         case 'REMOVE_ITEM':
@@ -329,7 +350,8 @@ export const CartProvider = ({ children }) => {
             artisanName: product.artisanName ?? product.artisan ?? '',
             imageUrl: product.image ?? product.images?.[0]?.image_url ?? product.images?.[0]?.imageUrl ?? null,
             basePrice: Number(product.basePrice ?? product.price ?? 0),
-            quantity,
+            quantity: Math.max(1, Number(quantity || 1)),
+            availableStock: product.availableStock ?? product.quantity ?? product.stock ?? null,
             zoneInputs,
             selected: true,
         });

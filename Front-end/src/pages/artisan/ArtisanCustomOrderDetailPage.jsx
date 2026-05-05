@@ -5,10 +5,13 @@ import ImageUpload from '../../components/ui/ImageUpload';
 import { useAuth } from '../../context/AuthContext';
 import { appToast } from '../../lib/appToast';
 import {
+    cancelCustomOrder,
     completeStage,
     getCustomOrderDetail,
+    getCustomOrderRefundEstimate,
     getCustomOrderStages,
     updateCustomOrderStatus,
+    uploadStageProof,
 } from '../../services/customRequestService';
 import { createShipment } from '../../services/shipmentService';
 import Sidebar from './components/Sidebar';
@@ -108,6 +111,8 @@ const ArtisanOrderDetailPage = () => {
     const [cancelling, setCancelling] = useState(false);
     const [cancelModalOpen, setCancelModalOpen] = useState(false);
     const [cancelConfirmText, setCancelConfirmText] = useState('');
+    const [cancelEstimate, setCancelEstimate] = useState(null);
+    const [cancelEstimateLoading, setCancelEstimateLoading] = useState(false);
     const [proofByStage, setProofByStage] = useState({});
     const [notesByStage, setNotesByStage] = useState({});
     const [shipmentFormOpen, setShipmentFormOpen] = useState(false);
@@ -205,9 +210,24 @@ const ArtisanOrderDetailPage = () => {
     const completedRevenue = stages.filter(isCompleted).reduce((sum, stage) => sum + Number(stage?.amount || 0) * 0.9, 0);
     const expectedRemain = stages.filter((stage) => !isCompleted(stage)).reduce((sum, stage) => sum + Number(stage?.amount || 0) * 0.9, 0);
 
-    const openCancelModal = () => {
+    const openCancelModal = async () => {
+        if (!id || cancelling) return;
+
         setCancelConfirmText('');
+        setCancelEstimate(null);
         setCancelModalOpen(true);
+        setCancelEstimateLoading(true);
+
+        const res = await getCustomOrderRefundEstimate(id);
+        setCancelEstimateLoading(false);
+
+        if (!res.success) {
+            setCancelEstimate(null);
+            appToast.error('Không thể ước tính hoàn tiền', res.error || 'Vui lòng thử lại');
+            return;
+        }
+
+        setCancelEstimate(res.data || null);
     };
 
     const handleCancelOrder = async () => {
@@ -215,16 +235,17 @@ const ArtisanOrderDetailPage = () => {
         if (cancelConfirmText.trim() !== 'Hủy đơn') return;
 
         setCancelling(true);
-        const res = await updateCustomOrderStatus(id, 'CANCELLED');
+        const res = await cancelCustomOrder(id, cancelConfirmText.trim());
         setCancelling(false);
 
         if (!res.success) {
-            appToast.error('Huỷ đơn thất bại', res.error || 'Vui lòng thử lại');
+            appToast.error('Hủy đơn thất bại', res.error || 'Vui lòng thử lại');
             return;
         }
 
         setCancelModalOpen(false);
-        appToast.success('Đã huỷ đơn thành công');
+        setCancelEstimate(null);
+        appToast.success('Đã hủy đơn thành công');
         navigate('/artisan/orders');
     };
 
@@ -266,11 +287,20 @@ const ArtisanOrderDetailPage = () => {
         }
 
         setSubmittingStageId(String(stageId));
-        const res = await completeStage(stageId, { completionImageUrl, notes });
+        const uploadRes = await uploadStageProof(stageId, { completionImageUrl, notes });
+
+        if (!uploadRes.success) {
+            setSubmittingStageId('');
+            appToast.error('Không thể upload proof stage', uploadRes.error || 'Vui lòng thử lại');
+            return;
+        }
+
+        const completeRes = await completeStage(stageId, { completionImageUrl, notes });
         setSubmittingStageId('');
 
-        if (!res.success) {
-            appToast.error('Không thể hoàn thành stage', res.error || 'Vui lòng thử lại');
+        if (!completeRes.success) {
+            appToast.error('Không thể hoàn thành stage', completeRes.error || 'Vui lòng thử lại');
+            loadAll();
             return;
         }
 
@@ -701,7 +731,9 @@ const ArtisanOrderDetailPage = () => {
                                 <h3>Thao tác nguy hiểm</h3>
                                 <p>Hủy đơn sẽ dừng toàn bộ quy trình của đơn tùy chỉnh này.</p>
                             </div>
-                            <button type="button" className="btn btn-danger" onClick={openCancelModal}>Hủy đơn</button>
+                            <button type="button" className="btn btn-danger" onClick={openCancelModal} disabled={cancelling}>
+                                Hủy đơn
+                            </button>
                         </section>
                     )}
 
@@ -710,6 +742,24 @@ const ArtisanOrderDetailPage = () => {
                             <div className="cancel-modal" role="dialog" aria-modal="true" aria-labelledby="cancel-modal-title" onClick={(e) => e.stopPropagation()}>
                                 <h3 id="cancel-modal-title">Xác nhận hủy đơn</h3>
                                 <p>Để xác nhận, vui lòng nhập chính xác <strong>Hủy đơn</strong> vào ô bên dưới.</p>
+
+                                <div className="detail-cancel-estimate">
+                                    {cancelEstimateLoading ? (
+                                        <div className="detail-empty-inline">Đang tính ước tính hoàn tiền...</div>
+                                    ) : cancelEstimate ? (
+                                        <>
+                                            <div className="detail-cancel-estimate-grid">
+                                                <div><span>Tổng số tiền hoàn lại: </span><strong>{formatCurrency(cancelEstimate.grossRefundAmount)}</strong></div>
+                                                <div><span>Phí nền tảng: </span><strong>{formatCurrency(cancelEstimate.platformCommissionAmount ?? cancelEstimate.platformCommission)}</strong></div>
+                                                <div><span>Hoàn thực nhận: </span><strong>{formatCurrency(cancelEstimate.netRefundAmount)}</strong></div>
+                                            </div>
+                                            {cancelEstimate.canCancel === false && <p className="detail-muted-text">Đơn hàng này hiện chưa thể hủy.</p>}
+                                        </>
+                                    ) : (
+                                        <div className="detail-empty-inline">Không có dữ liệu hoàn tiền.</div>
+                                    )}
+                                </div>
+
                                 <input
                                     type="text"
                                     className="form-input"

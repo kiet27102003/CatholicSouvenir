@@ -11,7 +11,6 @@ import {
     FiMoreVertical,
     FiCheck,
     FiX,
-    FiTrash2,
 } from 'react-icons/fi';
 import { getArtisans, getArtisanById } from '../../services/artisanService';
 import { appToast } from '../../lib/appToast';
@@ -20,6 +19,9 @@ import './UserManager.css';
 import './AdminCustomerArtisan.css';
 
 const PAGE_SIZE = 10;
+const ACTION_MENU_WIDTH = 190;
+const ACTION_MENU_HEIGHT = 184;
+const ACTION_MENU_GAP = 8;
 
 const displayVal = (v) => (v == null || v === '' ? '—' : v);
 
@@ -75,6 +77,7 @@ const ArtisanManager = () => {
     const [selectedArtisan, setSelectedArtisan] = useState(null);
     const [selectedArtisanError, setSelectedArtisanError] = useState('');
     const [openActionMenuId, setOpenActionMenuId] = useState(null);
+    const [openActionMenuStyle, setOpenActionMenuStyle] = useState(null);
 
     const loadPage = useCallback(async (pageIndex) => {
         setLoading(true);
@@ -113,6 +116,51 @@ const ArtisanManager = () => {
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
+
+    useEffect(() => {
+        if (!openActionMenuId) return;
+
+        const updatePlacement = () => {
+            const trigger = document.querySelector(`[data-action-menu-trigger="${openActionMenuId}"]`);
+            if (!trigger) return;
+
+            const rect = trigger.getBoundingClientRect();
+            const margin = 8;
+            const menuWidth = ACTION_MENU_WIDTH;
+            const menuHeight = ACTION_MENU_HEIGHT;
+            const canOpenRight = rect.left + menuWidth + margin <= window.innerWidth;
+            const canOpenLeft = rect.right - menuWidth - margin >= 0;
+            const canOpenDown = rect.bottom + menuHeight + margin <= window.innerHeight;
+            const canOpenUp = rect.top - menuHeight - margin >= 0;
+
+            let top = rect.bottom + margin;
+            let left = rect.left;
+
+            if (!canOpenRight && canOpenLeft) {
+                left = rect.right - menuWidth;
+            }
+            if (!canOpenDown && canOpenUp) {
+                top = rect.top - menuHeight - margin;
+            }
+            if (!canOpenRight && !canOpenLeft) {
+                left = Math.max(margin, window.innerWidth - menuWidth - margin);
+            }
+            if (!canOpenDown && !canOpenUp) {
+                top = Math.max(margin, window.innerHeight - menuHeight - margin);
+            }
+
+            setOpenActionMenuStyle({ top, left });
+        };
+
+        updatePlacement();
+        window.addEventListener('resize', updatePlacement);
+        window.addEventListener('scroll', updatePlacement, true);
+
+        return () => {
+            window.removeEventListener('resize', updatePlacement);
+            window.removeEventListener('scroll', updatePlacement, true);
+        };
+    }, [openActionMenuId]);
 
     const specialtyOptions = useMemo(() => {
         const set = new Set();
@@ -196,15 +244,7 @@ const ArtisanManager = () => {
 
     const artisanNameTitle = (a) => [a.artisanName, a.specialization, formatArtisanCode(a.artisanId)].filter(Boolean).join(' • ');
 
-    const revenueRatingCell = (a) => {
-        const hasPortfolio = Boolean(a.portfolioUrl);
-        return (
-            <div className="revenue-rating-cell">
-                <span>{formatExperience(a.experienceYears)}</span>
-                <span className="muted">{hasPortfolio ? 'Có portfolio' : 'Chưa có portfolio'}</span>
-            </div>
-        );
-    };
+    // Removed unused helper to keep the file lint-clean.
 
     const openDetail = async (artisanId) => {
         if (!artisanId) return;
@@ -227,6 +267,11 @@ const ArtisanManager = () => {
         setDetailOpen(false);
         setSelectedArtisan(null);
         setSelectedArtisanError('');
+    };
+
+    const closeActionMenu = () => {
+        setOpenActionMenuId(null);
+        setOpenActionMenuStyle(null);
     };
 
     const allVisibleIds = filteredRows.map((a) => a.artisanId).filter(Boolean);
@@ -321,8 +366,7 @@ const ArtisanManager = () => {
                                 <th>Nghệ nhân</th>
                                 <th>Chuyên môn</th>
                                 <th>Kinh nghiệm</th>
-                                <th>Portfolio</th>
-                                <th className="text-right">Hành động</th>
+                                <th className="text-right action-col">Hành động</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -349,8 +393,8 @@ const ArtisanManager = () => {
                                 </tr>
                             ) : (
                                 filteredRows.map((a, index) => {
-                                    const st = mapArtisanStatus(a);
                                     const id = a.artisanId;
+                                    const artisanStatus = mapArtisanStatus(a);
                                     return (
                                         <tr
                                             key={id || index}
@@ -381,11 +425,6 @@ const ArtisanManager = () => {
                                             </td>
                                             <td>{displayVal(a.specialization)}</td>
                                             <td>{formatExperience(a.experienceYears)}</td>
-                                            <td>
-                                                <span className="status-badge badge-secondary">
-                                                    {a.portfolioUrl ? 'Có portfolio' : 'Chưa có portfolio'}
-                                                </span>
-                                            </td>
                                             <td className="text-right artisan-actions-cell">
                                                 <div className="action-dropdown">
                                                     <button
@@ -394,16 +433,17 @@ const ArtisanManager = () => {
                                                         title="Mở menu hành động"
                                                         aria-expanded={openActionMenuId === id}
                                                         aria-haspopup="menu"
+                                                        data-action-menu-trigger={id}
                                                         onClick={() => setOpenActionMenuId((current) => (current === id ? null : id))}
                                                     >
                                                         <FiMoreVertical />
                                                     </button>
                                                     {openActionMenuId === id && (
-                                                        <div className="action-menu" role="menu">
+                                                        <div className="action-menu" role="menu" style={openActionMenuStyle || undefined}>
                                                             <button
                                                                 type="button"
                                                                 className="action-menu-item"
-                                                                onClick={() => { openDetail(id); setOpenActionMenuId(null); }}
+                                                                onClick={() => { openDetail(id); closeActionMenu(); }}
                                                             >
                                                                 <FiEye />
                                                                 <span>Xem chi tiết</span>
@@ -411,7 +451,7 @@ const ArtisanManager = () => {
                                                             <button
                                                                 type="button"
                                                                 className="action-menu-item"
-                                                                onClick={() => { setOpenActionMenuId(null); navigate(`/admin/artisan-applications?artisanId=${id}`); }}
+                                                                onClick={() => { closeActionMenu(); navigate(`/admin/artisan-applications?artisanId=${id}`); }}
                                                             >
                                                                 <FiCheck />
                                                                 <span>Duyệt</span>
@@ -419,7 +459,7 @@ const ArtisanManager = () => {
                                                             <button
                                                                 type="button"
                                                                 className="action-menu-item"
-                                                                onClick={() => { setOpenActionMenuId(null); navigate(`/admin/artisan-applications?artisanId=${id}&action=reject`); }}
+                                                                onClick={() => { closeActionMenu(); navigate(`/admin/artisan-applications?artisanId=${id}&action=reject`); }}
                                                             >
                                                                 <FiX />
                                                                 <span>Từ chối</span>
@@ -427,7 +467,7 @@ const ArtisanManager = () => {
                                                             <button
                                                                 type="button"
                                                                 className="action-menu-item danger"
-                                                                onClick={() => { setOpenActionMenuId(null); navigate(`/admin/artisans/${id}/suspend`); }}
+                                                                onClick={() => { closeActionMenu(); navigate(`/admin/artisans/${id}/suspend`); }}
                                                             >
                                                                 <FiSlash />
                                                                 <span>Đình chỉ</span>
@@ -482,7 +522,7 @@ const ArtisanManager = () => {
             </div>
 
             {detailOpen && (
-                <div className="detail-overlay" onClick={closeDetail} role="presentation">
+                <div className="detail-overlay" onClick={() => { closeDetail(); closeActionMenu(); }} role="presentation">
                     <div className="detail-modal artisan-detail-modal" onClick={(event) => event.stopPropagation()}>
                         <div className="detail-modal-header">
                             <h3>Chi tiết nghệ nhân</h3>

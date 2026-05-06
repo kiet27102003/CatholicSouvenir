@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
 import { AppToastContainer } from './lib/appToast'
+import GlobalLoading from './components/ui/GlobalLoading'
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
 import ArtisanDashboard from './pages/artisan/ArtisanDashboard'
@@ -27,6 +28,7 @@ import PendingCustomOrdersPage from './pages/customer/PendingCustomOrdersPage'
 import ChatPage from './pages/customer/ChatPage'
 import TemplateOrderPage from './pages/TemplateOrderPage'
 import TemplateCatalogPage from './pages/TemplateCatalogPage'
+import AboutUsPage from './pages/AboutUsPage'
 
 import CheckoutPage from './pages/CheckoutPage'
 import CartPage from './pages/CartPage'
@@ -88,12 +90,14 @@ function App() {
   return (
     <>
       <AppToastContainer />
+      <GlobalLoading />
       <CartDrawer />
       <ChatBox />
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/shop" element={<ShopPage />} />
         <Route path="/products" element={<ShopPage />} />
+        <Route path="/about" element={<AboutUsPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterForm />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />

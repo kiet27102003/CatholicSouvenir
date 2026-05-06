@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { startLoading, stopLoading } from '../context/loadingStore';
 
 const api = axios.create({
     baseURL: import.meta.env.VITE_APP_BASE_API || 'https://catholic-souvenir-api.southeastasia.cloudapp.azure.com',
@@ -7,9 +8,9 @@ const api = axios.create({
     },
 });
 
-// Add a request interceptor to include the auth token if available
 api.interceptors.request.use(
     (config) => {
+        startLoading();
         const storedUser = localStorage.getItem('sanctus_user') || sessionStorage.getItem('sanctus_user');
         if (storedUser) {
             try {
@@ -21,13 +22,26 @@ api.interceptors.request.use(
                 // Ignore parse errors
             }
         }
-        // Let axios set multipart/form-data with boundary when sending FormData
         if (config.data instanceof FormData) {
             delete config.headers['Content-Type'];
         }
         return config;
     },
-    (error) => Promise.reject(error)
+    (error) => {
+        stopLoading();
+        return Promise.reject(error);
+    }
+);
+
+api.interceptors.response.use(
+    (response) => {
+        stopLoading();
+        return response;
+    },
+    (error) => {
+        stopLoading();
+        return Promise.reject(error);
+    }
 );
 
 export default api;

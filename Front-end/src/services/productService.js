@@ -190,6 +190,38 @@ export const updateProductStatus = async (productId, payload) => {
  * @param {string[]} [payload.tags]
  * @returns {Promise<{ success: boolean, data?: object, error?: string }>}
  */
+export const generateProductDescription = async (payload) => {
+    try {
+        const response = await api.post('/product/generate-description', {
+            productName: String(payload.productName ?? '').trim(),
+            ...(payload.category != null && String(payload.category).trim() !== '' && { category: String(payload.category).trim() }),
+            ...(payload.tags != null && String(payload.tags).trim() !== '' && { tags: String(payload.tags).trim() }),
+            ...(payload.existingDescription != null && String(payload.existingDescription).trim() !== '' && {
+                existingDescription: String(payload.existingDescription).trim(),
+            }),
+        });
+        const res = response.data;
+
+        if (res?.success !== true) {
+            return {
+                success: false,
+                error: res?.message || 'Tạo mô tả bằng AI thất bại.',
+            };
+        }
+
+        return {
+            success: true,
+            data: res?.data ?? {},
+        };
+    } catch (error) {
+        const message = error.response?.data?.message ?? error.message ?? 'Tạo mô tả bằng AI thất bại.';
+        return {
+            success: false,
+            error: typeof message === 'string' ? message : 'Lỗi không xác định.',
+        };
+    }
+};
+
 export const updateProduct = async (productId, payload) => {
     try {
         const formData = new FormData();

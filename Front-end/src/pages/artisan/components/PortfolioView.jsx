@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import productService from '../../../services/productService';
 import api from '../../../cofig/api';
 import { appToast } from '../../../lib/appToast';
+import { FiSparkles } from 'react-icons/fi';
 import './PortfolioView.css';
 
 const PortfolioView = ({ user }) => {
@@ -47,6 +48,10 @@ const PortfolioView = ({ user }) => {
         images: [],
     });
     const [formErrors, setFormErrors] = useState({});
+    const [aiDescriptionLoading, setAiDescriptionLoading] = useState(false);
+    const [editingAiDescriptionLoading, setEditingAiDescriptionLoading] = useState(false);
+    const createDescriptionCount = (form.productDescription || '').length;
+    const editDescriptionCount = (editingProduct?.productDescription || '').length;
 
     const updateField = (field, value) => {
         setForm((prev) => ({ ...prev, [field]: value }));
@@ -59,6 +64,49 @@ const PortfolioView = ({ user }) => {
             }
         });
     }, []);
+
+    const parseCategoryLabel = useCallback((categoryId) => {
+        const found = categories.find((item) => item.id === categoryId);
+        return found?.name || '';
+    }, [categories]);
+
+    const generateDescription = useCallback(async ({ isEdit = false } = {}) => {
+        const target = isEdit ? editingProduct : form;
+        const setLoading = isEdit ? setEditingAiDescriptionLoading : setAiDescriptionLoading;
+        if (!target?.productName?.trim()) {
+            appToast.warning('Thiếu thông tin', 'Vui lòng nhập tên sản phẩm trước khi tạo mô tả.');
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const tagsValue = Array.isArray(target.tags)
+                ? target.tags.map((tag) => (tag || '').trim()).filter(Boolean).join(', ')
+                : '';
+            const result = await productService.generateProductDescription({
+                productName: target.productName,
+                category: parseCategoryLabel(target.categoryId),
+                tags: tagsValue,
+                existingDescription: target.productDescription,
+            });
+
+            if (result.success) {
+                const description = result.data?.description || '';
+                if (isEdit) {
+                    updateEditField('productDescription', description);
+                } else {
+                    updateField('productDescription', description);
+                }
+                appToast.success('Đã tạo mô tả', result.data?.message || 'Mô tả sản phẩm đã được tạo.');
+            } else {
+                appToast.error('Không tạo được mô tả', result.error || 'Vui lòng thử lại');
+            }
+        } catch (err) {
+            appToast.error('Không tạo được mô tả', err?.message || 'Vui lòng thử lại');
+        } finally {
+            setLoading(false);
+        }
+    }, [editingProduct, form, parseCategoryLabel]);
 
     const resetCreateForm = useCallback(() => {
         setForm((prev) => {
@@ -529,13 +577,25 @@ const PortfolioView = ({ user }) => {
                                                 />
                                             </div>
                                             <div className="form-group form-group--full">
-                                                <label className="form-label">Mô tả</label>
+                                                <div className="create-section-head">
+                                                    <label className="form-label">Mô tả</label>
+                                                    <button
+                                                        type="button"
+                                                        className="btn-chip"
+                                                        onClick={() => generateDescription({ isEdit: true })}
+                                                        disabled={editingAiDescriptionLoading}
+                                                    >
+                                                        <FiSparkles />
+                                                        {editingAiDescriptionLoading ? 'Đang tạo...' : 'Generate AI Description'}
+                                                    </button>
+                                                </div>
                                                 <textarea
                                                     className="form-textarea"
                                                     rows={4}
                                                     value={editingProduct.productDescription}
                                                     onChange={(e) => updateEditField('productDescription', e.target.value)}
                                                 />
+                                                <div className="description-count">{editDescriptionCount} ký tự</div>
                                             </div>
                                             <div className="form-group">
                                                 <label className="form-label">Kích thước</label>
@@ -706,13 +766,25 @@ const PortfolioView = ({ user }) => {
                                             </div>
 
                                             <div className="form-group form-group--full">
-                                                <label className="form-label">Mô tả</label>
+                                                <div className="create-section-head">
+                                                    <label className="form-label">Mô tả</label>
+                                                    <button
+                                                        type="button"
+                                                        className="btn-chip"
+                                                        onClick={() => generateDescription()}
+                                                        disabled={aiDescriptionLoading}
+                                                    >
+                                                        <FiSparkles />
+                                                        {aiDescriptionLoading ? 'Đang tạo...' : 'Generate AI Description'}
+                                                    </button>
+                                                </div>
                                                 <textarea
                                                     className="form-textarea"
                                                     rows={4}
                                                     value={form.productDescription}
                                                     onChange={(e) => updateField('productDescription', e.target.value)}
                                                 />
+                                                <div className="description-count">{createDescriptionCount} ký tự</div>
                                             </div>
 
                                             <div className="form-group">

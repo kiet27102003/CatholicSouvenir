@@ -6,7 +6,7 @@ import { appToast } from '../../lib/appToast';
 import complaintService from '../../services/complaintService';
 import './AdminComplaintManagementPage.css';
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 8;
 const COMPLAINT_STATUS_LABELS = {
     PENDING: 'Đang chờ xử lý',
     WAITING_RETURN: 'Chờ khách hoàn hàng',
@@ -16,14 +16,14 @@ const COMPLAINT_STATUS_LABELS = {
     APPROVED: 'Đã duyệt',
     REJECTED: 'Đã từ chối',
 };
-const REFUND_STATUS_LABELS = {
-    PENDING: 'Đang chờ',
-    PROCESSING: 'Đang xử lý',
-    COMPLETED: 'Hoàn tất',
-    FAILED: 'Thất bại',
-};
 const COMPLAINT_STATUS_OPTIONS = Object.keys(COMPLAINT_STATUS_LABELS);
-const REFUND_STATUS_OPTIONS = Object.keys(REFUND_STATUS_LABELS);
+const REFUND_STATUS_LABELS = {
+    PENDING: 'Chờ xử lý',
+    PROCESSING: 'Đang xử lý',
+    COMPLETED: 'Hoàn thành',
+    FAILED: 'Thất bại',
+    PARTIALLY_REFUNDED: 'Hoàn tiền một phần',
+};
 
 const formatDateTime = (value) => (value ? dayjs(value).format('DD/MM/YYYY HH:mm') : '—');
 const translateStatus = (status, labels) => labels[String(status || '').toUpperCase()] || status || '—';
@@ -35,15 +35,12 @@ const AdminComplaintManagementPage = () => {
 
     const [loading, setLoading] = useState(true);
     const [items, setItems] = useState([]);
-    const [refundItems, setRefundItems] = useState([]);
     const [selected, setSelected] = useState(null);
     const [selectedDetail, setSelectedDetail] = useState(null);
     const [page, setPage] = useState(0);
     const [totalPages, setTotalPages] = useState(1);
     const [statusFilter, setStatusFilter] = useState('');
-    const [refundStatusFilter, setRefundStatusFilter] = useState('');
-    const [refundPage, setRefundPage] = useState(0);
-    const [refundTotalPages, setRefundTotalPages] = useState(1);
+    const [sortOrder, setSortOrder] = useState('DESC');
     const [detailMode, setDetailMode] = useState(false);
     const [modalAction, setModalAction] = useState('DETAIL');
     const [actionLoading, setActionLoading] = useState(false);
@@ -53,47 +50,52 @@ const AdminComplaintManagementPage = () => {
     const [zoomedEvidence, setZoomedEvidence] = useState(null);
     const [orderTotal, setOrderTotal] = useState(null);
     const [orderLoading, setOrderLoading] = useState(false);
-    const [targetCustomOrder, setTargetCustomOrder] = useState(null);
+
+    const compareCreatedAt = (a, b) => dayjs(a?.createdAt || a?.created_at || 0).valueOf() - dayjs(b?.createdAt || b?.created_at || 0).valueOf();
 
     const loadComplaints = async () => {
         setLoading(true);
-        const res = await complaintService.getAdminComplaints({ status: statusFilter || undefined, page, size: PAGE_SIZE });
-        if (!res.success) {
-            appToast.error('Không tải được danh sách khiếu nại', res.error || 'Vui lòng thử lại sau');
+        const firstRes = await complaintService.getAdminComplaints({ status: statusFilter || undefined, page: 0, size: PAGE_SIZE });
+        if (!firstRes.success) {
+            appToast.error('Không tải được danh sách khiếu nại', firstRes.error || 'Vui lòng thử lại sau');
             setItems([]);
             setTotalPages(1);
-        } else {
-            const data = res.data || {};
-            setItems(Array.isArray(data.content) ? data.content : complaintService.toArray(data));
-            setTotalPages(Number(data.totalPages || 1));
-        }
-        setLoading(false);
-    };
-
-    const loadRefundTransactions = async () => {
-        const res = await complaintService.getAdminRefundTransactions({ status: refundStatusFilter || undefined, page: refundPage, size: PAGE_SIZE });
-        if (!res.success) {
-            appToast.error('Không tải được danh sách hoàn tiền', res.error || 'Vui lòng thử lại sau');
-            setRefundItems([]);
-            setRefundTotalPages(1);
+            setLoading(false);
             return;
         }
-        const data = res.data || {};
-        setRefundItems(Array.isArray(data.content) ? data.content : complaintService.toArray(data));
-        setRefundTotalPages(Number(data.totalPages || 1));
+
+        const firstData = firstRes.data || {};
+        const firstItems = Array.isArray(firstData.content) ? firstData.content : complaintService.toArray(firstData);
+        const firstTotalPages = Number(firstData.totalPages || 1);
+        const pageRequests = [];
+
+        for (let nextPage = 1; nextPage < firstTotalPages; nextPage += 1) {
+            pageRequests.push(complaintService.getAdminComplaints({ status: statusFilter || undefined, page: nextPage, size: PAGE_SIZE }));
+        }
+
+        const restResults = pageRequests.length > 0 ? await Promise.all(pageRequests) : [];
+        const restItems = restResults.flatMap((result) => {
+            if (!result?.success) return [];
+            const data = result.data || {};
+            return Array.isArray(data.content) ? data.content : complaintService.toArray(data);
+        });
+
+        const allItems = [...firstItems, ...restItems].sort(compareCreatedAt);
+        const orderedItems = sortOrder === 'ASC' ? allItems : [...allItems].reverse();
+        const pageCount = Math.max(1, Math.ceil(orderedItems.length / PAGE_SIZE));
+        const currentPage = Math.min(page, pageCount - 1);
+        const startIndex = currentPage * PAGE_SIZE;
+
+        setItems(orderedItems.slice(startIndex, startIndex + PAGE_SIZE));
+        setTotalPages(pageCount);
+        setLoading(false);
     };
 
     useEffect(() => {
         if (!isAuthenticated || !canView) return;
         loadComplaints();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isAuthenticated, canView, page, statusFilter]);
-
-    useEffect(() => {
-        if (!isAuthenticated || !canView) return;
-        loadRefundTransactions();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isAuthenticated, canView, refundPage, refundStatusFilter]);
+    }, [isAuthenticated, canView, page, statusFilter, sortOrder]);
 
     const filteredItems = useMemo(() => items, [items]);
 
@@ -103,7 +105,6 @@ const AdminComplaintManagementPage = () => {
         setModalAction(action);
         setDetailMode(true);
         setOrderTotal(null);
-        setTargetCustomOrder(item?.customOrderId || null);
         const res = await complaintService.getAdminComplaintDetail(item.complaintId || item.id);
         if (!res.success) {
             appToast.error('Không tải được chi tiết', res.error || 'Vui lòng thử lại sau');
@@ -140,7 +141,6 @@ const AdminComplaintManagementPage = () => {
         appToast.success('Đã phê duyệt khiếu nại');
         setDetailMode(false);
         await loadComplaints();
-        await loadRefundTransactions();
     };
 
     const handleReject = async () => {
@@ -152,15 +152,6 @@ const AdminComplaintManagementPage = () => {
         appToast.success('Đã từ chối khiếu nại');
         setDetailMode(false);
         await loadComplaints();
-    };
-
-    const handleRetryRefund = async (transactionId) => {
-        setActionLoading(true);
-        const res = await complaintService.retryAdminRefundTransaction(transactionId);
-        setActionLoading(false);
-        if (!res.success) return appToast.error('Thử lại thất bại', res.error || 'Vui lòng thử lại sau');
-        appToast.success('Đã thử lại giao dịch hoàn tiền');
-        await loadRefundTransactions();
     };
 
     if (!isAuthenticated) return <Navigate to="/login" replace />;
@@ -177,13 +168,21 @@ const AdminComplaintManagementPage = () => {
 
             <section className="admin-complaint-section">
                 <div className="admin-section-head">
-                    <h2>Danh sách khiếu nại</h2>
-                    <select className="admin-filter-select inline" value={statusFilter} onChange={(e) => { setPage(0); setStatusFilter(e.target.value); }}>
-                        <option value="">Tất cả trạng thái khiếu nại</option>
-                        {COMPLAINT_STATUS_OPTIONS.map((option) => (
-                            <option key={option} value={option}>{translateStatus(option, COMPLAINT_STATUS_LABELS)}</option>
-                        ))}
-                    </select>
+                    <div>
+                        <h2>Danh sách khiếu nại</h2>
+                    </div>
+                    <div className="admin-section-controls">
+                        <select className="admin-filter-select inline" value={statusFilter} onChange={(e) => { setPage(0); setStatusFilter(e.target.value); }}>
+                            <option value="">Tất cả trạng thái khiếu nại</option>
+                            {COMPLAINT_STATUS_OPTIONS.map((option) => (
+                                <option key={option} value={option}>{translateStatus(option, COMPLAINT_STATUS_LABELS)}</option>
+                            ))}
+                        </select>
+                        <select className="admin-filter-select inline" value={sortOrder} onChange={(e) => { setPage(0); setSortOrder(e.target.value); }}>
+                            <option value="DESC">Mới nhất</option>
+                            <option value="ASC">Cũ nhất</option>
+                        </select>
+                    </div>
                 </div>
                 {loading ? <div className="admin-complaint-empty">Đang tải dữ liệu...</div> : filteredItems.length === 0 ? <div className="admin-complaint-empty">Chưa có khiếu nại nào</div> : (
                     <div className="admin-complaint-list">
@@ -194,7 +193,6 @@ const AdminComplaintManagementPage = () => {
                                         <strong>#{String(item.complaintId || '').slice(0, 8)}</strong>
                                         <span className="admin-complaint-status">{translateStatus(item.status, COMPLAINT_STATUS_LABELS)}</span>
                                     </div>
-                                    <span className="admin-complaint-chip">{item.requireReturn ? 'Yêu cầu hoàn hàng' : 'Không hoàn hàng'}</span>
                                 </div>
                                 <p className="admin-complaint-reason">{item.reason || '—'}</p>
                                 <small>{item.customerName || '—'} • {item.artisanName || '—'}</small>
@@ -217,40 +215,6 @@ const AdminComplaintManagementPage = () => {
                     <button type="button" disabled={page <= 0} onClick={() => setPage((prev) => prev - 1)}>Trước</button>
                     <span>Trang {page + 1}/{totalPages}</span>
                     <button type="button" disabled={page + 1 >= totalPages} onClick={() => setPage((prev) => prev + 1)}>Sau</button>
-                </div>
-            </section>
-
-            <section className="admin-complaint-section">
-                <div className="admin-section-head">
-                    <h2>Giao dịch hoàn tiền</h2>
-                    <select className="admin-filter-select inline" value={refundStatusFilter} onChange={(e) => { setRefundPage(0); setRefundStatusFilter(e.target.value); }}>
-                        <option value="">Tất cả trạng thái hoàn tiền</option>
-                        {REFUND_STATUS_OPTIONS.map((option) => (
-                            <option key={option} value={option}>{translateStatus(option, REFUND_STATUS_LABELS)}</option>
-                        ))}
-                    </select>
-                </div>
-                {refundItems.length === 0 ? <div className="admin-complaint-empty">Chưa có giao dịch hoàn tiền nào</div> : (
-                    <div className="admin-refund-list">
-                        {refundItems.map((item) => (
-                            <div key={item.refundTransactionId} className="admin-refund-card">
-                                <strong>{translateStatus(item.status, REFUND_STATUS_LABELS)}</strong>
-                                <p>Số tiền: {item.amount ?? 0}</p>
-                                <p>{item.fromWalletOwnerName || '—'} → {item.toWalletOwnerName || '—'}</p>
-                                <small>{formatDateTime(item.createdAt)}</small>
-                                {String(item.status || '').toUpperCase() === 'FAILED' && (
-                                    <button type="button" onClick={() => handleRetryRefund(item.refundTransactionId)} disabled={actionLoading}>
-                                        Thử lại
-                                    </button>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                )}
-                <div className="admin-complaint-pagination">
-                    <button type="button" disabled={refundPage <= 0} onClick={() => setRefundPage((prev) => prev - 1)}>Trước</button>
-                    <span>Trang {refundPage + 1}/{refundTotalPages}</span>
-                    <button type="button" disabled={refundPage + 1 >= refundTotalPages} onClick={() => setRefundPage((prev) => prev + 1)}>Sau</button>
                 </div>
             </section>
 

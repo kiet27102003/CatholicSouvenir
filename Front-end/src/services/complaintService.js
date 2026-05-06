@@ -92,9 +92,12 @@ export const createComplaint = async (payload) => {
     }
 };
 
-export const getArtisanComplaints = async ({ page = 0, size = 10 } = {}) => {
+export const getArtisanComplaints = async ({ page = 0, size = 10, sort } = {}) => {
     try {
-        const response = await api.get('/artisan/complaints', { params: { page, size } });
+        const params = { page, size };
+        if (Array.isArray(sort)) params.sort = sort;
+        else if (sort) params.sort = sort;
+        const response = await api.get('/artisan/complaints', { params });
         const normalized = normalizeResponse(response);
         if (!isSuccessCode(normalized.code)) {
             return { success: false, error: normalized.message || 'Không tải được danh sách khiếu nại.', data: { content: [], totalElements: 0, totalPages: 0, number: page, size } };

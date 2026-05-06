@@ -44,6 +44,72 @@ export const recommendScripture = async ({ purpose, productName, theme, language
     }
 };
 
+export const validateImageFile = async (file) => {
+    if (!(file instanceof File)) {
+        return { success: false, error: 'File không hợp lệ.' };
+    }
+
+    try {
+        const formData = new FormData();
+        formData.append('image', file);
+
+        const response = await api.post('/ai/validate-image', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        const normalized = normalizeResponse(response);
+
+        if (!isSuccessCode(normalized.code)) {
+            return { success: false, error: normalized.message || 'Không thể xác thực ảnh.' };
+        }
+
+        return { success: true, data: normalized.data ?? {} };
+    } catch (error) {
+        return { success: false, error: mapError(error, 'Không thể xác thực ảnh. Vui lòng thử lại.') };
+    }
+};
+
+export const validateImageUrl = async (imageUrl) => {
+    const nextUrl = String(imageUrl || '').trim();
+    if (!nextUrl) {
+        return { success: false, error: 'Thiếu URL ảnh.' };
+    }
+
+    try {
+        const response = await api.post('/ai/validate-image-url', null, {
+            params: { imageUrl: nextUrl },
+        });
+        const normalized = normalizeResponse(response);
+
+        if (!isSuccessCode(normalized.code)) {
+            return { success: false, error: normalized.message || 'Không thể xác thực ảnh.' };
+        }
+
+        return { success: true, data: normalized.data ?? {} };
+    } catch (error) {
+        return { success: false, error: mapError(error, 'Không thể xác thực ảnh. Vui lòng thử lại.') };
+    }
+};
+
+export const validateImagesBatch = async (imageUrls = []) => {
+    const urls = Array.isArray(imageUrls) ? imageUrls.map((url) => String(url || '').trim()).filter(Boolean) : [];
+    if (urls.length === 0) {
+        return { success: false, error: 'Thiếu danh sách URL ảnh.' };
+    }
+
+    try {
+        const response = await api.post('/ai/validate-images-batch', { imageUrls: urls });
+        const normalized = normalizeResponse(response);
+
+        if (!isSuccessCode(normalized.code)) {
+            return { success: false, error: normalized.message || 'Không thể xác thực danh sách ảnh.' };
+        }
+
+        return { success: true, data: normalized.data ?? {} };
+    } catch (error) {
+        return { success: false, error: mapError(error, 'Không thể xác thực danh sách ảnh. Vui lòng thử lại.') };
+    }
+};
+
 export const generateConceptImage = async ({ description }) => {
     try {
         const response = await api.post('/ai/generate-concept', { description });
@@ -58,4 +124,4 @@ export const generateConceptImage = async ({ description }) => {
     }
 };
 
-export default { recommendScripture, generateConceptImage };
+export default { recommendScripture, validateImageFile, validateImageUrl, validateImagesBatch, generateConceptImage };

@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import Header from '../../components/Header/Header';
 import ImageUpload from '../../components/ui/ImageUpload';
-import { generateConceptImage } from '../../services/aiService';
+import { generateConceptImage, validateImageUrl } from '../../services/aiService';
 import { createCustomRequestV2 as createCustomRequest } from '../../services/customRequestService';
 import { appToast } from '../../lib/appToast';
 import './CustomRequestPage.css';
@@ -23,11 +23,45 @@ const CustomRequestPage = () => {
     });
     const [submitting, setSubmitting] = useState(false);
     const [generatingImage, setGeneratingImage] = useState(false);
+    const [validatingReference, setValidatingReference] = useState(false);
+    const [referenceValidation, setReferenceValidation] = useState(null);
     const [modalOpen, setModalOpen] = useState(false);
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
         setFormData((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+    };
+
+    const handleReferenceImageChange = async (nextValue) => {
+        setFormData((prev) => ({ ...prev, referenceImageUrl: nextValue }));
+        setReferenceValidation(null);
+
+        const imageUrl = String(nextValue || '').trim();
+        if (!imageUrl) return;
+
+        setValidatingReference(true);
+        const result = await validateImageUrl(imageUrl);
+        setValidatingReference(false);
+
+        if (result.success) {
+            setReferenceValidation(result.data || null);
+            const data = result.data || {};
+            const confidence = Number(data.confidenceScore ?? 0);
+            const label = data.valid
+                ? confidence >= 0.8
+                    ? 'Ảnh tham khảo hợp lệ'
+                    : 'Ảnh hợp lệ nhưng cần review'
+                : 'Ảnh không phải vật phẩm Công Giáo';
+
+            if (data.valid) {
+                appToast.success('Đã kiểm tra ảnh tham khảo', label);
+            } else {
+                appToast.warning('Cần kiểm tra ảnh tham khảo', label);
+            }
+            return;
+        }
+
+        appToast.error('Không kiểm tra được ảnh tham khảo', result.error != null ? String(result.error) : 'Vui lòng thử lại');
     };
 
     const validateForm = () => {
@@ -91,6 +125,11 @@ const CustomRequestPage = () => {
         const validationError = validateForm();
         if (validationError) {
             appToast.warning('Dữ liệu chưa hợp lệ', validationError);
+            return;
+        }
+
+        if (referenceValidation && referenceValidation.valid === false) {
+            appToast.warning('Ảnh tham khảo chưa hợp lệ', 'Vui lòng đổi ảnh tham khảo khác trước khi gửi yêu cầu');
             return;
         }
 
@@ -216,10 +255,24 @@ const CustomRequestPage = () => {
 
                             <ImageUpload
                                 value={formData.referenceImageUrl}
-                                onChange={(nextValue) => setFormData((prev) => ({ ...prev, referenceImageUrl: nextValue }))}
+                                onChange={handleReferenceImageChange}
                                 label="Ảnh tham khảo"
                                 folder="custom-requests"
                             />
+
+                            <div className="form-hint-row">
+                                {validatingReference ? (
+                                    <span className="form-hint form-hint-info">Đang kiểm tra ảnh tham khảo...</span>
+                                ) : referenceValidation ? (
+                                    <span
+                                        className={`form-hint ${referenceValidation.valid ? 'form-hint-success' : 'form-hint-warning'}`}
+                                    >
+                                        {referenceValidation.valid
+                                            ? `Ảnh hợp lệ${referenceValidation.requiresManualReview ? ' - cần review thủ công' : ''}`
+                                            : 'Ảnh không phải vật phẩm Công Giáo'}
+                                    </span>
+                                ) : null}
+                            </div>
 
                             <div className="form-group">
                                 <label className="form-label">Ảnh concept AI</label>

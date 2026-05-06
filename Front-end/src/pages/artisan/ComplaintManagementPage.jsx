@@ -23,6 +23,9 @@ const ComplaintManagementPage = ({ embedded = false }) => {
     const [items, setItems] = useState([]);
     const [page, setPage] = useState(0);
     const [pageInfo, setPageInfo] = useState({ totalPages: 0, totalElements: 0, number: 0 });
+    const [sortOrder, setSortOrder] = useState('DESC');
+    const [statusSort, setStatusSort] = useState('ALL');
+    const [statusSortOrder, setStatusSortOrder] = useState('ASC');
     const [selected, setSelected] = useState(null);
     const [detailLoading, setDetailLoading] = useState(false);
     const [previewImage, setPreviewImage] = useState('');
@@ -33,7 +36,7 @@ const ComplaintManagementPage = ({ embedded = false }) => {
 
     const loadData = async (nextPage = page) => {
         setLoading(true);
-        const res = await getArtisanComplaints({ page: nextPage, size: PAGE_SIZE });
+        const res = await getArtisanComplaints({ page: nextPage, size: PAGE_SIZE, sort: `createdAt,${sortOrder.toLowerCase()}`, status: statusSort === 'ALL' ? undefined : statusSort, statusSort: statusSort === 'ALL' ? undefined : `status,${statusSortOrder.toLowerCase()}` });
         if (!res.success) {
             appToast.error('Không tải được danh sách khiếu nại', res.error || 'Vui lòng thử lại');
             setItems([]);
@@ -55,7 +58,7 @@ const ComplaintManagementPage = ({ embedded = false }) => {
     useEffect(() => {
         loadData(page);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [page]);
+    }, [page, sortOrder, statusSort]);
 
     const paginationText = useMemo(() => {
         if (!pageInfo.totalElements) return 'Hiển thị 0 khiếu nại';
@@ -142,8 +145,36 @@ const ComplaintManagementPage = ({ embedded = false }) => {
 
             <section className="artisan-complaint-list-card">
                 <div className="list-head">
-                    <h2>Danh sách khiếu nại</h2>
-                    <span>{paginationText}</span>
+                    <div>
+                        <h2>Danh sách khiếu nại</h2>
+                        <span>{paginationText}</span>
+                    </div>
+                    <div className="list-head__controls">
+                        <select
+                            className="artisan-complaint-sort"
+                            value={sortOrder}
+                            onChange={(e) => {
+                                setPage(0);
+                                setSortOrder(e.target.value);
+                            }}
+                        >
+                            <option value="DESC">Mới nhất</option>
+                            <option value="ASC">Cũ nhất</option>
+                        </select>
+                        <select
+                            className="artisan-complaint-sort"
+                            value={statusSort}
+                            onChange={(e) => {
+                                setPage(0);
+                                setStatusSort(e.target.value);
+                            }}
+                        >
+                            <option value="ALL">Tất cả trạng thái</option>
+                            {Object.keys(STATUS_META).map((status) => (
+                                <option key={status} value={status}>{STATUS_META[status].label}</option>
+                            ))}
+                        </select>
+                    </div>
                 </div>
 
                 {loading ? (
@@ -203,7 +234,6 @@ const ComplaintManagementPage = ({ embedded = false }) => {
                                         <div className="detail-box"><span>Khách hàng</span><strong>{selected.customerName || '—'}</strong><p>{selected.customerEmail || '—'}</p></div>
                                         <div className="detail-box"><span>Đơn hàng</span><strong>{selected.orderId || '—'}</strong><p>{selected.customOrderId || 'Không phải đơn tùy chỉnh'}</p></div>
                                         <div className="detail-box"><span>Trạng thái</span><strong>{STATUS_META[String(selected.status || '').toUpperCase()]?.label || selected.status || '—'}</strong></div>
-                                        <div className="detail-box"><span>Yêu cầu trả hàng</span><strong>{selected.requireReturn ? 'Có' : 'Không'}</strong></div>
                                         <div className="detail-box"><span>Số tiền hoàn</span><strong>{new Intl.NumberFormat('vi-VN').format(Number(selected.refundAmount || 0))} đ</strong></div>
                                         <div className="detail-box"><span>Thời gian</span><strong>{formatDateTime(selected.createdAt)}</strong><p>Cập nhật: {formatDateTime(selected.updatedAt)}</p></div>
                                         <div className="detail-box wide"><span>Lý do khiếu nại</span><p>{selected.reason || '—'}</p></div>

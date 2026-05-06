@@ -1,5 +1,22 @@
 import api from '../cofig/api';
 
+const normalizeAiResponse = (response, fallbackMessage) => {
+    const res = response?.data;
+
+    if (response?.status !== 200 || (res?.code != null && res.code !== 200 && res.code !== 0)) {
+        return {
+            success: false,
+            error: res?.message || fallbackMessage,
+        };
+    }
+
+    return {
+        success: true,
+        data: res?.data ?? null,
+        message: res?.message,
+    };
+};
+
 /**
  * Tạo sản phẩm (POST /api/product) - multipart/form-data.
  * @param {Object} payload
@@ -200,29 +217,101 @@ export const generateProductDescription = async (payload) => {
                 existingDescription: String(payload.existingDescription).trim(),
             }),
         });
-        const res = response.data;
 
-        if (response?.status !== 200) {
-            return {
-                success: false,
-                error: res?.message || 'Tạo mô tả bằng AI thất bại.',
-            };
-        }
+        const normalized = normalizeAiResponse(response, 'Tạo mô tả bằng AI thất bại.');
+        if (!normalized.success) return normalized;
 
-        const description = typeof res?.data === 'string'
-            ? res.data
-            : res?.data?.description ?? '';
+        const description = typeof normalized.data === 'string'
+            ? normalized.data
+            : normalized.data?.description ?? '';
 
         return {
             success: true,
             data: {
                 description,
-                aiGenerated: res?.data?.aiGenerated,
-                message: res?.message,
+                aiGenerated: normalized.data?.aiGenerated,
+                message: normalized.message,
             },
         };
     } catch (error) {
         const message = error.response?.data?.message ?? error.message ?? 'Tạo mô tả bằng AI thất bại.';
+        return {
+            success: false,
+            error: typeof message === 'string' ? message : 'Lỗi không xác định.',
+        };
+    }
+};
+
+export const validateProductImageFile = async (file) => {
+    if (!(file instanceof File)) {
+        return { success: false, error: 'File không hợp lệ.' };
+    }
+
+    try {
+        const formData = new FormData();
+        formData.append('image', file);
+        const response = await api.post('/ai/validate-image', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+
+        const normalized = normalizeAiResponse(response, 'Không thể xác thực ảnh.');
+        if (!normalized.success) return normalized;
+
+        return {
+            success: true,
+            data: normalized.data,
+            message: normalized.message,
+        };
+    } catch (error) {
+        const message = error.response?.data?.message ?? error.message ?? 'Không thể xác thực ảnh.';
+        return {
+            success: false,
+            error: typeof message === 'string' ? message : 'Lỗi không xác định.',
+        };
+    }
+};
+
+export const validateProductImageUrl = async (imageUrl) => {
+    const url = String(imageUrl || '').trim();
+    if (!url) return { success: false, error: 'Thiếu imageUrl.' };
+
+    try {
+        const response = await api.post('/ai/validate-image-url', null, {
+            params: { imageUrl: url },
+        });
+        const normalized = normalizeAiResponse(response, 'Không thể xác thực ảnh.');
+        if (!normalized.success) return normalized;
+
+        return {
+            success: true,
+            data: normalized.data,
+            message: normalized.message,
+        };
+    } catch (error) {
+        const message = error.response?.data?.message ?? error.message ?? 'Không thể xác thực ảnh.';
+        return {
+            success: false,
+            error: typeof message === 'string' ? message : 'Lỗi không xác định.',
+        };
+    }
+};
+
+export const validateProductImagesBatch = async (imageUrls) => {
+    const urls = Array.isArray(imageUrls) ? imageUrls.map((url) => String(url || '').trim()).filter(Boolean) : [];
+    if (urls.length === 0) return { success: false, error: 'Thiếu danh sách imageUrls.' };
+
+    try {
+        const response = await api.post('/ai/validate-images-batch', { imageUrls: urls });
+        const normalized = normalizeAiResponse(response, 'Không thể xác thực danh sách ảnh.');
+        if (!normalized.success) return normalized;
+
+        return {
+            success: true,
+            data: normalized.data,
+            message: normalized.message,
+        };
+    } catch (error) {
+        const message = error.response?.data?.message ?? error.message ?? 'Không thể xác thực danh sách ảnh.';
         return {
             success: false,
             error: typeof message === 'string' ? message : 'Lỗi không xác định.',

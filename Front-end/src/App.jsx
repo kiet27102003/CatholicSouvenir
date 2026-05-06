@@ -146,8 +146,8 @@ function App() {
           <Route path="payments" element={<AdminComingSoon title="Thanh toán" />} />
           <Route path="wallets" element={<AdminWallets />} />
           <Route path="complaints" element={<AdminComplaintManagementPage />} />
-          <Route path="recovery-management" element={<AdminRecoveryManagementPage />} />
           <Route path="refund-transactions" element={<AdminRefundTransactionsPage />} />
+          <Route path="recovery-management" element={<AdminRecoveryManagementPage />} />
           <Route path="withdrawals" element={<AdminWithdrawals />} />
           <Route path="categories" element={<CategoryManager />} />
           <Route path="artisan-applications" element={<ArtisanApplications />} />

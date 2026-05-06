@@ -18,6 +18,7 @@ import {
     FiCreditCard,
     FiRepeat,
     FiAlertTriangle,
+    FiMessageSquare,
 } from 'react-icons/fi';
 
 const AdminLayout = () => {
@@ -61,7 +62,13 @@ const AdminLayout = () => {
         {
             title: 'Dịch vụ & hỗ trợ',
             items: [
-                { path: '/admin/complaints', name: 'Khiếu nại', icon: <FiAlertTriangle /> },
+                { path: '/admin/complaints', name: 'Danh sách khiếu nại', icon: <FiAlertTriangle /> },
+            ],
+        },
+        {
+            title: 'Hoàn tiền',
+            items: [
+                { path: '/admin/refund-transactions', name: 'Giao dịch hoàn tiền', icon: <FiMessageSquare /> },
             ],
         },
         {

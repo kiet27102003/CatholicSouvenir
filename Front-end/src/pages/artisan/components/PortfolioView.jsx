@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import * as productService from '../../../services/productService';
 import api from '../../../cofig/api';
 import { appToast } from '../../../lib/appToast';
-import { FiStar } from 'react-icons/fi';
+import { FiCheckCircle, FiStar, FiXCircle } from 'react-icons/fi';
 import './PortfolioView.css';
 
 const PortfolioView = ({ user }) => {
@@ -50,6 +50,8 @@ const PortfolioView = ({ user }) => {
     const [formErrors, setFormErrors] = useState({});
     const [aiDescriptionLoading, setAiDescriptionLoading] = useState(false);
     const [editingAiDescriptionLoading, setEditingAiDescriptionLoading] = useState(false);
+    const [uploadValidationLoading, setUploadValidationLoading] = useState(false);
+    const [uploadValidationResults, setUploadValidationResults] = useState([]);
     const createDescriptionCount = (form.productDescription || '').length;
     const editDescriptionCount = (editingProduct?.productDescription || '').length;
 
@@ -63,6 +65,7 @@ const PortfolioView = ({ user }) => {
                 URL.revokeObjectURL(item.preview);
             }
         });
+        setUploadValidationResults([]);
     }, []);
 
     const parseCategoryLabel = useCallback((categoryId) => {
@@ -70,9 +73,45 @@ const PortfolioView = ({ user }) => {
         return found?.name || '';
     }, [categories]);
 
+    const validateCreateImages = useCallback(async (files) => {
+        const items = Array.isArray(files) ? files : [];
+        if (items.length === 0) {
+            setUploadValidationResults([]);
+            return;
+        }
+
+        setUploadValidationLoading(true);
+        try {
+            const results = [];
+            for (const item of items) {
+                const file = item?.file;
+                if (!(file instanceof File)) continue;
+                const validation = await productService.validateProductImageFile(file);
+                results.push({
+                    name: file.name,
+                    ...validation,
+                    data: validation.data || {},
+                });
+            }
+            setUploadValidationResults(results);
+
+            const invalidCount = results.filter((item) => item.success && item.data?.valid === false).length;
+            if (invalidCount > 0) {
+                appToast.warning('Có ảnh cần kiểm tra', `${invalidCount} ảnh chưa được xác nhận là vật phẩm Công Giáo.`);
+            } else if (results.length > 0) {
+                appToast.success('Ảnh hợp lệ', 'Tất cả ảnh đã qua kiểm tra AI.');
+            }
+        } catch (error) {
+            appToast.error('Không thể kiểm tra ảnh', error?.message || 'Vui lòng thử lại');
+        } finally {
+            setUploadValidationLoading(false);
+        }
+    }, []);
+
     const generateDescription = useCallback(async ({ isEdit = false } = {}) => {
         const target = isEdit ? editingProduct : form;
         const setLoading = isEdit ? setEditingAiDescriptionLoading : setAiDescriptionLoading;
+
         if (!target?.productName?.trim()) {
             appToast.warning('Thiếu thông tin', 'Vui lòng nhập tên sản phẩm trước khi tạo mô tả.');
             return;
@@ -101,8 +140,8 @@ const PortfolioView = ({ user }) => {
             } else {
                 appToast.error('Không tạo được mô tả', result.error || 'Vui lòng thử lại');
             }
-        } catch (err) {
-            appToast.error('Không tạo được mô tả', err?.message || 'Vui lòng thử lại');
+        } catch (error) {
+            appToast.error('Không tạo được mô tả', error?.message || 'Vui lòng thử lại');
         } finally {
             setLoading(false);
         }
@@ -415,11 +454,12 @@ const PortfolioView = ({ user }) => {
         });
     };
 
-    const addCreateImages = (fileList) => {
+    const addCreateImages = async (fileList) => {
         const files = Array.from(fileList || []).filter((file) => file?.type?.startsWith('image/'));
         if (files.length === 0) return;
         const newItems = files.map((file) => ({ file, preview: URL.createObjectURL(file) }));
         setForm((prev) => ({ ...prev, images: [...(prev.images || []), ...newItems] }));
+        await validateCreateImages(newItems);
     };
 
     const removeCreateImage = (index) => {
@@ -867,21 +907,34 @@ const PortfolioView = ({ user }) => {
                                                 <span>PNG, JPG, WEBP. Hỗ trợ xem trước ngay.</span>
                                             </label>
                                             {(form.images || []).length > 0 && (
-                                                <div className="create-image-grid">
-                                                    {form.images.map((img, idx) => (
-                                                        <div key={`create-image-${idx}`} className="create-image-item">
-                                                            <img src={img.preview} alt={`Ảnh ${idx + 1}`} />
-                                                            <button
-                                                                type="button"
-                                                                className="edit-modal-image-remove"
-                                                                onClick={() => removeCreateImage(idx)}
-                                                                title="Xóa ảnh"
-                                                            >
-                                                                ×
-                                                            </button>
-                                                        </div>
-                                                    ))}
-                                                </div>
+                                                <>
+                                                    <div className="create-image-grid">
+                                                        {form.images.map((img, idx) => {
+                                                            const validation = uploadValidationResults[idx];
+                                                            const isValid = validation?.success ? Boolean(validation.data?.valid) : null;
+                                                            return (
+                                                                <div key={`create-image-${idx}`} className="create-image-item">
+                                                                    <img src={img.preview} alt={`Ảnh ${idx + 1}`} />
+                                                                    {validation?.success ? (
+                                                                        <span className={`image-validation-badge ${isValid ? 'is-valid' : 'is-invalid'}`}>
+                                                                            {isValid ? <FiCheckCircle /> : <FiXCircle />}
+                                                                            {isValid ? 'Hợp lệ' : 'Cần review'}
+                                                                        </span>
+                                                                    ) : null}
+                                                                    <button
+                                                                        type="button"
+                                                                        className="edit-modal-image-remove"
+                                                                        onClick={() => removeCreateImage(idx)}
+                                                                        title="Xóa ảnh"
+                                                                    >
+                                                                        ×
+                                                                    </button>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                    {uploadValidationLoading && <span className="form-hint">Đang kiểm tra ảnh bằng AI...</span>}
+                                                </>
                                             )}
                                         </div>
                                     </div>

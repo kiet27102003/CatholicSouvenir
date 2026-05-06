@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import productService from '../../../services/productService';
+import * as productService from '../../../services/productService';
 import api from '../../../cofig/api';
 import { appToast } from '../../../lib/appToast';
-import { FiSparkles } from 'react-icons/fi';
+import { FiStar } from 'react-icons/fi';
 import './PortfolioView.css';
 
 const PortfolioView = ({ user }) => {
@@ -585,7 +585,7 @@ const PortfolioView = ({ user }) => {
                                                         onClick={() => generateDescription({ isEdit: true })}
                                                         disabled={editingAiDescriptionLoading}
                                                     >
-                                                        <FiSparkles />
+                                                        <FiStar />
                                                         {editingAiDescriptionLoading ? 'Đang tạo...' : 'Generate AI Description'}
                                                     </button>
                                                 </div>
@@ -774,7 +774,7 @@ const PortfolioView = ({ user }) => {
                                                         onClick={() => generateDescription()}
                                                         disabled={aiDescriptionLoading}
                                                     >
-                                                        <FiSparkles />
+                                                        <FiStar />
                                                         {aiDescriptionLoading ? 'Đang tạo...' : 'Generate AI Description'}
                                                     </button>
                                                 </div>

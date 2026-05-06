@@ -192,7 +192,7 @@ export const updateProductStatus = async (productId, payload) => {
  */
 export const generateProductDescription = async (payload) => {
     try {
-        const response = await api.post('/product/generate-description', {
+        const response = await api.post('/ai/generate-description', {
             productName: String(payload.productName ?? '').trim(),
             ...(payload.category != null && String(payload.category).trim() !== '' && { category: String(payload.category).trim() }),
             ...(payload.tags != null && String(payload.tags).trim() !== '' && { tags: String(payload.tags).trim() }),
@@ -202,16 +202,24 @@ export const generateProductDescription = async (payload) => {
         });
         const res = response.data;
 
-        if (res?.success !== true) {
+        if (response?.status !== 200) {
             return {
                 success: false,
                 error: res?.message || 'Tạo mô tả bằng AI thất bại.',
             };
         }
 
+        const description = typeof res?.data === 'string'
+            ? res.data
+            : res?.data?.description ?? '';
+
         return {
             success: true,
-            data: res?.data ?? {},
+            data: {
+                description,
+                aiGenerated: res?.data?.aiGenerated,
+                message: res?.message,
+            },
         };
     } catch (error) {
         const message = error.response?.data?.message ?? error.message ?? 'Tạo mô tả bằng AI thất bại.';
@@ -388,6 +396,7 @@ export const getProductsByArtisan = async (artisanId, options = {}) => {
     }
 };
 
+
 export default {
     createProduct,
     getProducts,
@@ -396,4 +405,5 @@ export default {
     updateProduct,
     updateProductStatus,
     deleteProduct,
+    generateProductDescription,
 };

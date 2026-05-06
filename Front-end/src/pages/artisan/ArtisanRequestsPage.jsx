@@ -1,7 +1,7 @@
 import React, { memo, useEffect, useMemo, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { appToast } from '../../lib/appToast';
-import { getArtisanCustomRequests } from '../../services/customRequestService';
+import { getArtisanCustomRequests, getOpenCustomRequests } from '../../services/customRequestService';
 import { getMyConversations, startConversation } from '../../services/chatService';
 import './ArtisanRequestsPage.css';
 
@@ -34,31 +34,61 @@ const budgetOptions = [
 const statusOptions = [
     { key: 'ALL', label: 'Tất cả trạng thái' },
     { key: 'ARTISAN_SELECTED', label: 'Đã chọn nghệ nhân' },
-    { key: 'OPEN', label: 'Đang mở' },
     { key: 'IN_PROGRESS', label: 'Đang thực hiện' },
     { key: 'COMPLETED', label: 'Hoàn thành' },
     { key: 'CANCELLED', label: 'Đã huỷ' },
-    { key: 'CLOSED', label: 'Đã đóng' },
+    // { key: 'CLOSED', label: 'Đã đóng' },
 ];
 
-const RequestFilters = memo(({ search, onSearchChange, statusFilter, onStatusChange, budgetFilter, onBudgetChange }) => (
+const viewOptions = [
+    { key: 'OPEN', label: 'Đơn đang mở' },
+    { key: 'DEFAULT', label: 'Đơn của tôi' },
+];
+
+const RequestFilters = memo(({ search, onSearchChange, statusFilter, onStatusChange, budgetFilter, onBudgetChange, activeView, onViewChange }) => (
     <header className="artisan-page-header">
         <div>
             <h1>Yêu cầu đặt làm riêng</h1>
             <p>Các yêu cầu từ khách hàng đang tìm nghệ nhân</p>
         </div>
-        <div className="artisan-requests-filters">
-            <input type="search" placeholder="Tìm theo mô tả yêu cầu..." value={search} onChange={(e) => onSearchChange(e.target.value)} />
-            <select value={statusFilter} onChange={(e) => onStatusChange(e.target.value)}>
-                {statusOptions.map((option) => (
-                    <option key={option.key} value={option.key}>{option.label}</option>
-                ))}
-            </select>
-            <select value={budgetFilter} onChange={(e) => onBudgetChange(e.target.value)}>
-                {budgetOptions.map((option) => (
-                    <option key={option.key} value={option.key}>{option.label}</option>
-                ))}
-            </select>
+        <div className="artisan-page-header-center">
+            <div className="artisan-view-toggle" role="tablist" aria-label="Chọn chế độ xem yêu cầu">
+                <button
+                    type="button"
+                    role="tab"
+                    aria-selected={activeView === 'OPEN'}
+                    className={activeView === 'OPEN' ? 'is-active' : ''}
+                    onClick={() => onViewChange('OPEN')}
+                >
+                    {viewOptions[0].label}
+                </button>
+                <button
+                    type="button"
+                    role="tab"
+                    aria-selected={activeView === 'DEFAULT'}
+                    className={activeView === 'DEFAULT' ? 'is-active' : ''}
+                    onClick={() => onViewChange('DEFAULT')}
+                >
+                    {viewOptions[1].label}
+                </button>
+            </div>
+        </div>
+        <div className="artisan-requests-toolbar">
+            <div className="artisan-requests-filters">
+                <input type="search" placeholder="Tìm theo mô tả yêu cầu..." value={search} onChange={(e) => onSearchChange(e.target.value)} />
+                {activeView !== 'OPEN' && (
+                    <select value={statusFilter} onChange={(e) => onStatusChange(e.target.value)}>
+                        {statusOptions.map((option) => (
+                            <option key={option.key} value={option.key}>{option.label}</option>
+                        ))}
+                    </select>
+                )}
+                <select value={budgetFilter} onChange={(e) => onBudgetChange(e.target.value)}>
+                    {budgetOptions.map((option) => (
+                        <option key={option.key} value={option.key}>{option.label}</option>
+                    ))}
+                </select>
+            </div>
         </div>
     </header>
 ));
@@ -82,7 +112,6 @@ const RequestList = memo(({ loading, filtered, page, totalPages, onPrev, onNext,
                 {filtered.map((item) => {
                     const id = getRequestId(item);
                     const refs = Array.isArray(item?.referenceImages) ? item.referenceImages : [];
-                    const quoteCount = Number(item?.quotationCount ?? item?.quotesCount ?? item?.totalQuotations ?? 0);
                     const customerName = item?.customerName || item?.customer?.fullName || item?.customer?.name || 'Khách hàng';
                     const status = String(item?.status || '').toUpperCase();
                     const canCreateCustomOrder = status === 'ARTISAN_SELECTED';
@@ -116,7 +145,11 @@ const RequestList = memo(({ loading, filtered, page, totalPages, onPrev, onNext,
                             </div>
                             <footer className="card-footer-block">
                                 <div className="artisan-request-actions">
-                                    {canCreateCustomOrder ? (
+                                    {status === 'OPEN' ? (
+                                        <button type="button" className="btn btn-outline btn-sm" onClick={() => navigate(`/artisan/requests/${id}`)}>
+                                            Xem chi tiết
+                                        </button>
+                                    ) : canCreateCustomOrder ? (
                                         <button type="button" className="btn btn-outline btn-sm" onClick={() => navigate(`/artisan/requests/${id}/custom-order`)}>
                                             Tạo custom order
                                         </button>
@@ -163,6 +196,7 @@ const ArtisanRequestsPage = () => {
     const [size] = useState(10);
     const [totalPages, setTotalPages] = useState(0);
     const [conversationByRequest, setConversationByRequest] = useState({});
+    const [activeView, setActiveView] = useState('DEFAULT');
 
     const handleSearchChange = useCallback((value) => setSearch(value), []);
     const handleStatusChange = useCallback((value) => {
@@ -170,6 +204,10 @@ const ArtisanRequestsPage = () => {
         setPage(0);
     }, []);
     const handleBudgetChange = useCallback((value) => setBudgetFilter(value), []);
+    const handleViewChange = useCallback((value) => {
+        setActiveView(value);
+        setPage(0);
+    }, []);
     const handlePrevPage = useCallback(() => setPage((current) => Math.max(0, current - 1)), []);
     const handleNextPage = useCallback(() => setPage((current) => current + 1), []);
 
@@ -190,8 +228,16 @@ const ArtisanRequestsPage = () => {
         let ignore = false;
         const fetchOpenRequests = async () => {
             setLoading(true);
+            const requestsPromise = activeView === 'OPEN'
+                ? getOpenCustomRequests({ page, size })
+                : getArtisanCustomRequests({ status: statusFilter, page, size });
+
+            if (activeView === 'OPEN' && statusFilter !== 'OPEN') {
+                setStatusFilter('OPEN');
+            }
+
             const [res, convRes] = await Promise.all([
-                getArtisanCustomRequests({ status: statusFilter, page, size }),
+                requestsPromise,
                 getMyConversations(),
             ]);
             if (ignore) return;
@@ -221,7 +267,7 @@ const ArtisanRequestsPage = () => {
         return () => {
             ignore = true;
         };
-    }, [page, size, statusFilter]);
+    }, [activeView, page, size, statusFilter]);
 
     const filtered = useMemo(() => {
         const q = search.trim().toLowerCase();
@@ -248,6 +294,8 @@ const ArtisanRequestsPage = () => {
                 onStatusChange={handleStatusChange}
                 budgetFilter={budgetFilter}
                 onBudgetChange={handleBudgetChange}
+                activeView={activeView}
+                onViewChange={handleViewChange}
             />
 
             <RequestList

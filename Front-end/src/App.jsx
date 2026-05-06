@@ -7,6 +7,7 @@ import LoginPage from './pages/LoginPage'
 import ArtisanDashboard from './pages/artisan/ArtisanDashboard'
 import ArtisanOrderDetailPage from './pages/artisan/ArtisanOrderDetailPage'
 import ArtisanCustomOrderDetailPage from './pages/artisan/ArtisanCustomOrderDetailPage'
+import ArtisanCustomRequestDetailPage from './pages/artisan/ArtisanCustomRequestDetailPage'
 
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
@@ -120,6 +121,7 @@ function App() {
         <Route path="/artisan/requests" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
         <Route path="/artisan/wallet" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
         <Route path="/artisan/messages" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
+        <Route path="/artisan/requests/:id" element={<ArtisanOnlyRoute><ArtisanCustomRequestDetailPage /></ArtisanOnlyRoute>} />
         <Route path="/artisan/requests/:id/custom-order" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
         <Route path="/artisan/orders" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />
         <Route path="/artisan/ready-orders" element={<ArtisanOnlyRoute><ArtisanDashboard /></ArtisanOnlyRoute>} />

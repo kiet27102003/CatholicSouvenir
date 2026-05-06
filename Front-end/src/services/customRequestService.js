@@ -527,24 +527,26 @@ export const getCustomOrderRefundEstimate = async (orderId) => {
     }
 };
 
-export const cancelCustomOrder = async (orderId, reason = '') => {
+export const rejectCustomOrder = async (orderId, reason = '') => {
     if (!orderId) return { success: false, error: 'Thiếu mã đơn.' };
 
     try {
-        const response = await api.post(`/custom-orders/${orderId}/cancel`, null, {
-            params: reason ? { reason } : {},
+        const response = await api.post(`/custom-orders/${orderId}/reject`, {
+            reason: String(reason || '').trim(),
         });
         const normalized = normalizeResponse(response);
 
         if (!isSuccessCode(normalized.code)) {
-            return { success: false, error: normalized.message || 'Huỷ đơn thất bại.' };
+            return { success: false, error: normalized.message || 'Từ chối đơn thất bại.' };
         }
 
         return { success: true, data: normalized.data || {} };
     } catch (error) {
-        return { success: false, error: mapError(error, 'Huỷ đơn thất bại.') };
+        return { success: false, error: mapError(error, 'Từ chối đơn thất bại.') };
     }
 };
+
+export const cancelCustomOrder = rejectCustomOrder;
 
 export const uploadStageProof = async (stageId, payload = {}) => {
     if (!stageId) return { success: false, error: 'Thiếu mã stage.' };
@@ -609,7 +611,7 @@ export default {
     getCustomOrderByRequest,
     confirmCustomOrder,
     updateCustomOrderStatus,
-    cancelCustomOrder,
+    rejectCustomOrder,
     uploadStageProof,
     completeStage,
 };

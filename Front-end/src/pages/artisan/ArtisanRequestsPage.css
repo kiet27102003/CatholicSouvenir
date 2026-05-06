@@ -1,7 +1,14 @@
 .artisan-requests-page { width: 100%; min-width: 0; padding: 0 8px 8px; }
-.artisan-page-header { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin: 0 0 12px; }
+.artisan-page-header { position: sticky; top: 0; z-index: 20; display: flex; justify-content: space-between; gap: 16px; align-items: center; margin: 0 0 12px; padding: 12px 0; background: rgba(255, 255, 255, 0.78); backdrop-filter: blur(14px) saturate(1.2); -webkit-backdrop-filter: blur(14px) saturate(1.2); }
 .artisan-page-header h1 { font-size: 1.75rem; margin: 0 0 4px; }
 .artisan-page-header p { color: var(--color-text-light); margin: 0; }
+.artisan-page-header-center { flex: 1; display: flex; justify-content: center; align-items: center; }
+.artisan-requests-toolbar { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+.artisan-view-toggle { display: inline-flex; align-items: stretch; border: 1px solid var(--color-border); border-radius: 14px; overflow: hidden; background: #fff; box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04); }
+.artisan-view-toggle button { border: 0; background: transparent; height: 42px; padding: 0 18px; color: var(--color-text-light); font-weight: 700; min-width: 140px; transition: background-color .2s ease, color .2s ease, transform .2s ease; }
+.artisan-view-toggle button + button { border-left: 1px solid var(--color-border-light); }
+.artisan-view-toggle button:hover { background: #f8fafc; color: var(--color-text); }
+.artisan-view-toggle button.is-active { background: linear-gradient(135deg, var(--color-primary), #1d4ed8); color: #fff; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12); }
 .artisan-requests-filters { display: flex; gap: 10px; flex-wrap: wrap; }
 .artisan-requests-filters input, .artisan-requests-filters select { height: 40px; border: 1px solid var(--color-border); border-radius: 10px; padding: 0 12px; }
 .artisan-requests-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px; width: 100%; }
@@ -29,7 +36,11 @@
 .artisan-skeleton-card { height: 230px; border-radius: 14px; background: linear-gradient(110deg,#f5f5f5 8%,#ebebeb 18%,#f5f5f5 33%); background-size: 200% 100%; animation: loading 1.2s linear infinite; }
 @keyframes loading { to { background-position-x: -200%; } }
 @media (max-width: 768px) {
-  .artisan-page-header { flex-direction: column; }
+  .artisan-page-header { flex-direction: column; align-items: stretch; top: 0; padding: 10px 0; }
+  .artisan-page-header-center { width: 100%; justify-content: stretch; }
+  .artisan-requests-toolbar { width: 100%; align-items: stretch; }
+  .artisan-view-toggle { width: 100%; }
+  .artisan-view-toggle button { flex: 1; min-width: 0; padding: 0 10px; }
   .artisan-requests-filters { width: 100%; flex-direction: column; }
   .artisan-requests-grid { grid-template-columns: 1fr; }
   .card-footer-block { flex-direction: column; align-items: stretch; margin: auto -16px -16px; padding: 12px 16px 0; }
